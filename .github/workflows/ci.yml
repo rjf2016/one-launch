@@ -48,14 +48,14 @@ jobs:
       # After every driver run, so a failure in any of them leaves its screenshots and log copy behind.
       - name: Upload the driver output
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: drive-output
           path: drive-out/**
           if-no-files-found: ignore
           retention-days: 7
       - name: Upload the installer
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: OneLaunch-setup
           path: dist/OneLaunch-*-setup.exe
