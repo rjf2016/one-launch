@@ -1,0 +1,21 @@
+000000.000| ALWAYS| Logging started at 2026-10-07T17:27:00.089
+000000.000| ALWAYS| Application Version: 140.0.7.5045
+000000.030| ALWAYS| Command Line Arguments (Riot Client App):
+    --launch-product=valorant
+    --launch-patchline=live
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --update-root=C:/ProgramData/Riot Games/Metadata/Riot Client/Update
+    --log-root=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Logs
+    --user-data-root=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client
+    --session-id=00000000-0000-4000-8000-000000000006
+000000.030| ALWAYS| Command Line Arguments (SDKModule):
+    --launch-product=valorant
+    --launch-patchline=live
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --session-id=00000000-0000-4000-8000-000000000006
+    --persistence-path=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client
+000000.413|   OKAY| ProcessSingleton: Did not initially acquire process singleton
+000000.420|   OKAY| ProcessSingleton: Message to other Riot Client succeeded
+000000.421|   OKAY| ProcessSingleton: Did not acquire process singleton

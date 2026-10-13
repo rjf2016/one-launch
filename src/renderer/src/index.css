@@ -1,0 +1,263 @@
+@import 'tailwindcss';
+
+:root {
+  --color-bg: #0b0d12;
+  --color-surface: #12151c;
+  --color-surface-2: #1a1e28;
+  --color-surface-3: #222736;
+  --color-border: #262b38;
+  --color-border-strong: #343a4b;
+  --color-text: #e8eaf0;
+  --color-text-strong: #ffffff;
+  --color-muted: #8f97ab;
+  --color-faint: #7f879b;
+
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #9d75ff;
+  --color-accent-soft: rgb(139 92 246 / 0.16);
+  --color-success: #3ddc97;
+  --color-warning: #f5b750;
+  --color-danger: #f25f5c;
+
+  --color-steam: #66c0f4;
+  --color-epic: #e6e6e6;
+  --color-battlenet: #148eff;
+  --color-riot: #ff4655;
+}
+
+@theme inline {
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'Cascadia Mono', Consolas, ui-monospace, monospace;
+
+  --color-bg: var(--color-bg);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-surface-3: var(--color-surface-3);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-text: var(--color-text);
+  --color-text-strong: var(--color-text-strong);
+  --color-muted: var(--color-muted);
+  --color-faint: var(--color-faint);
+
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+
+  --color-steam: var(--color-steam);
+  --color-epic: var(--color-epic);
+  --color-battlenet: var(--color-battlenet);
+  --color-riot: var(--color-riot);
+
+  --radius-panel: 12px;
+  --shadow-panel: 0 1px 0 rgb(255 255 255 / 0.03) inset, 0 8px 24px rgb(0 0 0 / 0.35);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    user-select: none;
+  }
+  input,
+  textarea,
+  select {
+    user-select: text;
+  }
+  ::selection {
+    background: var(--color-accent-soft);
+  }
+  /* Chromium only (Electron): no arrow buttons, a rounded thumb inset from the content by a transparent border. */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-track {
+    margin: 6px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+  /* .sb-hover is set by lib/scrollbarHover.ts on the scroll container under the pointer. */
+  .sb-hover::-webkit-scrollbar-thumb,
+  .sb-hover::-webkit-scrollbar-thumb:hover,
+  .sb-hover::-webkit-scrollbar-thumb:active {
+    background-color: var(--color-border-strong);
+  }
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+}
+
+@utility app-drag {
+  -webkit-app-region: drag;
+}
+@utility app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* The boot surface in index.html, painted until React's first commit replaces it. The bar matches TitleBar to the pixel; the mark only appears when the bundle is slow, so a normal start never flashes it. */
+.boot {
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  background: var(--color-bg);
+}
+.boot-bar {
+  height: 36px;
+  flex: none;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent);
+  background: var(--color-surface);
+}
+.boot-body {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+.boot-mark {
+  color: var(--color-accent);
+  opacity: 0;
+  animation: boot-fade 200ms ease-out 250ms forwards;
+}
+@keyframes boot-fade {
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boot-mark {
+    animation-duration: 0ms;
+  }
+}
+
+/* The setup guide: entrances for the card, each step and its rows, and two slow loops (the account name that keeps changing, the ring around Play). Opacity and transform only, and none of it under reduced motion. */
+@keyframes guide-card {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+@keyframes guide-fwd {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes guide-back {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@keyframes guide-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes guide-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+@keyframes guide-swap {
+  0%,
+  42% {
+    opacity: 1;
+    transform: none;
+  }
+  50%,
+  92% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes guide-ring {
+  from {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.75);
+  }
+}
+.guide-card {
+  animation: guide-card 240ms ease-out both;
+}
+.guide-fwd {
+  animation: guide-fwd 240ms ease-out both;
+}
+.guide-back {
+  animation: guide-back 240ms ease-out both;
+}
+.guide-rise {
+  animation: guide-rise 360ms ease-out both;
+}
+.guide-pop {
+  animation: guide-pop 280ms cubic-bezier(0.2, 0.7, 0.3, 1.1) both;
+}
+.guide-swap-a {
+  animation: guide-swap 5s ease-in-out infinite;
+}
+.guide-swap-b {
+  animation: guide-swap 5s ease-in-out -2.5s infinite;
+}
+.guide-ring {
+  animation: guide-ring 2.4s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .guide-card,
+  .guide-fwd,
+  .guide-back,
+  .guide-rise,
+  .guide-pop,
+  .guide-swap-a,
+  .guide-swap-b,
+  .guide-ring {
+    animation: none;
+  }
+  .guide-swap-b,
+  .guide-ring {
+    opacity: 0;
+  }
+}

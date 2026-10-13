@@ -1,0 +1,22 @@
+auto_patching_enabled_by_player: false
+dependencies:
+    DirectX:
+        hash: "0000000000000000000000000000000000000000000000000000000000000000"
+        phase: "Succeeded"
+        version: "1.0.0"
+    vanguard: true
+locale_data:
+    available_locales:
+    - "en_US"
+    - "de_DE"
+    default_locale: "en_US"
+patching_policy: "manual"
+patchline_patching_ask_policy: "ask"
+product_install_full_path: "D:/Games/Riot Games/VALORANT/live"
+product_install_root: "D:/Games/Riot Games"
+settings:
+    create_shortcut: false
+    create_uninstall_key: true
+    locale: "en_US"
+shortcut_name: "VALORANT.lnk"
+should_repair: false

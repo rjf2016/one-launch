@@ -1,0 +1,13 @@
+name: Idea or question
+description: A feature, a change, or something that is unclear
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Screenshots show your account names, and logs contain file paths and game names: read what you paste before you post it.
+  - type: textarea
+    id: what
+    attributes:
+      label: What would you like, or what is unclear?
+    validations:
+      required: true

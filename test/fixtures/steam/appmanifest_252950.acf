@@ -1,0 +1,51 @@
+"AppState"
+{
+	"appid"		"252950"
+	"universe"		"1"
+	"LauncherPath"		"D:\\Games\\Steam\\steam.exe"
+	"name"		"Rocket League"
+	"StateFlags"		"6"
+	"installdir"		"rocketleague"
+	"LastUpdated"		"1786069598"
+	"LastPlayed"		"1785117264"
+	"SizeOnDisk"		"42795878686"
+	"StagingSize"		"0"
+	"buildid"		"24421949"
+	"LastOwner"		"76561198000000001"
+	"DownloadType"		"4"
+	"UpdateResult"		"0"
+	"BytesToDownload"		"298977808"
+	"BytesDownloaded"		"0"
+	"BytesToStage"		"0"
+	"BytesStaged"		"0"
+	"TargetBuildID"		"24938203"
+	"AutoUpdateBehavior"		"0"
+	"AllowOtherDownloadsWhileRunning"		"0"
+	"ScheduledAutoUpdate"		"1789804460"
+	"InstalledDepots"
+	{
+		"252951"
+		{
+			"manifest"		"8892869592291340076"
+			"size"		"42795878686"
+		}
+	}
+	"InstallScripts"
+	{
+		"252951"		"appinfo.vdf"
+	}
+	"SharedDepots"
+	{
+		"228989"		"228980"
+		"228990"		"228980"
+		"229033"		"228980"
+	}
+	"UserConfig"
+	{
+		"language"		"english"
+	}
+	"MountedConfig"
+	{
+		"language"		"english"
+	}
+}

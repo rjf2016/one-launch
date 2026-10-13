@@ -1,0 +1,49 @@
+appId: dev.onelaunch.app
+productName: One Launch
+copyright: Copyright © 2026 rjf2016
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  # better-sqlite3: ship only the Windows x64 Node-API prebuild, not sources or other platforms.
+  - '!node_modules/better-sqlite3/{src,deps,build,docs}/**'
+  - '!node_modules/better-sqlite3/prebuilds/*'
+  - 'node_modules/better-sqlite3/prebuilds/win32-x64.node'
+# Next to One Launch.exe, beside the LICENSE.electron.txt and LICENSES.chromium.html that electron-builder puts there. Regenerate with `npm run notices`.
+extraFiles:
+  - from: THIRD-PARTY-NOTICES.txt
+    to: THIRD-PARTY-NOTICES.txt
+asarUnpack:
+  - '**/*.node'
+npmRebuild: true
+# The packaged exe cannot be run as plain Node, takes no NODE_OPTIONS or --inspect, and loads only the integrity-checked app.asar.
+# grantFileProtocolExtraPrivileges stays on: the renderer loads over file://.
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableEmbeddedAsarIntegrityValidation: true
+win:
+  target:
+    - nsis
+  # No spaces: the file is passed around by hand and, later, fetched by URL.
+  artifactName: OneLaunch-${version}-setup.${ext}
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  perMachine: false
+  # build/license.txt is written by `npm run notices`: the MIT licence plus where the third-party notices are installed.
+  license: build/license.txt
+  # Keep it false. Uninstalling must not delete accounts and backups, and if it were ever turned on it would
+  # target %APPDATA%\One Launch (the product name), not %APPDATA%\OneLaunch where the data really is.
+  deleteAppDataOnUninstall: false
+# Writes latest.yml and resources/app-update.yml. Every build passes --publish never; the release workflow makes the draft and the owner signs and publishes it (docs/development.md, "Releases").
+publish:
+  provider: github
+  owner: rjf2016
+  repo: one-launch
+  releaseType: draft

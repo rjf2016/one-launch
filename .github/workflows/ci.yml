@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx vitest run
+      - run: npx electron-vite build
+      # The unpackaged build against fake launchers: Play on each launcher, the no-launchers first start, and the updater against a loopback feed.
+      - name: Fake-launcher and update-feed runs
+        run: |
+          node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=drive-out/play-all
+          node scripts/drive.mjs scripts/scenarios/first-run.mjs --fake=none --shots=drive-out/first-run
+          node scripts/drive.mjs scripts/scenarios/update.mjs --fake=none --shots=drive-out/update
+      # One electron-builder run makes both dist/win-unpacked and the NSIS installer.
+      - name: Package (installer)
+        run: npx electron-builder --win nsis --publish never
+      - name: Packaged build contains the app
+        shell: pwsh
+        run: |
+          if (-not (Test-Path 'dist/win-unpacked/One Launch.exe')) { throw 'One Launch.exe missing' }
+          if (-not (Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/better-sqlite3/prebuilds/win32-x64.node')) { throw 'better-sqlite3 prebuild missing' }
+          if (-not (Test-Path 'dist/win-unpacked/THIRD-PARTY-NOTICES.txt')) { throw 'THIRD-PARTY-NOTICES.txt missing' }
+          if (-not (Get-ChildItem 'dist/OneLaunch-*-setup.exe')) { throw 'installer missing' }
+          if (-not (Test-Path 'dist/latest.yml')) { throw 'latest.yml missing' }
+          $feed = Get-Content 'dist/win-unpacked/resources/app-update.yml' -Raw
+          if ($feed -notmatch 'owner: rjf2016' -or $feed -notmatch 'repo: one-launch') { throw "app-update.yml does not name the release repo: $feed" }
+      # Starts the packaged exe on a scratch data folder (--data-dir=), reads app:info and launchers:status, and checks that it quits with code 0.
+      - name: Packaged smoke run
+        run: node scripts/smoke-packaged.mjs --shots=drive-out/packaged-smoke
+      # After every driver run, so a failure in any of them leaves its screenshots and log copy behind.
+      - name: Upload the driver output
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-output
+          path: drive-out/**
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload the installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: OneLaunch-setup
+          path: dist/OneLaunch-*-setup.exe
+          if-no-files-found: error
+          retention-days: 14

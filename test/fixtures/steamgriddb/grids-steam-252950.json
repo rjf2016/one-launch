@@ -1,0 +1,46 @@
+{
+  "success": true,
+  "page": 0,
+  "total": 2,
+  "limit": 50,
+  "data": [
+    {
+      "id": 91001,
+      "score": 12,
+      "style": "alternate",
+      "width": 600,
+      "height": 900,
+      "nsfw": false,
+      "humor": false,
+      "notes": null,
+      "mime": "image/png",
+      "language": "en",
+      "url": "https://cdn2.steamgriddb.com/grid/aaaa1111.png",
+      "thumb": "https://cdn2.steamgriddb.com/thumb/aaaa1111.jpg",
+      "lock": false,
+      "epilepsy": false,
+      "upvotes": 12,
+      "downvotes": 0,
+      "author": { "name": "fixture", "steam64": "76561198000000000", "avatar": "https://example.invalid/a.jpg" }
+    },
+    {
+      "id": 91002,
+      "score": 3,
+      "style": "blurred",
+      "width": 600,
+      "height": 900,
+      "nsfw": false,
+      "humor": false,
+      "notes": null,
+      "mime": "image/jpeg",
+      "language": "en",
+      "url": "https://cdn2.steamgriddb.com/grid/bbbb2222.jpg",
+      "thumb": "https://cdn2.steamgriddb.com/thumb/bbbb2222.jpg",
+      "lock": false,
+      "epilepsy": false,
+      "upvotes": 3,
+      "downvotes": 0,
+      "author": { "name": "fixture", "steam64": "76561198000000000", "avatar": "https://example.invalid/a.jpg" }
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "success": true,
+  "page": 0,
+  "total": 1,
+  "limit": 50,
+  "data": [
+    {
+      "id": 77001,
+      "score": 5,
+      "style": "alternate",
+      "width": 1920,
+      "height": 620,
+      "nsfw": false,
+      "humor": false,
+      "notes": null,
+      "mime": "image/jpeg",
+      "language": "en",
+      "url": "https://cdn2.steamgriddb.com/hero/cccc3333.jpg",
+      "thumb": "https://cdn2.steamgriddb.com/thumb/cccc3333.jpg",
+      "lock": false,
+      "epilepsy": false,
+      "upvotes": 5,
+      "downvotes": 0,
+      "author": { "name": "fixture", "steam64": "76561198000000000", "avatar": "https://example.invalid/a.jpg" }
+    }
+  ]
+}

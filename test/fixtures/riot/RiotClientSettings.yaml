@@ -1,0 +1,15 @@
+install:
+    auto-update: true
+    globals:
+        locale: "en_US"
+        region: "NA"
+    last-session-timestamp:
+        valorant.live: 1760000000
+        league_of_legends.live: "1759000000"
+    lifecycle:
+        enable_run_in_background: false
+    localization:
+        locale: "en_US"
+        region: "NA"
+    product-release-ids:
+        valorant.live: "placeholder-release"

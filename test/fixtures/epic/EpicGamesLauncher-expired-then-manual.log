@@ -1,0 +1,10 @@
+Log file open, 09/11/26 13:08:02
+[2026.09.11-17.08.03:178][  0]FAccountService::AutoSignIn
+[2026.09.11-17.08.03:501][  2]FAccountService::OnLoginComplete - 0 FALSE  errormessage=Sorry the refresh token '22222222222222222222222222222222' is invalid. Reason: TOKEN_EXPIRED errorcode=18036 errorpath=errors.com.epicgames.account.auth_token.invalid_refresh_token
+[2026.09.11-17.08.03:670][ 12]LogInit: AllCheckComplete SelfUpdate=1 SignedIn=0 RequiresRestart=0
+[2026.09.11-17.08.59:030][305]FAccountService::SignIn (exchange code)
+[2026.09.11-17.08.59:278][320]FAccountService::OnLoginComplete - 0 TRUE 33333333333333333333333333333333 
+[2026.09.11-17.08.59:328][320]FAccountService::OnLoginChanged - LoggedIn 0
+[2026.09.11-17.09.05:563][449]LogCore: Engine exit requested (reason: Shutdown)
+[2026.09.11-17.09.07:383][449]LogExit: Exiting.
+Log file closed, 09/11/26 13:09:07

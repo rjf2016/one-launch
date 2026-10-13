@@ -1,0 +1,37 @@
+000000.000| ALWAYS| Logging started at 2026-10-04T20:34:14.123
+000000.000| ALWAYS| Application Version: 140.0.6.5027
+000000.033|   OKAY| Sentry Enabled
+000000.039| ALWAYS| Command Line Arguments (Riot Client App):
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --update-root=C:/Riot Games/Riot Client
+    --log-root=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Logs/Riot Client Logs
+    --user-data-root=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client
+    --session-id=00000000-0000-4000-8000-000000000001
+000000.039| ALWAYS| Command Line Arguments (SDKModule):
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --session-id=00000000-0000-4000-8000-000000000001
+000000.385|   OKAY| ProcessSingleton: Acquired process singleton
+000000.830| ALWAYS| vanguard: Discovered vanguard version 1.19.1.8 at startup
+000001.027| ALWAYS| rnet-product-registry: Getting dependencies for product 'valorant' and patchline 'live'.
+000001.100|   OKAY| telemetry: Sending telemetry to schema riot_client_lifecycle_v1: {"session_id":"00000000-0000-4000-8000-000000000001","tdid":"PLACEHOLDERPLACEHOLDERPLACEHOLDERPLACEHOLDER"}
+000001.788| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingInitialization
+000001.789| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingClientId
+000001.790| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingPersistenceInitialization
+000002.005| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to RestoreAuthorization
+000002.210| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingEulaData
+000002.210|   OKAY| SDK: private-settings: Updated private settings for user localuser with key psl.authorization.riot-client
+000002.213| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingEulaData
+000002.226| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingEulaData
+000002.295| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingPersistentFlagsData
+000002.296| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingProductContext
+000002.400|   OKAY| telemetry: Sending telemetry to schema rso_auth_v1: {"id_token":"eyJPLACEHOLDER.eyJPLACEHOLDER.PLACEHOLDER","refresh_token":"PLACEHOLDERPLACEHOLDERPLACEHOLDER"}
+000003.302|   OKAY| SDK: private-settings: Updated private settings for user localuser with key rso-authenticator.tdid
+000003.435|   OKAY| SDK: private-settings: Updated private settings for user localuser with key rso-authenticator.tdid
+000004.590|   OKAY| patch-proxy: HandleProductPatchlineStatusUpdate: productId: valorant, patchlineId: live, status: UpToDate, progress: 0
+000004.590|   OKAY| patch-proxy: Notifying app update status of valorant.live to updateAvailable: 0
+000004.590|   OKAY| patch-proxy: HandleProductPatchlineStatusUpdate: productId: valorant, patchlineId: live, status: UpToDate, progress: 0
+000004.594|   WARN| patch-proxy: Failed to fetch dependencies for valorant.live
+000040.933|   OKAY| riot-client-lifecycle: Attempting to quit. SwitchToBackgroundMode: False
+000041.555| ALWAYS| ProcessSingleton: Removal of LockFile complete: "C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Config/lockfile_"

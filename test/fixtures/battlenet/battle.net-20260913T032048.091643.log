@@ -1,0 +1,40 @@
+I 2026-09-13 03:20:48.092586 [Main] {Main} Logging started for Battle.net build 2.52.11.17778
+I 2026-09-13 03:20:48.092816 [Configuration] {Main} SharedConfigRoot: C:\ProgramData\Battle.net
+I 2026-09-13 03:20:48.093031 [Configuration] {Main} RoamingConfigRoot: C:\Users\someone\AppData\Roaming\Battle.net
+I 2026-09-13 03:20:48.093040 [Configuration] {Main} LocalConfigRoot: C:\Users\someone\AppData\Local\Battle.net
+D 2026-09-13 03:20:48.098326 [Configuration] {Main} User Configuration File: C:\Users\someone\AppData\Roaming\Battle.net\Battle.net.config
+I 2026-09-13 03:20:48.099244 [Main] {Main} Command line arguments: {[0]=--from-launcher}
+I 2026-09-13 03:20:48.100525 [Main] {Main} Opening IPC shared memory. queueName=User:someone:Battle.net IPC ShMem mode=server
+I 2026-09-13 03:20:49.146696 [Agent] {Agent} Agent Version is now: 2.41.0.9775 (retail)
+D 2026-09-13 03:20:49.149438 [Agent] {Agent} GameResource created for uid: battle.net
+D 2026-09-13 03:20:49.149478 [Agent] {Agent} GameResource created for uid: hs_beta
+D 2026-09-13 03:20:49.149486 [Agent] {Agent} GameResource created for uid: prometheus
+I 2026-09-13 03:20:50.462439 [EnvironmentManager] {Main} Login parameters changed: address=us.actual.battle.net:1119 region=US
+D 2026-09-13 03:20:50.960932 [InstallManager] {Main} Selecting best game install data for game prometheus: savedUid=prometheus originalUid=<none> newUid=prometheus
+D 2026-09-13 03:20:50.961033 [ProductState] {Main} InstallState (prometheus): currentOperation=Update currentOperationStatus=New installed=1 hasInstallModificationOptions=1 installPath=C:/Users/someone/Games/Overwatch sharedContainerSubpath=_retail_
+D 2026-09-13 03:20:52.951674 [LoginController] {Main} Login_QueueUpdate (position=1,clientWaitTime=00:00:00.086699,skipLoginQueueUi=true)
+I 2026-09-13 03:20:52.951696 [LoginController] {Main} External Challenge URL: https://us.account.battle.net/login/external-challenge?challengeType=token-security-checkpoint
+I 2026-09-13 03:20:52.951730 [UnifiedAuth] {Main} UAuth: setting url: https://account.battle.net/login/en/login.app?app=app reason: reset from external challenge
+D 2026-09-13 03:20:53.555745 [UnifiedAuth] {} UAuth: browser state changed: Challenge
+D 2026-09-13 03:20:53.561402 [UnifiedAuth] {Main} UAuth: status changed: RequestingToken
+D 2026-09-13 03:20:54.071544 [UnifiedAuth] {Main} UAuth: status changed: ReceivedToken
+D 2026-09-13 03:20:54.073047 [UnifiedAuth] {Main} UAuth: external challenge complete, submitting credentials for verification
+D 2026-09-13 03:20:54.073066 [UnifiedAuth] {Main} UAuth: browser state changed: Done
+I 2026-09-13 03:20:54.485561 [GSAccountProvider] {Main} Login triggered. entityId=1:0:0a1b2c3d
+D 2026-09-13 03:20:54.486823 [GSAccountProvider] {Main} Querying program level information for program: Pro
+I 2026-09-13 03:20:55.118026 [Frontend] {Main} Attempting to show main window. isMinimizedOnStartup=false varAutoStarted=false hasBattlePlatformProductCode=false needToMinimize=false
+I 2026-09-13 03:20:55.149702 [BNLogin] {Main} Logged into Battle.net successfully. |bnet=1:0:0a1b2c3d|game=2:100000000:0a1b2c3
+I 2026-09-13 03:20:55.278600 [GameSessionList] {Agent} Reporting process: TrackingInfo(uid=battle.net, type=game, opStatus=On, reqId=0, running=5, oldRunning=0)
+D 2026-09-13 03:20:55.854691 [GameProvider] {Main} Binding account info to available unbound entity. productCode=Pro_retail accountInfo=[Pro-Pro:retail]
+D 2026-09-13 03:20:55.932422 [GameController] {Main} Game Family Added: id=Pro visible=0
+I 2026-09-13 03:20:55.950684 [GameController] {Main} GameAccount added to family: family=Pro account=GameAccount(Pro:retail region=US)
+D 2026-09-13 03:20:55.950700 [GameController] {Main} Adding product state reference. uid=prometheus refCount=0
+D 2026-09-13 03:20:59.388104 [GameController] {Main} Active family set to: Pro
+I 2026-09-13 03:24:12.757489 [Main] {Main} Frontend is requesting to close window.
+I 2026-09-13 03:24:12.763827 [GameLaunchController] {Main} Game launch sequence canceled
+I 2026-09-13 03:24:12.794436 [GameController] {Main} Deleting GameFamily: Pro, # of game accounts:2
+D 2026-09-13 03:24:13.446030 [Main] {Main} Shutting down agent manager
+D 2026-09-13 03:24:13.447972 [Main] {Main} Shutting down battle.net interface
+D 2026-09-13 03:24:13.693987 [Main] {Main} Shutting down callback queue
+D 2026-09-13 03:24:13.694028 [WebServer] {Main} Shutting down WebServerImpl
+D 2026-09-13 03:24:13.803817 [DIAG_BNL_Voice] {Main} {4924} debug: Notification client reference removed: 0

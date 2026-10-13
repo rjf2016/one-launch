@@ -1,0 +1,19 @@
+node_modules/
+out/
+dist/
+*.log
+!test/fixtures/**/*.log
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+
+test/fixtures/**/*.real.*
+*.local.*
+*.tsbuildinfo
+
+# Release signing keys never belong in the repository (scripts/release-keygen.mjs refuses to write them here).
+*.pem
+
+# Ad hoc driver scenarios (scripts/drive.mjs runs only files in scripts/scenarios/).
+scripts/scenarios/adhoc-*.mjs

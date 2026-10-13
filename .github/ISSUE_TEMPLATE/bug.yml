@@ -1,0 +1,44 @@
+name: Bug report
+description: One Launch did something wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Read what you paste before you post it.** One Launch's logs redact passwords, tokens, emails and account ids, but they still contain file paths and the names of your games. Screenshots show your account names. Cut anything you do not want public.
+
+        A security problem does not belong here: use "Report a security vulnerability" on the previous page.
+  - type: input
+    id: version
+    attributes:
+      label: One Launch version
+      description: Shown at the bottom of the sidebar and in Settings › Updates.
+    validations:
+      required: true
+  - type: dropdown
+    id: launcher
+    attributes:
+      label: Launcher
+      multiple: true
+      options:
+        - Steam
+        - Epic Games
+        - Battle.net
+        - Riot Games
+        - None, the app itself
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: log
+    attributes:
+      label: Log lines
+      description: Optional. From `%APPDATA%\OneLaunch\logs`, only the lines around the problem, after reading them.
+      render: text

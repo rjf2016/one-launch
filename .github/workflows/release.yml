@@ -1,0 +1,76 @@
+name: Release
+
+# A pushed v<version> tag builds the installer and leaves it in a draft release. Nothing reaches users until the
+# owner signs latest.yml offline (npm run release:sign) and publishes the draft; see docs/development.md, "Releases".
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      # No dependency cache: a release build installs from the lockfile alone.
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - name: The tag names this version and is on master
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw "Tag $env:GITHUB_REF_NAME does not match the package.json version $version" }
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/master
+          if ($LASTEXITCODE -ne 0) { throw "Tag $env:GITHUB_REF_NAME is not on master" }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npx vitest run
+      - run: npx electron-vite build
+      - name: Fake-launcher and update-feed runs
+        run: |
+          node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=drive-out/play-all
+          node scripts/drive.mjs scripts/scenarios/first-run.mjs --fake=none --shots=drive-out/first-run
+          node scripts/drive.mjs scripts/scenarios/update.mjs --fake=none --shots=drive-out/update
+      - name: Package (installer)
+        run: npx electron-builder --win nsis --publish never
+      - name: Packaged smoke run
+        run: node scripts/smoke-packaged.mjs --shots=drive-out/packaged-smoke
+      - name: Build provenance for the installer
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/OneLaunch-*-setup.exe
+      - name: Draft release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $installer = "dist/OneLaunch-$version-setup.exe"
+          $files = @($installer, "$installer.blockmap", 'dist/latest.yml')
+          foreach ($f in $files) { if (-not (Test-Path $f)) { throw "$f is missing" } }
+          gh release create $env:GITHUB_REF_NAME @files --draft --verify-tag --title "One Launch $version" --notes "Not signed yet. Sign with: npm run release:sign -- $env:GITHUB_REF_NAME"
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
+      - name: Upload the driver output
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: drive-output
+          path: drive-out/**
+          if-no-files-found: ignore
+          retention-days: 7

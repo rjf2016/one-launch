@@ -1,0 +1,20 @@
+auto_patching_enabled_by_player: false
+dependencies:
+    Direct X 9:
+        hash: ""
+        phase: "Unknown"
+        version: ""
+    vanguard: true
+locale_data:
+    available_locales:
+    - "en_US"
+    - "en_GB"
+    default_locale: "en_US"
+patching_policy: "manual"
+patchline_patching_ask_policy: "ask"
+product_dependency: "teamfighttactics.live"
+product_install_full_path: "D:/Games/Riot Games/League of Legends"
+product_install_root: "D:/Games/Riot Games"
+settings:
+    locale: "en_US"
+should_repair: false

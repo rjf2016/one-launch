@@ -1,0 +1,60 @@
+000000.000| ALWAYS| Logging started at 2026-10-07T20:51:16.212
+000000.000| ALWAYS| Application Version: 140.0.8.5062
+000000.030| ALWAYS| Command Line Arguments (Riot Client App):
+    --launch-product=valorant
+    --launch-patchline=live
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --update-root=C:/ProgramData/Riot Games/Metadata/Riot Client/Update
+    --log-root=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Logs
+    --user-data-root=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client
+    --session-id=00000000-0000-4000-8000-000000000007
+000000.030| ALWAYS| Command Line Arguments (SDKModule):
+    --launch-product=valorant
+    --launch-patchline=live
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --session-id=00000000-0000-4000-8000-000000000007
+    --persistence-path=C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client
+000000.414|   OKAY| ProcessSingleton: Acquired process singleton
+000000.436|   OKAY| SDK: product-session: Created product session for riot_client on patchline  with version 0
+000001.617| ALWAYS| riot-client-lifecycle: Setting product context to valorant.live, willAutoLaunch=true
+000001.617| ALWAYS| SDK: client-feature-flags: Subscribed to feature flag 'direct_launch_opt_in.enabled' -- value 'false'
+000001.618| ALWAYS| SDK: client-feature-flags: Subscribed to feature flag 'autoLaunch.disabled' -- value 'true'
+000001.621| ALWAYS| SDK: client-feature-flags: Subscribed to feature flag 'restart_after_direct_launch.enabled' -- value 'false'
+000001.623| ALWAYS| riot-client-lifecycle: Setting product context to valorant.live, willAutoLaunch=false
+000001.626|   OKAY| riot-client-lifecycle: Restart after direct launch flag set to 0
+000001.640|   OKAY| patch-proxy: HandleProductPatchlineStatusUpdate: productId: valorant, patchlineId: live, status: UpToDate, progress: 0
+000001.830| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingInitialization
+000001.831| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingClientId
+000001.833| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to RestoreAuthorization
+000002.100|   OKAY| SDK: private-settings: Updated private settings for user localuser with key psl.authorization.riot-client
+000002.119| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingProductContextInitialization
+000002.300| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (SelfUpdate) -> (LifecycleSync)
+000002.300| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LifecycleSync) -> (LeagueRegion)
+000002.300| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LeagueRegion) -> (Login)
+000002.300| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (Login) -> (HomeBaseCountry)
+000002.300| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (HomeBaseCountry) -> (Eula)
+000002.300| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (Eula) -> (ClientConfig)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (ClientConfig) -> (VanguardHealthCheckStatus)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (VanguardHealthCheckStatus) -> (PatchlineData)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PatchlineData) -> (RiotIdRequired)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (RiotIdRequired) -> (AccountAlias)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AccountAlias) -> (LeagueRegionElection)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LeagueRegionElection) -> (PlayerAffinitySync)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PlayerAffinitySync) -> (AppRepairAndUpdate)
+000003.100| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AppRepairAndUpdate) -> (PatchStatus)
+000003.450| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PatchStatus) -> (AgeRestriction)
+000003.450| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AgeRestriction) -> (Permissions)
+000003.450| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (Permissions) -> (LaunchRestriction)
+000003.450| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LaunchRestriction) -> (PatchlineLaunchDisabled)
+000003.450| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PatchlineLaunchDisabled) -> (VngAccountRequired)
+000003.450| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (VngAccountRequired) -> (RestartRequired)
+000003.454| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (RestartRequired) -> (WaitForLaunch)
+000003.454|   OKAY| riot-client-lifecycle: Attempting to launch default product with reason (Auto-launch is disabled)
+000003.717|   OKAY| SDK: product-session: Created product session for riot_client on patchline  with version
+000202.224|   OKAY| riot-client-lifecycle: Attempting to quit
+000202.332|   OKAY| product-launcher: Session for 'riot_client' on patchline '' has ended after 198615ms
+000202.339|   OKAY| riot-client-lifecycle: All conditions cleared to quit after session exit, so quitting.
+000202.339|   OKAY| riot-client-lifecycle: Attempting to quit. SwitchToBackgroundMode: False
+000202.833| ALWAYS| ProcessSingleton: Removal of LockFile complete: "C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Config/lockfile_"

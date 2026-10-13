@@ -1,0 +1,67 @@
+psl:
+    authorization:
+        riot-client: null
+riot-login:
+    persist:
+        region: "NA"
+        scopes:
+        - "openid"
+        - "link"
+        - "ban"
+        - "lol_region"
+        - "lol"
+        - "summoner"
+        - "offline_access"
+        session:
+            cookies:
+            - domain: "placeholder.example"
+                hostOnly: false
+                httpOnly: true
+                name: "tdid"
+                path: "/"
+                persistent: true
+                secureOnly: true
+                value: "eyJplaceholderplaceholderplaceholderplaceho.placeholderpayloadplaceholderpayloadplaceholderpayloadplaceholder.placeholdersigplaceholdersigplaceholdersigplaceholdersigplaceholdersigplaceholdersigpl"
+            - domain: "auth.placeholder.example"
+                hostOnly: false
+                httpOnly: true
+                name: "ssid"
+                path: "/"
+                persistent: true
+                secureOnly: true
+                value: "eyJplaceholderplaceholderplaceholderplaceho.placeholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayloadplaceholderpayl.placeholdersigplaceholdersigplaceholdersigplaceholdersigplaceholdersigplaceholdersigpl"
+            - domain: "auth.placeholder.example"
+                hostOnly: false
+                httpOnly: true
+                name: "sub"
+                path: "/"
+                persistent: true
+                secureOnly: true
+                value: "99999999-9999-4999-8999-999999999999"
+            - domain: "auth.placeholder.example"
+                hostOnly: false
+                httpOnly: true
+                name: "csid"
+                path: "/"
+                persistent: true
+                secureOnly: true
+                value: "placeholder-csid-placeholder-csid-placeholder"
+            - domain: "auth.placeholder.example"
+                hostOnly: false
+                httpOnly: true
+                name: "clid"
+                path: "/"
+                persistent: true
+                secureOnly: true
+                value: "ph1"
+rso-authenticator:
+    tdid:
+        domain: "placeholder.example"
+        expiryTime: 1790000000
+        hostOnly: false
+        httpOnly: true
+        name: "tdid"
+        path: "/"
+        persistent: true
+        secureOnly: true
+        value: "eyJplaceholderplaceholderplaceholderplaceho.placeholderpayloadplaceholderpayloadplaceholderpayloadplaceholder.placeholdersigplaceholdersigplaceholdersigplaceholdersigplaceholdersigplaceholdersigpl"

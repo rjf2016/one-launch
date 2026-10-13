@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "installed": ["steam", "epic", "battlenet", "riot"],
+  "files": {
+    "steam/steam.exe": "",
+    "steam/config/loginusers.vdf": "@fixtures/steam/loginusers.vdf",
+    "steam/steamapps/libraryfolders.vdf": {
+      "inline": "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"{root:vdf}\\\\steam\"\n\t}\n}\n"
+    },
+    "steam/steamapps/appmanifest_252950.acf": "@fixtures/steam/appmanifest_252950.acf",
+    "steam/steamapps/common/rocketleague/.keep": "",
+    "epic/Launcher/Portal/Binaries/Win64/EpicGamesLauncher.exe": "",
+    "programdata/Epic/EpicGamesLauncher/Data/Manifests/A0000000000000000000000000000001.item": "@fixtures/epic/A0000000000000000000000000000001.item",
+    "programdata/Epic/UnrealEngineLauncher/LauncherInstalled.dat": "@fixtures/epic/LauncherInstalled.dat",
+    "localappdata/EpicGamesLauncher/Saved/Config/Windows/GameUserSettings.ini": "@fixtures/epic/GameUserSettings.ini",
+    "localappdata/EpicGamesLauncher/Saved/Logs/EpicGamesLauncher.log": "@fixtures/epic/EpicGamesLauncher.log",
+    "battlenet/Battle.net.exe": "",
+    "battlenet/Battle.net Launcher.exe": "",
+    "appdata/Battle.net/Battle.net.config": "@fixtures/battlenet/Battle.net.config",
+    "appdata/Battle.net/0a1b2c3d.config": "@fixtures/battlenet/0a1b2c3d.config",
+    "programdata/Battle.net/Agent/aggregate.json": {
+      "inline": "{\"installed\":[{\"name\":\"Overwatch\",\"product_id\":\"pro\",\"launch_uri\":\"battlenet://game/pro\",\"last_played_timestamp\":1771729603000}]}"
+    },
+    "games/Overwatch/.keep": "",
+    "riot/RiotClientServices.exe": "",
+    "localappdata/Riot Games/Riot Client/Data/RiotGamesPrivateSettings.yaml": "@fixtures/riot/RiotGamesPrivateSettings.yaml",
+    "localappdata/Riot Games/Riot Client/Config/RiotClientSettings.yaml": "@fixtures/riot/RiotClientSettings.yaml",
+    "localappdata/Riot Games/Riot Client/Logs/Riot Client Logs/2026-10-04T20-34-14_10001_Riot Client.log": "@fixtures/riot/2026-10-04T20-34-14_10001_Riot Client.log"
+  },
+  "registry": {
+    "HKCU\\Software\\Blizzard Entertainment\\Battle.net\\UnifiedAuth\\AA11BB22": "binary:01000000d08c9ddf0001abababababababababababababababababababababababababababababababababababababab"
+  },
+  "processes": {
+    "shutdownPolls": 3
+  },
+  "knobs": {
+    "steam": {
+      "reactMs": 400
+    },
+    "epic": {
+      "reactMs": 400
+    },
+    "battlenet": {
+      "reactMs": 400
+    },
+    "riot": {
+      "reactMs": 400
+    }
+  },
+  "onDisk": {
+    "epic": "33333333333333333333333333333333",
+    "battlenet": "0a1b2c3d"
+  },
+  "seed": {
+    "settings": {
+      "firstRun.dismissed": "true"
+    },
+    "accounts": [
+      {
+        "launcher": "steam",
+        "displayName": "Persona One",
+        "login": "user_1",
+        "launcherUid": "76561198000000001"
+      },
+      {
+        "launcher": "epic",
+        "displayName": "Alt",
+        "login": "alt@example.com",
+        "launcherUid": "22222222222222222222222222222222"
+      },
+      {
+        "launcher": "battlenet",
+        "displayName": "Alt",
+        "login": "saved3@example.com",
+        "launcherUid": "0b2c3d4e"
+      },
+      {
+        "launcher": "riot",
+        "displayName": "Riot Alt",
+        "login": "riot_alt",
+        "launcherUid": "33333333-3333-4333-8333-333333333333"
+      }
+    ],
+    "sessions": [
+      {
+        "launcher": "epic",
+        "login": "alt@example.com",
+        "launcherUid": "22222222222222222222222222222222",
+        "blob": {
+          "v": 1,
+          "rememberMe": {
+            "enable": "True",
+            "data": "YmxvYi1mb3ItYWx0LWJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYg=="
+          },
+          "offline": null
+        }
+      },
+      {
+        "launcher": "battlenet",
+        "login": "saved3@example.com",
+        "launcherUid": "0b2c3d4e",
+        "blob": {
+          "v": 1,
+          "unifiedAuth": {
+            "name": "B1B1B1B1",
+            "hex": "01000000d08c9ddf0002abababababababababababababababababababababababababababababababababababababab"
+          }
+        }
+      },
+      {
+        "launcher": "riot",
+        "login": "riot_alt",
+        "launcherUid": "33333333-3333-4333-8333-333333333333",
+        "refreshToken": "placeholder-refresh-token-for-riot-alt-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    ]
+  }
+}

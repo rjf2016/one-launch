@@ -1,0 +1,8 @@
+# Fake-launcher scenarios
+
+Each folder is a `scenario.json` the app runs against with `ONELAUNCH_FAKE_LAUNCHERS` (unpackaged only). `node scripts/drive.mjs <scenario.mjs> --fake=<folder name>` copies it into a scratch folder first, so a run never modifies these files.
+
+- `files`: launcher-shaped paths to create in the copy; `"@fixtures/<path>"` copies a file from `test/fixtures`, `{ "inline": "..." }` writes text with `{root}` (the copy's folder) and `{root:vdf}` (backslashes doubled) substituted, `""` makes an empty file. Read by the driver, never by the app.
+- `installed`, `registry`, `processes`, `knobs`, `timing`, `onDisk`, `seed`, `quitDuringSwitch`: read by the app (`src/main/launchers/sim/scenario.ts`). `knobs.json` next to it (written from `--knobs=`, or by a scenario's `restart({ knobs })`) is merged over `knobs`, `processes`, and `timing`, and may set `quitDuringSwitch`.
+- Everything is a placeholder: logins under `example.com` (Riot: `riot_<name>`), the fixtures' ids, made-up blobs. Never a real login, id, or token. A Riot session is seeded from a `refreshToken` alone; the seed builds the whole session file around it and the account id (`src/main/launchers/sim/riot.ts`). The Riot install (metadata, `.ok` markers, `RiotClientInstalls.json`) is laid down by the simulator at start, so a tree carries only the exe, the session file, the settings, and a run log.
+- Variants (an expired session, an elevated launcher, a launcher started by something else) are `--knobs=` overrides in the driving scenario, not folders. Add a folder only when the seed or the file tree differs.

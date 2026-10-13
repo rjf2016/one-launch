@@ -1,0 +1,56 @@
+000000.000| ALWAYS| Logging started at 2026-01-14T19:01:46.012
+000000.000| ALWAYS| Application Version: 77.0.1.814
+000001.543| ALWAYS| App: Running Riot Client version 77.0.1.814
+000001.543| ALWAYS| Command Line Arguments (Riot Client App):
+    --launch-product=valorant
+    --launch-patchline=live
+    --app-root=D:/Games/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+000001.543| ALWAYS| Command Line Arguments (SDKModule):
+    --launch-product=valorant
+    --launch-patchline=live
+    --app-root=D:/Games/Riot Games/Riot Client
+000001.834|   OKAY| SDK: Setting SDK configuration setting globals.launch-product from command-line argument --launch-product
+000001.834|   OKAY| SDK: Setting SDK configuration setting globals.launch-patchline from command-line argument --launch-patchline
+000001.948|   OKAY| SDK: riot-login: Updated platform ID to 'localuser'
+000001.948|   OKAY| SDK: riot-login: Not restoring login because client config not yet received.
+000002.117|   OKAY| SDK: riot-login: RiotLoginPlugin::OnConfigReady
+000002.159| ALWAYS| vanguard: Discovered vanguard version 1.14.3.1 at startup
+000002.466|   OKAY| SDK: riot-login: Successfully logged in with persistent session state
+000002.894|   OKAY| SDK: riot-login: Persisting 5 RSO auth cookies: tdid ssid sub csid clid and 7 RSO auth scopes: openid link ban lol_region lol summoner offline_access
+000002.911|   OKAY| riot-client-lifecycle: [LaunchContext] Subscribing to Patch Proxy patch states for valorant.live
+000002.925|   OKAY| rnet-product-registry: HandlePatchStatusChange: install 'valorant.live' starting at state 'PendingVerify'
+000002.927| ALWAYS| riot-client-lifecycle: Setting product context to valorant.live, willAutoLaunch=true
+000002.930| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (SelfUpdate) -> (LifecycleSync)
+000002.930| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LifecycleSync) -> (LeagueRegion)
+000002.930| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LeagueRegion) -> (Login)
+000002.935| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (Login) -> (HomeBaseCountry)
+000002.935| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (HomeBaseCountry) -> (Eula)
+000003.412| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (Eula) -> (PatchlineData)
+000003.412| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PatchlineData) -> (RiotIdRequired)
+000003.412| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (RiotIdRequired) -> (AccountUsername)
+000003.412| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AccountUsername) -> (AccountAlias)
+000003.412| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AccountAlias) -> (LeagueRegionElection)
+000003.412| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LeagueRegionElection) -> (PlayerAffinitySync)
+000003.557| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PlayerAffinitySync) -> (AppRepairAndUpdate)
+000003.557| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AppRepairAndUpdate) -> (PatchStatus)
+000003.557|   OKAY| rnet-product-registry: HandlePatchStatusChange: install 'valorant.live' starting at state 'UpToDate'
+000003.613| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PatchStatus) -> (AgeRestriction)
+000003.613| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (AgeRestriction) -> (LaunchRestriction)
+000003.614| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (LaunchRestriction) -> (PatchlineLaunchDisabled)
+000003.614| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (PatchlineLaunchDisabled) -> (VngAccountRequired)
+000003.614| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (VngAccountRequired) -> (RestartRequired)
+000003.614|   OKAY| vanguard: No need to restart the machine.
+000003.614| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (RestartRequired) -> (WaitForLaunch)
+000003.614| ALWAYS| riot-client-lifecycle: Setting product context to valorant.live, willAutoLaunch=false
+000003.617|   OKAY| product-launcher: Stopping all patching jobs
+000003.980| ALWAYS| riot-client-lifecycle: Context #1: Middleware transition (WaitForLaunch) -> (WaitForSessionExit)
+003536.905|   OKAY| SDK: riot-login: Persisting 5 RSO auth cookies: tdid ssid sub csid clid and 7 RSO auth scopes: openid link ban lol_region lol summoner offline_access
+003747.762|   OKAY| product-launcher: Detected that the session for valorant on patchline live is no longer running
+003747.762|   OKAY| product-launcher: Session for valorant on patchline live has ended after 3743783ms
+003747.764| ALWAYS| riot-client-lifecycle: Context #1 is done
+003747.765|   OKAY| riot-client-lifecycle: Checking if we can quit
+003747.794|   OKAY| riot-client-lifecycle: All conditions cleared to quit after session exit, so quitting.
+003747.794|   OKAY| riot-client-lifecycle: Attempting to quit. SwitchToBackgroundMode: False
+003747.794| ALWAYS| App: Quitting.
+003748.191| ALWAYS| ProcessSingleton: Removal of LockFile complete: "C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Config/lockfile_"

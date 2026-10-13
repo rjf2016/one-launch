@@ -1,0 +1,20 @@
+000000.000| ALWAYS| Logging started at 2026-10-04T20:42:52.789
+000000.000| ALWAYS| Application Version: 140.0.6.5027
+000000.034|   OKAY| Sentry Enabled
+000000.040| ALWAYS| Command Line Arguments (Riot Client App):
+    --app-root=C:/Riot Games/Riot Client
+    --data-root=C:/ProgramData/Riot Games/Metadata
+    --session-id=00000000-0000-4000-8000-000000000003
+000000.392|   OKAY| ProcessSingleton: Acquired process singleton
+000001.811| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingInitialization
+000001.812| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingClientId
+000001.813| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingPersistenceInitialization
+000001.946|  ERROR| SDK: rso-auth: error 'authorization_creation_failure_request_error': in plugin library function HandleAuthorizationCreate: Failed to create RSO authorization (401) invalid_grant:
+000001.960|   OKAY| SDK: private-settings: Updated private settings for user localuser with key psl.authorization.riot-client
+000001.961| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to RestoreAuthorization
+000001.961| ALWAYS| riot-client-lifecycle: PSLProvider: PSL state changed to PendingLoginStrategy
+000003.526|   OKAY| SDK: private-settings: Updated private settings for user localuser with key rso-authenticator.tdid
+000003.681|   OKAY| SDK: private-settings: Updated private settings for user localuser with key rso-authenticator.tdid
+000149.776|   OKAY| riot-client-lifecycle: Attempting to quit
+000149.829|   OKAY| riot-client-lifecycle: Attempting to quit. SwitchToBackgroundMode: False
+000150.362| ALWAYS| ProcessSingleton: Removal of LockFile complete: "C:/Users/Placeholder/AppData/Local/Riot Games/Riot Client/Config/lockfile_"
