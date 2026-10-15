@@ -62,14 +62,14 @@ export function WelcomeStep() {
         Welcome to One Launch
       </h2>
       <p className="guide-rise mt-2 max-w-md text-sm text-muted" style={{ animationDelay: '120ms' }}>
-        One front door to your Steam, Epic Games, Battle.net and Riot Games accounts. Pick a game, pick an account, play.
+        Launch any game, from any launcher, on any account.
       </p>
       <div className="guide-rise mt-7" style={{ animationDelay: '200ms' }}>
         <FlowArt />
       </div>
       <p className="guide-rise mt-6 inline-flex items-center gap-2 text-xs text-muted" style={{ animationDelay: '320ms' }}>
         <ShieldCheck className="size-3.5 shrink-0 text-success" />
-        Your accounts stay on this PC. Passwords and saved sign-ins are encrypted by Windows.
+        Everything stays on this PC. There is no account, no sync, no telemetry.
       </p>
     </div>
   );

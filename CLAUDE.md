@@ -1,6 +1,6 @@
 # One Launch
 
-Windows desktop app (Electron, React + Vite + Tailwind, TypeScript strict, better-sqlite3, DPAPI vault): one front door to the user's Steam, Epic, Battle.net, and Riot Games accounts and installed games. Pick a game, pick an account, play. Private beta; current work is polish, UI tweaks, quality-of-life, and bug fixes.
+Windows desktop app (Electron, React + Vite + Tailwind, TypeScript strict, better-sqlite3, DPAPI vault): launch any game, from any launcher, on any account (Steam, Epic, Battle.net, Riot Games). Pick a game, pick an account, play. Private beta; current work is polish, UI tweaks, quality-of-life, and bug fixes.
 
 Docs live in `docs/`; start at `docs/README.md` and read only the file the task needs.
 
