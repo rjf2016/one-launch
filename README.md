@@ -2,7 +2,7 @@
 
 Launch any game, from any launcher, on any account.
 
-<img src="docs/screenshots/setup-guide.png" alt="The One Launch setup guide" width="60%">
+<p align="center"><img src="docs/screenshots/setup-guide.png" alt="The One Launch setup guide" width="75%"></p>
 
 One Launch keeps your game accounts in one place and shows every game you have installed. Pick a game, pick an account, press Play. One Launch switches the launcher to that account and starts the game. The launchers stay installed and still do the real work.
 
