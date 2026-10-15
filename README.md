@@ -1,6 +1,6 @@
 # One Launch
 
-Launch any game, from any launcher, on any account, from One Launch.
+Launch any game, from any launcher, on any account.
 
 <img src="docs/screenshots/setup-guide.png" alt="The One Launch setup guide" width="60%">
 

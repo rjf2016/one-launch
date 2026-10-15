@@ -1,7 +1,7 @@
 {
   "name": "one-launch",
   "version": "1.0.0-beta.2",
-  "description": "Single front door to your PC games and game accounts across Steam, Epic, and Battle.net.",
+  "description": "Launch any game, from any launcher, on any account.",
   "private": true,
   "main": "./out/main/index.js",
   "author": "rjf2016",

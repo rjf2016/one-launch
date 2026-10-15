@@ -1,6 +1,6 @@
 # One Launch docs
 
-One Launch is a Windows desktop app that is the single front door to a user's PC games and game accounts: **pick a game, pick an account, play.** It keeps many accounts per launcher (Steam, Epic Games, Battle.net, Riot Games), switches the launcher to the chosen account (closing, rewriting its files or registry values, restarting it, confirming the sign-in), and starts the game through the launcher. It does not replace the launchers; it orchestrates them.
+One Launch is a Windows desktop app that launches any game, from any launcher, on any account: **pick a game, pick an account, play.** It keeps many accounts per launcher (Steam, Epic Games, Battle.net, Riot Games), switches the launcher to the chosen account (closing, rewriting its files or registry values, restarting it, confirming the sign-in), and starts the game through the launcher. It does not replace the launchers; it orchestrates them.
 
 Stack: Electron, React + Vite + Tailwind, TypeScript (strict), better-sqlite3, secrets encrypted with DPAPI via Electron `safeStorage`, electron-updater. A private beta; the version is in `package.json`.
 
