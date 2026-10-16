@@ -36,6 +36,7 @@ jobs:
           node scripts/drive.mjs scripts/scenarios/first-run.mjs --fake=none --shots=drive-out/first-run
           node scripts/drive.mjs scripts/scenarios/update.mjs --fake=none --shots=drive-out/update
       # One electron-builder run makes both dist/win-unpacked and the NSIS installer.
+      - run: npm run notices
       - name: Package (installer)
         run: npx electron-builder --win nsis --publish never
       - name: Packaged build contains the app

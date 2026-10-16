@@ -49,6 +49,7 @@ jobs:
           node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=drive-out/play-all
           node scripts/drive.mjs scripts/scenarios/first-run.mjs --fake=none --shots=drive-out/first-run
           node scripts/drive.mjs scripts/scenarios/update.mjs --fake=none --shots=drive-out/update
+      - run: npm run notices
       - name: Package (installer)
         run: npx electron-builder --win nsis --publish never
       - name: Packaged smoke run
