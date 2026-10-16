@@ -1,6 +1,5 @@
-// Writes THIRD-PARTY-NOTICES.txt (shipped next to the exe) and build/license.txt (the installer's licence page).
-//   node scripts/third-party-notices.mjs          write both files
-//   node scripts/third-party-notices.mjs --check  exit 1 when either file is out of date
+// Writes build/THIRD-PARTY-NOTICES.txt (shipped next to the exe) and build/license.txt (the installer's licence page).
+//   node scripts/third-party-notices.mjs   writes both files (gitignored); build, build:installer and the workflows run it before electron-builder
 //
 // What ships is worked out, not listed by hand: the production dependencies in package.json, plus every
 // package the source under src/ imports (the renderer bundle carries those), plus what they depend on
@@ -10,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const NOTICES = join(root, 'THIRD-PARTY-NOTICES.txt');
+const NOTICES = join(root, 'build', 'THIRD-PARTY-NOTICES.txt');
 const LICENCE_PAGE = join(root, 'build', 'license.txt');
 
 const readJson = (file) => JSON.parse(readFileSync(file, 'utf8'));
@@ -164,14 +163,5 @@ const wanted = [
   [LICENCE_PAGE, licencePage()],
 ];
 
-if (process.argv.includes('--check')) {
-  const stale = wanted.filter(([file, text]) => !existsSync(file) || lf(readFileSync(file, 'utf8')) !== text).map(([file]) => file);
-  if (stale.length > 0) {
-    console.error(`Out of date: ${stale.join(', ')}\nRun: npm run notices`);
-    process.exit(1);
-  }
-  console.log('Third-party notices are up to date.');
-} else {
-  for (const [file, text] of wanted) writeFileSync(file, text);
-  console.log(`Wrote ${wanted.map(([file]) => file).join(' and ')}`);
-}
+for (const [file, text] of wanted) writeFileSync(file, text);
+console.log(`Wrote ${wanted.map(([file]) => file).join(' and ')}`);

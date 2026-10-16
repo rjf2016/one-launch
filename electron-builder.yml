@@ -12,9 +12,9 @@ files:
   - '!node_modules/better-sqlite3/{src,deps,build,docs}/**'
   - '!node_modules/better-sqlite3/prebuilds/*'
   - 'node_modules/better-sqlite3/prebuilds/win32-x64.node'
-# Next to One Launch.exe, beside the LICENSE.electron.txt and LICENSES.chromium.html that electron-builder puts there. Regenerate with `npm run notices`.
+# Next to One Launch.exe, beside the LICENSE.electron.txt and LICENSES.chromium.html that electron-builder puts there. Written by `npm run notices` and gitignored; build, build:installer and the workflows run it first.
 extraFiles:
-  - from: THIRD-PARTY-NOTICES.txt
+  - from: build/THIRD-PARTY-NOTICES.txt
     to: THIRD-PARTY-NOTICES.txt
 asarUnpack:
   - '**/*.node'

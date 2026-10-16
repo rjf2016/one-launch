@@ -20,5 +20,4 @@ Docs live in `docs/`; start at `docs/README.md` and read only the file the task 
 ## Everyday
 
 - `npm run dev`, `npm run build`, `npm test` (must stay green), `npm run typecheck`, `npm run lint`.
-- After any dependency change run `npm run notices` (a test fails when the notices are stale).
 - Docs: update only when a change makes a doc wrong or adds an invariant or decision a future agent needs. No dates, hashes, or line numbers in docs.

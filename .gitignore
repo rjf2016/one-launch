@@ -17,3 +17,7 @@ test/fixtures/**/*.real.*
 
 # Ad hoc driver scenarios (scripts/drive.mjs runs only files in scripts/scenarios/).
 scripts/scenarios/adhoc-*.mjs
+
+# Written by `npm run notices` before every electron-builder run (the build scripts and workflows do it); never committed.
+build/THIRD-PARTY-NOTICES.txt
+build/license.txt
