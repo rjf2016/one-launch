@@ -1140,11 +1140,11 @@ describe('SteamAdapter.switchAccount (real, Steam updates itself first)', () => 
   });
 
   it('starts the sign-in budget over when the update ends, instead of timing out in the middle of it', async () => {
-    // The update outlasts the sign-in budget, so without the restart the wait would end mid-update; the budget itself stays wide enough for a starved CI runner.
-    steamUpdatesFor(700);
+    // The update outlasts the sign-in budget, so without the restart the wait would end mid-update; the second the restarted budget then gives the sign-in is the margin a starved CI runner needs (300 ms was not).
+    steamUpdatesFor(1_500);
     const seen: (LaunchAttention | null)[] = [];
     const details: string[] = [];
-    const result = await adapter(undefined, { signInMs: 300, updateMs: 5_000 }).switchAccount(ref(), {
+    const result = await adapter(undefined, { signInMs: 1_000, updateMs: 5_000 }).switchAccount(ref(), {
       dryRun: false,
       onAttention: (a) => seen.push(a),
       onProgress: (steps) => details.push(steps.find((s) => s.title === 'Confirm Steam signed in')!.detail),

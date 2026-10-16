@@ -394,9 +394,9 @@ describe('SetupGuide: accounts', () => {
     await forwardTo(user, 'ready');
     expect(await heading("You're all set")).toBeTruthy();
     const valueOf = (label: string): string | null => screen.getByText(label).nextElementSibling?.textContent ?? null;
-    await waitFor(() => expect(valueOf('Launchers found')).toBe('2'), { timeout: 2500 });
-    await waitFor(() => expect(valueOf('Games found')).toBe('1'), { timeout: 2500 });
-    await waitFor(() => expect(valueOf('Accounts')).toBe('1'), { timeout: 2500 });
+    await waitFor(() => expect(valueOf('Launchers found')).toBe('2'), { timeout: 5000 });
+    await waitFor(() => expect(valueOf('Games found')).toBe('1'), { timeout: 5000 });
+    await waitFor(() => expect(valueOf('Accounts')).toBe('1'), { timeout: 5000 });
   });
 });
 

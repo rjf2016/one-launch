@@ -13,6 +13,12 @@ updates:
           - electron
           - electron-builder
           - electron-updater
+      # A vite major moves together with electron-vite and @vitejs/plugin-react, whose peer ranges pin it; bumped alone, each fails npm ci with ERESOLVE.
+      vite:
+        patterns:
+          - vite
+          - '@vitejs/*'
+          - electron-vite
 
   - package-ecosystem: github-actions
     directory: /
