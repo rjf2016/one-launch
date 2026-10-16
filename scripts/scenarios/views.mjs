@@ -2,6 +2,7 @@
 // and card menu by keyboard. The check for any renderer change. Runs against fake launchers (--fake) or, read-only,
 // against whatever this PC has; on a folder with no accounts it screenshots and skips the setup guide, then seeds
 // three placeholder accounts over IPC.
+import { sleep } from '../app-driver.mjs';
 import { skipSetup } from './lib.mjs';
 
 export const name = 'views';
@@ -70,4 +71,20 @@ export default async (d) => {
   await d.viewport(960, 600);
   await d.shot('settings-960x600');
   await d.viewport(null);
+
+  const hasNotes = await d.evaluate(() => {
+    const button = document.querySelector('button[aria-label="Show what\'s new"]');
+    return button !== null && !button.disabled;
+  });
+  if (hasNotes) {
+    await d.click("Show what's new");
+    await d.waitFor(() => document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"]') !== null);
+    await sleep(900);
+    await d.shot('whats-new');
+    await d.viewport(960, 600);
+    await d.shot('whats-new-960x600');
+    await d.viewport(null);
+    await d.key('Escape');
+    await d.waitFor(() => document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"]') !== null, { absent: true });
+  }
 };

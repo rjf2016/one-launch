@@ -5,7 +5,7 @@ React 19 + TypeScript in `src/renderer/src`, built by electron-vite. It is sandb
 ## Aesthetic and principles
 
 - Dark only (`color-scheme: dark`), premium game launcher, not an admin tool. Artwork-forward: the Library is a poster wall.
-- Motion is subtle: `transition-colors duration-150` on interactive elements, 200 ms `ease-out` for the sidebar width. No bouncy or layout-shifting animation. Add `motion-reduce:transition-none` to anything that moves. The setup guide is the one place with entrance fades and two slow loops (below); all of it is opacity and transform, and none of it runs under reduced motion.
+- Motion is subtle: `transition-colors duration-150` on interactive elements, 200 ms `ease-out` for the sidebar width. No bouncy or layout-shifting animation. Add `motion-reduce:transition-none` to anything that moves. The setup guide and the What's New card are the only places with entrance fades, and the guide has two slow loops (below); all of it is opacity and transform, and none of it runs under reduced motion.
 - Light deps only: Tailwind 4 (CSS-first config in `index.css`), `lucide-react` icons, `zustand`. No component, animation, chart or router library. Don't add one.
 - Native `<select>` is banned: its OS-drawn popup cannot be themed. Use `Dropdown` (selection) or `MenuButton` (actions).
 - Layout must hold from the 960 px minimum window width to fullscreen: no horizontal page scroll, no wrapping button labels (`Button` is `whitespace-nowrap`), no content shift when async text changes length (fixed widths + `truncate`, skeleton rows the same height as the real ones).
@@ -21,7 +21,7 @@ React 19 + TypeScript in `src/renderer/src`, built by electron-vite. It is sandb
 
 ## Shell and navigation
 
-- There is no router: `view` and `accountRoute` in the store select the page. `App.tsx` mounts the global hosts (`ConfirmDialog`, `RecoveryHost`, `SetupGuideHost`, `LaunchHost`) above the views.
+- There is no router: `view` and `accountRoute` in the store select the page. `App.tsx` mounts the global hosts (`ConfirmDialog`, `RecoveryHost`, `SetupGuideHost`, `WhatsNewHost`, `LaunchHost`) above the views.
 - `TitleBar` is a 36 px (`h-9`) drag strip. Main draws the Windows caption buttons over its right end (`titleBarOverlay`). Put nothing interactive in it. Every modal backdrop starts at `top-9` so the window stays draggable. When `app:info` reports `platformSource: 'fake'` it shows a "Fake launchers" `role="status"` badge, so no screenshot of a fake-launcher run can pass for a real one.
 - `Sidebar` collapses to icons below 1100 px (`SIDEBAR_NARROW_QUERY`). A manual toggle (Ctrl+B) is stored in `localStorage` until the window crosses the breakpoint. Only the aside width animates. Labels fade in place so nothing reflows. The "Preview mode is on" card shows only when `dryRun === 'true'`.
 - `Page` scrolls the whole pane. Its `narrow` prop caps forms at 65 rem, and the Library stays full width. `PageHeader` is sticky.
@@ -56,6 +56,13 @@ React 19 + TypeScript in `src/renderer/src`, built by electron-vite. It is sandb
 - Every way out writes `firstRun.dismissed` and closes: Skip, Escape, the X, Open Library, Go to Accounts, and "Add a <launcher> account", which opens that launcher's new-account form. A save that fails still closes the guide; it comes back next start. The guide never opens by itself once dismissed or once an account exists, so installs that predate it never see it.
 - Each step opens with the focus on its primary action, an sr-only `role="status"` announces "Step n of 5: <name>", and the dialog is named by the step heading (`id="setup-title"`).
 - Motion: the card and each step fade in (`guide-card`, `guide-fwd` / `guide-back`), rows rise with a stagger (`guide-rise` plus an inline `animationDelay`), check marks pop, the welcome art swaps the account name on a 5 s loop and rings the Play button, and the phase demo advances on a JS clock (`useLoop`, `lib/motion.ts`). `usePrefersReducedMotion` freezes the loops and the CSS block turns the rest off. A screenshot taken the instant a step mounts catches the entrance mid-fade; scenarios settle for 900 ms first.
+
+## What's New (`components/WhatsNewDialog.tsx`)
+
+- The notes live in `src/shared/whats-new-releases.ts`, newest first: a version, a `YYYY-MM-DD` date, an optional intro sentence, and items with a bold `lead` and a plain `detail`. A release with an entry announces itself once; a release without one shows nothing. `test/whats-new.test.ts` refuses a malformed entry or one newer than `package.json`.
+- `WhatsNewHost` asks once at startup (`settings:getAll`, `app:info`, `recovery:get`) and opens the card about 400 ms later, over the painted Library, when `pickWhatsNew` (`src/shared/whats-new.ts`) finds an entry at or below the running version and newer than `whatsNew.lastSeen`. Only the newest unseen entry shows. Unset `lastSeen` counts as older than everything (a folder from before the feature); a fresh folder never qualifies because main records the running version at its first start. A start with the recovery prompt or the setup guide up is left alone; the card comes back next start.
+- Every way out (the X, Escape, the backdrop) writes `whatsNew.lastSeen` = the running version and closes, even when the write fails. With `whatsNew.enabled` off the host never opens the card and only records the running version as seen, so turning it on later never resurfaces old notes. Settings › General › "Show" opens the newest entry at or below the running version regardless (`openWhatsNew`).
+- A modal dialog at `z-40` like the guide, named by `#whats-new-title`. The title, the date and the X stay at the top; only the list scrolls, and it takes the focus on open so the keyboard scrolls it. The date is formatted from its parts as a local date, so it never shifts with the time zone.
 
 ## Views
 

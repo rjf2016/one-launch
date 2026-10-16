@@ -170,6 +170,15 @@ describe('IPC handlers', () => {
     expect(settings.getBool('updates.auto', true)).toBe(false);
   });
 
+  it("keeps the What's New switch to true or false, and its last-seen version to a version", async () => {
+    expect(await call('settings:set', { key: 'whatsNew.enabled', value: 'maybe' })).toMatchObject({ ok: false, error: { code: 'BAD_REQUEST' } });
+    expect(await call('settings:set', { key: 'whatsNew.enabled', value: 'false' })).toEqual({ ok: true, data: { ok: true } });
+    expect(settings.getBool('whatsNew.enabled', true)).toBe(false);
+    expect(await call('settings:set', { key: 'whatsNew.lastSeen', value: 'latest' })).toMatchObject({ ok: false, error: { code: 'BAD_REQUEST' } });
+    expect(await call('settings:set', { key: 'whatsNew.lastSeen', value: '1.2.3-beta.1' })).toEqual({ ok: true, data: { ok: true } });
+    expect(settings.get('whatsNew.lastSeen')).toBe('1.2.3-beta.1');
+  });
+
   it('refuses an update install with nothing verified, or during a switch', async () => {
     expect(await call('updates:install')).toMatchObject({ ok: false, error: { code: 'NOT_READY' } });
     updateReady = true;

@@ -164,7 +164,7 @@
   }
 }
 
-/* The setup guide: entrances for the card, each step and its rows, and two slow loops (the account name that keeps changing, the ring around Play). Opacity and transform only, and none of it under reduced motion. */
+/* The setup guide and the What's New card: entrances for the card, each step and its rows, and the guide's two slow loops (the account name that keeps changing, the ring around Play). Opacity and transform only, and none of it under reduced motion. */
 @keyframes guide-card {
   from {
     opacity: 0;

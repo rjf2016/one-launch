@@ -150,7 +150,7 @@ Once: in PowerShell or Windows Terminal (the passphrase prompt needs a real cons
 
 Per release:
 
-1. Bump `version` in `package.json` on a branch and merge it through a PR.
+1. Bump `version` in `package.json` on a branch, add the release's entry to `src/shared/whats-new-releases.ts` if it should announce itself (an entry opens the What's New card once after the update; no entry, no card), and merge it through a PR.
 2. Tag the merge commit `v<version>` and push the tag. The release workflow checks that the tag matches the version and is on master, runs the CI checks and scenarios, builds the installer, attests its build provenance, and creates a draft release with the installer, its `.blockmap`, and `latest.yml`.
 3. `npm run release:sign -- v<version> --key=<primary .pem>` downloads the draft's installer and `latest.yml`, refuses unless they describe the same file, signs what it measured, uploads the signed `latest.yml`, downloads it again to verify it, and offers to publish.
 

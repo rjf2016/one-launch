@@ -26,7 +26,7 @@ const info: AppInfo = {
 function shell() {
   return installBridge({
     'app:info': () => info,
-    'settings:getAll': () => ({ settings: { 'firstRun.dismissed': 'true' } }),
+    'settings:getAll': () => ({ settings: { 'firstRun.dismissed': 'true', 'whatsNew.lastSeen': info.version } }),
     'library:list': () => ({ games: [game()] }),
     'launch:recent': () => ({ recent: [] }),
     'artwork:status': () => ({ status: { queued: 0, running: 0, completed: 0, failed: 0, hasApiKey: false, revision: 1, scanned: true } }),

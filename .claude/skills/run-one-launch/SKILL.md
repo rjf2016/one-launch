@@ -41,6 +41,7 @@ node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=<your scrat
 | `restore.mjs`, `recovery.mjs`, `quit-during-switch.mjs` | Settings › Backups restore (refused while Steam runs); crash mid-switch (`killHard`), the recovery prompt, Restore and Keep as is; the quit prompt mid-switch (with the tray setting off), both answers. |
 | `close-to-tray.mjs` | Closing the window hides it and the app stays up (the default), a second start brings it back, the Settings toggle off makes the same close quit with 0. |
 | `first-run.mjs` (`fake: 'none'`) | A PC with no launchers: the setup guide step by step (four Locate rows, the phase demo, Add by hand, Back, finishing into an account form), four "Not installed" rows, Show again and Escape, a second start with no guide, no ERROR line (the CI runner's state). |
+| `whats-new.mjs` (`fake: 'none'`) | The What's New card: a fresh folder counts the running version as seen (no card), a folder that last saw an older version shows it once at 1280x800 and 960x600, closing records the version, the next start shows nothing, the switch off keeps it closed and still records the version, Settings › Show opens it, Escape closes it. The card parts run only when an entry exists at or below the running version. |
 | `import.mjs`, `preview.mjs` | Import accounts from Steam and Battle.net; Preview mode, the preview stage, `DRY_RUN`, "Turn preview off and play now". |
 | `needs-update.mjs` | Battle.net wants to update Overwatch and the Riot Client VALORANT: the Update badges, the pickers' notes, both switches run, both launches fail with the client's reason, and no launch command is sent. |
 | `game-running.mjs` | Overwatch runs on after the Battle.net client exited: the switch starts the client, the launch is refused at once as already running, no launch command sent. |
@@ -98,7 +99,7 @@ agent-browser eval "setTimeout(() => window.close(), 50)"      # quits the app, 
 
 ## Gotchas
 
-- A fresh data folder with no accounts opens the setup guide over the Library, a modal that swallows Escape and the shortcuts. The `all-four` seed has it dismissed; with `--fake=none` or no `--fake`, call `skipSetup(d)` first unless the guide is the point (`views.mjs` and `update.mjs` do). Its entrances take about 400 ms, so settle before a screenshot of it.
+- A fresh data folder with no accounts opens the setup guide over the Library, a modal that swallows Escape and the shortcuts. The `all-four` seed has it dismissed; with `--fake=none` or no `--fake`, call `skipSetup(d)` first unless the guide is the point (`views.mjs` and `update.mjs` do). Its entrances take about 400 ms, so settle before a screenshot of it. The What's New card never opens on a fresh folder (main records the running version as seen), so nothing needs to skip it; `whats-new.mjs` seeds `whatsNew.lastSeen` = `0.0.0` and restarts to see it.
 - Target buttons by accessible name (aria-label, else text): `click('Play Rocket League')`, `click({ contains: 'Persona One' })` for a row.
 - Menus close on scroll; `click` scrolls first and clicks in a second evaluate. Keyboard needs `key()`, not synthetic events.
 - Native dialogs (Locate…, Choose portrait image…) cannot be answered over CDP; only call them with a payload that is refused first.

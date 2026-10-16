@@ -6,6 +6,7 @@ import { LibraryService } from '../src/main/services/library';
 import { SecretStore } from '../src/main/services/secrets';
 import { SettingsService } from '../src/main/services/settings';
 import type { Vault } from '../src/main/services/vault';
+import { seedWhatsNewSeen } from '../src/main/services/whats-new';
 
 /** Reversible stand-in for DPAPI so the store logic can be tested without Electron. */
 class FakeVault implements Vault {
@@ -78,6 +79,18 @@ describe('SettingsService', () => {
     expect(s.getInt('backups.keep', 20)).toBe(20);
     s.delete('dryRun');
     expect(s.get('dryRun')).toBeNull();
+  });
+});
+
+describe('seedWhatsNewSeen', () => {
+  it('marks the running version as seen on a brand-new DB only, and never overwrites', () => {
+    const s = new SettingsService(freshDb());
+    expect(seedWhatsNewSeen(s, false, '1.2.3')).toBe(false);
+    expect(s.get('whatsNew.lastSeen')).toBeNull();
+    expect(seedWhatsNewSeen(s, true, '1.2.3')).toBe(true);
+    expect(s.get('whatsNew.lastSeen')).toBe('1.2.3');
+    expect(seedWhatsNewSeen(s, true, '1.2.4')).toBe(false);
+    expect(s.get('whatsNew.lastSeen')).toBe('1.2.3');
   });
 });
 

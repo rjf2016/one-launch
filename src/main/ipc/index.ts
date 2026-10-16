@@ -20,6 +20,7 @@ import {
   type SettingKey,
   type StartupMetrics,
 } from '@shared/models';
+import { isVersionString } from '@shared/whats-new';
 import type { AppPaths } from '../platform/paths';
 import type { AccountsService } from '../services/accounts';
 import type { ArtworkService } from '../services/artwork';
@@ -184,6 +185,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
     if (key === 'epic.launchUri' && !isEpicLaunchUriForm(value)) throw new IpcRequestError('BAD_REQUEST', 'epic.launchUri must be catalog or appname');
     if (key === 'battlenet.launch' && !isBattlenetLaunchForm(value)) throw new IpcRequestError('BAD_REQUEST', 'battlenet.launch must be uri or exec');
+    if (key === 'whatsNew.lastSeen' && !isVersionString(value)) throw new IpcRequestError('BAD_REQUEST', 'whatsNew.lastSeen must be a version');
     if (
       (key === 'dryRun' ||
         key === 'artwork.autoFetch' ||
@@ -191,7 +193,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         key === 'riot.pressPlay' ||
         key === 'firstRun.dismissed' ||
         key === 'window.closeToTray' ||
-        key === 'updates.auto') &&
+        key === 'updates.auto' ||
+        key === 'whatsNew.enabled') &&
       value !== 'true' &&
       value !== 'false'
     ) {
