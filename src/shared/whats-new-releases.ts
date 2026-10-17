@@ -20,18 +20,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
             lead: 'One Launch now tells you what changed.',
             detail: 'After an update, this card shows up to inform you of any new quirks or features.',
           },
-          {
-            lead: 'A smoother update experience.',
-            detail: 'Updates now apply more reliably and with fewer interruptions.',
-          },
-          {
-            lead: 'Better performance overall.',
-            detail: 'Various optimizations have been made to make One Launch faster and more responsive.',
-          },
-          {
-            lead: 'Enhanced security measures.',
-            detail: 'One Launch now includes additional security features to protect your data and privacy.',
-          },
         ],
       },
       {
@@ -41,10 +29,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
           {
             lead: 'A clearer welcome for new installs.',
             detail: 'The setup guide opens with the same tagline as the rest of the app and gets to the point faster.',
-          },
-          {
-            lead: 'Improved update notifications.',
-            detail: 'Users are now better informed about available updates and their impact.',
           },
         ],
       },
