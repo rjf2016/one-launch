@@ -17,7 +17,7 @@ React 19 + TypeScript in `src/renderer/src`, built by electron-vite. It is sandb
 - Tone pattern for callouts: `border-<tone>/30 bg-<tone>/10 text-<tone>` (warning = needs the user, danger = failed, accent-soft = in progress, success = done).
 - Fonts are Segoe UI (`font-sans`, base 14 px) and Cascadia (`font-mono`) for ids and paths. `text-xs` is for hints and `text-sm` for body text. Cards and dialogs use `rounded-panel` with `shadow-panel`.
 - `body` is `user-select: none`; inputs opt back in. Add `select-text` to values the user may want to copy (paths, step detail).
-- Scrollbars are custom `::-webkit-scrollbar`. The thumb shows only on the container under the pointer via the `.sb-hover` class from `lib/scrollbarHover.ts`. CSS `:hover` does not work: Chromium doesn't repaint custom scrollbars on a host hover change.
+- Scrollbars are custom `::-webkit-scrollbar`. The thumb shows only on the container under the pointer via the `.sb-hover` class from `lib/scrollbarHover.ts`. CSS `:hover` does not work: Chromium doesn't repaint custom scrollbars on a host hover change. `.sb-always` keeps the thumb visible regardless, for a list inside a card where nothing else says there is more below (the What's New card).
 
 ## Shell and navigation
 
@@ -63,7 +63,7 @@ React 19 + TypeScript in `src/renderer/src`, built by electron-vite. It is sandb
 - Development builds only: Settings ends with a Developer panel (`components/WhatsNewDevPanel.tsx`, loaded lazily behind `import.meta.env.DEV`, so a production bundle never contains it) whose "Preview What's New" opens any entry in the file, whatever the running version. Under `npm run dev`, saving the file updates the open card (`import.meta.hot.accept` on the releases module swaps the store's release for the new one).
 - `WhatsNewHost` asks once at startup (`settings:getAll`, `app:info`, `recovery:get`) and opens the card about 400 ms later, over the painted Library, when `pickWhatsNew` (`src/shared/whats-new.ts`) finds an entry at or below the running version and newer than `whatsNew.lastSeen`. Only the newest unseen entry shows. Unset `lastSeen` counts as older than everything (a folder from before the feature); a fresh folder never qualifies because main records the running version at its first start. A start with the recovery prompt or the setup guide up is left alone; the card comes back next start.
 - Every way out (the X, Escape, the backdrop) writes `whatsNew.lastSeen` = the running version and closes, even when the write fails. With `whatsNew.enabled` off the host never opens the card and only records the running version as seen, so turning it on later never resurfaces old notes. Settings › General › "Show" opens the newest entry at or below the running version regardless (`openWhatsNew`).
-- A modal dialog at `z-40` like the guide, named by `#whats-new-title`. The title, the date and the X stay at the top; only the list scrolls, and it takes the focus on open so the keyboard scrolls it. The date is formatted from its parts as a local date, so it never shifts with the time zone.
+- A modal dialog at `z-40` like the guide, named by `#whats-new-title`. The title, the date and the X stay at the top; only the list scrolls, it takes the focus on open so the keyboard scrolls it, and its scrollbar thumb stays visible (`sb-always`). The date is formatted from its parts as a local date, so it never shifts with the time zone.
 
 ## Views
 

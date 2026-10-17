@@ -83,11 +83,6 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
         className="guide-card relative flex max-h-full w-full max-w-[40rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-panel"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-[radial-gradient(70%_100%_at_50%_0%,var(--color-accent-soft),transparent)]"
-        />
-
         <header className="relative flex items-start justify-between gap-4 border-b border-border/60 px-8 pt-6 pb-4">
           <div>
             <h2 id="whats-new-title" className="guide-rise text-2xl font-semibold tracking-tight text-text-strong">
@@ -108,7 +103,7 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
           </button>
         </header>
 
-        <div ref={listRef} tabIndex={-1} className="relative min-h-0 flex-1 overflow-y-auto px-8 py-5 focus:outline-none">
+        <div ref={listRef} tabIndex={-1} className="sb-always relative min-h-0 flex-1 overflow-y-auto px-8 py-5 focus:outline-none">
           {imageUrl ? (
             <img src={imageUrl} alt={release.image?.alt ?? ''} draggable={false} className="guide-rise mb-6 w-full rounded-lg" style={rise()} />
           ) : null}
