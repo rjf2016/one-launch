@@ -3,12 +3,24 @@
 // it closed and still records the version, and Settings shows it on request. The card needs an entry at or below the
 // running version; without one the scenario checks only that nothing opens.
 import { sleep } from '../app-driver.mjs';
-import { skipSetup } from './lib.mjs';
+import { pixelAt, skipSetup } from './lib.mjs';
 
 export const name = 'whats-new';
 export const options = { fake: 'none' };
 
 const settle = () => sleep(900);
+
+/** True when the list does not overflow yet the middle of its scrollbar track shows the thumb colour rather than the card. */
+async function thumbWithoutOverflow(d) {
+  const list = await d.evaluate(() => {
+    const el = document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"] .overflow-y-auto');
+    const r = el.getBoundingClientRect();
+    return { overflows: el.scrollHeight > el.clientHeight, x: Math.round(r.right - 6), y: Math.round(r.top + r.height / 2) };
+  });
+  if (list.overflows) return false;
+  const [r, g, b] = await pixelAt(d, list.x, list.y);
+  return Math.abs(r - 0x34) + Math.abs(g - 0x3a) + Math.abs(b - 0x4b) < 24;
+}
 const cardOpen = (d) => d.evaluate(() => document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"]') !== null);
 const waitForCard = (d, { absent = false } = {}) =>
   d.waitFor(() => document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"]') !== null, { absent });
@@ -54,6 +66,19 @@ export default async (d) => {
     await d.shot('whats-new');
     await d.viewport(960, 600);
     await d.shot('whats-new-960x600');
+
+    // A window grown in small steps must not leave a scrollbar thumb painted once the list fits (the gutter is always reserved,
+    // so the thumb's pixel colour in the middle of the track is what tells a thumb from an empty track).
+    let stale = null;
+    for (let h = 600; h <= 1400 && !stale; h += 8) {
+      await d.viewport(1400, h);
+      await sleep(40);
+      if (await thumbWithoutOverflow(d)) {
+        await sleep(200);
+        if (await thumbWithoutOverflow(d)) stale = h;
+      }
+    }
+    d.check('a window grown in small steps leaves no scrollbar thumb once the list fits', stale === null, stale ? `thumb painted at h=${stale}` : '');
     await d.viewport(null);
     await d.click({ selector: '[aria-labelledby="whats-new-title"] button[aria-label="Close"]' });
     await waitForCard(d, { absent: true });

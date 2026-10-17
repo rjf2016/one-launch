@@ -103,7 +103,12 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
           </button>
         </header>
 
-        <div ref={listRef} tabIndex={-1} className="sb-always relative min-h-0 flex-1 overflow-y-auto px-8 py-5 focus:outline-none">
+        {/* The gutter is always reserved: with the image scaling to the width, a scrollbar that came and went would change the content height and Chromium would keep it. */}
+        <div
+          ref={listRef}
+          tabIndex={-1}
+          className="sb-always relative min-h-0 flex-1 overflow-y-auto py-5 pr-5 pl-8 [scrollbar-gutter:stable] focus:outline-none"
+        >
           {imageUrl ? (
             <img src={imageUrl} alt={release.image?.alt ?? ''} draggable={false} className="guide-rise mb-6 w-full rounded-lg" style={rise()} />
           ) : null}

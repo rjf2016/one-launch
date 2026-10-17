@@ -46,10 +46,6 @@ export const WHATS_NEW: readonly WhatsNewRelease[] = [
             lead: 'Improved update notifications.',
             detail: 'Users are now better informed about available updates and their impact.',
           },
-          {
-            lead: 'Enhanced security measures.',
-            detail: 'One Launch now includes additional security features to protect your data and privacy.',
-          },
         ],
       },
     ],
