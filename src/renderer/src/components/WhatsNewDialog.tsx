@@ -81,7 +81,7 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-title"
-        className="guide-card relative flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-panel"
+        className="guide-card relative flex max-h-full w-full max-w-[40rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-panel lg:max-w-[46rem] 2xl:max-w-[52rem]"
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -115,22 +115,22 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
               src={imageUrl}
               alt={release.image?.alt ?? ''}
               draggable={false}
-              className="guide-rise mb-5 w-full rounded-lg border border-border/60"
+              className="guide-rise mb-6 w-full rounded-lg border border-border/60"
               style={rise()}
             />
           ) : null}
           {release.intro ? (
-            <p className="guide-rise mb-5 text-sm text-text" style={rise()}>
+            <p className="guide-rise mb-6 text-sm text-text" style={rise()}>
               {release.intro}
             </p>
           ) : null}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-8">
             {groups.map((group, g) => {
               const tone = TONE[group.heading?.tone ?? 'accent'];
               return (
                 <div key={g}>
                   {group.heading ? (
-                    <h3 className={`guide-rise mb-3 flex items-center gap-3 text-xs font-bold tracking-wider uppercase ${tone.text}`} style={rise()}>
+                    <h3 className={`guide-rise mb-4 flex items-center gap-3 text-sm font-bold tracking-wider uppercase ${tone.text}`} style={rise()}>
                       <span>{group.heading.heading}</span>
                       <span aria-hidden className={`h-px flex-1 ${tone.line}`} />
                     </h3>
