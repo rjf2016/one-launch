@@ -81,7 +81,7 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
         role="dialog"
         aria-modal="true"
         aria-labelledby="whats-new-title"
-        className="guide-card relative flex max-h-full w-full max-w-[40rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-panel lg:max-w-[46rem] 2xl:max-w-[52rem]"
+        className="guide-card relative flex max-h-full w-full max-w-[40rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-panel"
         onClick={(e) => e.stopPropagation()}
       >
         <div
@@ -111,13 +111,7 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
 
         <div ref={listRef} tabIndex={-1} className="relative min-h-0 flex-1 overflow-y-auto px-8 py-5 focus:outline-none">
           {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={release.image?.alt ?? ''}
-              draggable={false}
-              className="guide-rise mb-6 w-full rounded-lg border border-border/60"
-              style={rise()}
-            />
+            <img src={imageUrl} alt={release.image?.alt ?? ''} draggable={false} className="guide-rise mb-6 w-full rounded-lg" style={rise()} />
           ) : null}
           {release.intro ? (
             <p className="guide-rise mb-6 text-sm text-text" style={rise()}>
