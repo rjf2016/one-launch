@@ -51,6 +51,7 @@ import { SecretStore } from './services/secrets';
 import { LauncherSessionStore } from './services/sessions';
 import { SettingsService } from './services/settings';
 import { SwitchJournal, SwitchRecoveryService } from './services/switch-journal';
+import { seedWhatsNewSeen } from './services/whats-new';
 import { SafeStorageVault } from './services/vault';
 import { VaultHealth } from './services/vault-health';
 import { createTray } from './tray';
@@ -413,6 +414,7 @@ function bootstrap(): void {
   }
 
   const settings = new SettingsService(db);
+  seedWhatsNewSeen(settings, migration.from === 0, app.getVersion());
   const configuredLevel = settings.get('logLevel');
   if (!isDev && isLogLevel(configuredLevel)) setLogLevel(configuredLevel);
   closeToTray = () => settings.getBool('window.closeToTray', true);

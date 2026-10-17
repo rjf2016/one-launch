@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Game, LaunchJob, LauncherId, LauncherStatus, UpdateStatus } from '@shared/models';
+import type { WhatsNewRelease } from '@shared/whats-new';
 
 export type View = 'library' | 'accounts' | 'settings';
 
@@ -61,6 +62,12 @@ export interface ActiveLaunch {
 /** Why the setup guide is open: a new install opened it by itself, or the user asked for it from Settings. */
 export type SetupGuideSource = 'first-run' | 'settings';
 
+/** The release the What's New card shows, and the running version it records as seen when it closes. */
+export interface WhatsNewRequest {
+  release: WhatsNewRelease;
+  version: string;
+}
+
 interface UiState {
   view: View;
   accountRoute: AccountRoute;
@@ -86,6 +93,10 @@ interface UiState {
   setupGuide: SetupGuideSource | null;
   openSetupGuide: (source: SetupGuideSource) => void;
   closeSetupGuide: () => void;
+  /** The What's New card is open for this release, or closed. Hosted at the app level, above every view. */
+  whatsNew: WhatsNewRequest | null;
+  openWhatsNew: (request: WhatsNewRequest) => void;
+  closeWhatsNew: () => void;
   openLaunch: (request: LaunchRequest) => void;
   closeLaunch: () => void;
   setActiveLaunch: (launch: ActiveLaunch | null) => void;
@@ -130,6 +141,9 @@ export const useUiStore = create<UiState>((set, get) => {
     setupGuide: null,
     openSetupGuide: (source) => set({ setupGuide: source }),
     closeSetupGuide: () => set({ setupGuide: null }),
+    whatsNew: null,
+    openWhatsNew: (request) => set({ whatsNew: request }),
+    closeWhatsNew: () => set({ whatsNew: null }),
     openLaunch: (request) => set({ launchRequest: { ...request, key: Date.now() } }),
     closeLaunch: () => set({ launchRequest: null }),
     setActiveLaunch: (launch) => set({ activeLaunch: launch }),

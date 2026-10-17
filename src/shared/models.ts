@@ -215,7 +215,9 @@ export type SettingKey =
   | 'window.bounds'
   | 'window.closeToTray'
   | 'firstRun.dismissed'
-  | 'updates.auto';
+  | 'updates.auto'
+  | 'whatsNew.enabled'
+  | 'whatsNew.lastSeen';
 
 export const SETTING_KEYS = [
   'dryRun',
@@ -234,6 +236,8 @@ export const SETTING_KEYS = [
   'window.closeToTray',
   'firstRun.dismissed',
   'updates.auto',
+  'whatsNew.enabled',
+  'whatsNew.lastSeen',
 ] as const satisfies readonly SettingKey[];
 
 /**

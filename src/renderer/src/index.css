@@ -105,6 +105,10 @@
   .sb-hover::-webkit-scrollbar-thumb:active {
     background-color: var(--color-border-strong);
   }
+  /* .sb-always keeps the thumb visible without the pointer: a list in a card, where a hidden thumb hides that there is more below. */
+  .sb-always::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-strong);
+  }
   ::-webkit-scrollbar-button {
     display: none;
     width: 0;
@@ -164,7 +168,7 @@
   }
 }
 
-/* The setup guide: entrances for the card, each step and its rows, and two slow loops (the account name that keeps changing, the ring around Play). Opacity and transform only, and none of it under reduced motion. */
+/* The setup guide and the What's New card: entrances for the card, each step and its rows, and the guide's two slow loops (the account name that keeps changing, the ring around Play). Opacity and transform only, and none of it under reduced motion. */
 @keyframes guide-card {
   from {
     opacity: 0;

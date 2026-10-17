@@ -72,6 +72,10 @@ export default async (d) => {
   await d.waitFor('Rescan');
   await sleep(1000);
   d.check('a second start on the same folder shows no guide', !(await d.has('Welcome to One Launch')));
+  d.check(
+    "and no What's New card: a new folder counts the running version as seen",
+    await d.evaluate(() => document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"]') === null),
+  );
   await settle();
   await d.shot('second-start');
 };

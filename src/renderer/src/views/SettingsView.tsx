@@ -1,6 +1,8 @@
-import { FolderOpen, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { FolderOpen, PartyPopper, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useState } from 'react';
 import { BATTLENET_LAUNCH_FORMS, EPIC_LAUNCH_URI_FORMS, LOG_LEVELS, type BattlenetLaunchForm, type EpicLaunchUriForm, type LogLevel } from '@shared/models';
+import { latestWhatsNew } from '@shared/whats-new';
+import { WHATS_NEW } from '@shared/whats-new-releases';
 import { ArtworkPanel } from '../components/ArtworkPanel';
 import { BackupsPanel } from '../components/BackupsPanel';
 import { Button } from '../components/Button';
@@ -17,6 +19,9 @@ import { useUiStore } from '../store/ui';
 
 type SelfTest = { state: 'idle' } | { state: 'running' } | { state: 'ok'; ms: number } | { state: 'failed'; message: string };
 
+// A development build only; in a production build this is `null` and the panel's chunk is never emitted.
+const WhatsNewDevPanel = import.meta.env.DEV ? lazy(() => import('../components/WhatsNewDevPanel')) : null;
+
 type EditableSetting =
   | 'dryRun'
   | 'logLevel'
@@ -26,7 +31,8 @@ type EditableSetting =
   | 'steam.autoLogin'
   | 'riot.pressPlay'
   | 'window.closeToTray'
-  | 'updates.auto';
+  | 'updates.auto'
+  | 'whatsNew.enabled';
 
 function formatMs(ms: number | null): string {
   return ms === null ? 'pending' : `${ms} ms`;
@@ -44,6 +50,7 @@ export function SettingsView() {
   const [pathError, setPathError] = useState<string | null>(null);
   const settingsChanged = useUiStore((s) => s.settingsChanged);
   const openSetupGuide = useUiStore((s) => s.openSetupGuide);
+  const openWhatsNew = useUiStore((s) => s.openWhatsNew);
 
   async function resetVault(): Promise<void> {
     setResetting(true);
@@ -69,6 +76,9 @@ export function SettingsView() {
   const steamAutoLogin = settings.data?.settings['steam.autoLogin'] === 'true';
   const riotPressPlay = settings.data?.settings['riot.pressPlay'] !== 'false';
   const closeToTray = settings.data?.settings['window.closeToTray'] !== 'false';
+  const whatsNewOn = settings.data?.settings['whatsNew.enabled'] !== 'false';
+  const version = info.data?.version ?? null;
+  const latestNotes = version ? latestWhatsNew(WHATS_NEW, version) : null;
 
   async function setSetting(key: EditableSetting, value: string): Promise<void> {
     setSettingsError(null);
@@ -175,6 +185,26 @@ export function SettingsView() {
               disabled={settings.loading}
               onChange={(next) => void setSetting('riot.pressPlay', String(next))}
             />
+          </Row>
+          <Row label="Show what's new after an update" hint="The first time you open One Launch after an update, a short list of what changed.">
+            <Toggle
+              label="Show what's new after an update"
+              checked={whatsNewOn}
+              disabled={settings.loading}
+              onChange={(next) => void setSetting('whatsNew.enabled', String(next))}
+            />
+          </Row>
+          <Row label="What's new" hint="The changes in the latest update.">
+            <Button
+              icon={<PartyPopper />}
+              aria-label="Show what's new"
+              disabled={!latestNotes}
+              onClick={() => {
+                if (latestNotes && version) openWhatsNew({ release: latestNotes, version });
+              }}
+            >
+              Show
+            </Button>
           </Row>
           <Row label="Setup guide" hint="The welcome steps: your launchers, how Play works, and adding accounts.">
             <Button icon={<Sparkles />} onClick={() => openSetupGuide('settings')}>
@@ -303,6 +333,12 @@ export function SettingsView() {
             <Row label="Build">{info.data ? (info.data.isPackaged ? 'Packaged' : 'Development') : '…'}</Row>
           </Panel>
         </Collapsible>
+
+        {WhatsNewDevPanel ? (
+          <Suspense fallback={null}>
+            <WhatsNewDevPanel />
+          </Suspense>
+        ) : null}
       </div>
     </Page>
   );

@@ -5,6 +5,7 @@ import { RecoveryHost } from './components/RecoveryDialog';
 import { SetupGuideHost } from './components/SetupGuide';
 import { NAV_ITEMS, Sidebar } from './components/Sidebar';
 import { TitleBar } from './components/TitleBar';
+import { WhatsNewHost } from './components/WhatsNewDialog';
 import { isShortcut } from './lib/shortcuts';
 import { SIDEBAR_NARROW_QUERY, useUiStore } from './store/ui';
 import { AccountDetailView } from './views/AccountDetailView';
@@ -55,6 +56,7 @@ export function App() {
       <TitleBar />
       <RecoveryHost />
       <SetupGuideHost />
+      <WhatsNewHost />
       <LaunchHost />
       <div className="flex min-h-0 flex-1">
         <Sidebar />

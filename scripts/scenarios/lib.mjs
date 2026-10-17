@@ -1,6 +1,7 @@
 // Helpers shared by the fake-launcher scenarios.
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { inflateSync } from 'node:zlib';
 import { repoRoot, sleep } from '../app-driver.mjs';
 
 export const LAUNCHER_NAMES = { steam: 'Steam', epic: 'Epic Games', battlenet: 'Battle.net', riot: 'Riot Games' };
@@ -38,6 +39,25 @@ export async function skipSetup(d, { shot = null } = {}) {
   await d.click('Skip setup');
   await d.waitFor('Welcome to One Launch', { absent: true });
   return true;
+}
+
+/** The colour of one page pixel as [r, g, b], from a 1x1 screenshot clip (a one-pixel PNG needs no unfiltering). */
+export async function pixelAt(d, x, y) {
+  const { data } = await d.send('Page.captureScreenshot', { format: 'png', clip: { x, y, width: 1, height: 1, scale: 1 } });
+  const png = Buffer.from(data, 'base64');
+  let offset = 8;
+  let channels = 4;
+  const idat = [];
+  while (offset < png.length) {
+    const length = png.readUInt32BE(offset);
+    const type = png.toString('latin1', offset + 4, offset + 8);
+    const body = png.subarray(offset + 8, offset + 8 + length);
+    if (type === 'IHDR') channels = { 0: 1, 2: 3, 4: 2, 6: 4 }[body[9]] ?? 4;
+    if (type === 'IDAT') idat.push(body);
+    offset += 12 + length;
+  }
+  const raw = inflateSync(Buffer.concat(idat));
+  return channels < 3 ? [raw[1], raw[1], raw[1]] : [raw[1], raw[2], raw[3]];
 }
 
 export function journalExists(d) {

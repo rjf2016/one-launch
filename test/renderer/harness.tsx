@@ -74,6 +74,7 @@ export function resetUi(): void {
       leaveGuard: null,
       settingsRevision: 0,
       setupGuide: null,
+      whatsNew: null,
     });
   });
   afterEach(() => cleanup());

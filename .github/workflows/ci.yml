@@ -29,11 +29,12 @@ jobs:
       - run: npm run lint
       - run: npx vitest run
       - run: npx electron-vite build
-      # The unpackaged build against fake launchers: Play on each launcher, the no-launchers first start, and the updater against a loopback feed.
+      # The unpackaged build against fake launchers: Play on each launcher, the no-launchers first start, the What's New card, and the updater against a loopback feed.
       - name: Fake-launcher and update-feed runs
         run: |
           node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=drive-out/play-all
           node scripts/drive.mjs scripts/scenarios/first-run.mjs --fake=none --shots=drive-out/first-run
+          node scripts/drive.mjs scripts/scenarios/whats-new.mjs --fake=none --shots=drive-out/whats-new
           node scripts/drive.mjs scripts/scenarios/update.mjs --fake=none --shots=drive-out/update
       # One electron-builder run makes both dist/win-unpacked and the NSIS installer.
       - run: npm run notices
