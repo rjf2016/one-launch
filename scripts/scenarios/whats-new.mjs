@@ -79,6 +79,24 @@ export default async (d) => {
       }
     }
     d.check('a window grown in small steps leaves no scrollbar thumb once the list fits', stale === null, stale ? `thumb painted at h=${stale}` : '');
+
+    // While the card is up, the wheel scrolls its list from anywhere in the window.
+    await d.viewport(960, 600);
+    await sleep(400);
+    const scrollTop = () => d.evaluate(() => document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"] .overflow-y-auto').scrollTop);
+    const scrollable = await d.evaluate(() => {
+      const list = document.querySelector('[role="dialog"][aria-labelledby="whats-new-title"] .overflow-y-auto');
+      return list.scrollHeight > list.clientHeight;
+    });
+    if (scrollable) {
+      await d.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 80, y: 300, deltaX: 0, deltaY: 200 });
+      await sleep(500);
+      const down = await scrollTop();
+      d.check('a wheel over the backdrop, away from the card, scrolls its list', down > 0, `${down} px`);
+      await d.send('Input.dispatchMouseEvent', { type: 'mouseWheel', x: 80, y: 300, deltaX: 0, deltaY: -2000 });
+      await sleep(600);
+      d.check('and wheels it back to the top', (await scrollTop()) === 0);
+    }
     await d.viewport(null);
     await d.click({ selector: '[aria-labelledby="whats-new-title"] button[aria-label="Close"]' });
     await waitForCard(d, { absent: true });

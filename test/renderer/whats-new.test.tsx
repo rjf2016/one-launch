@@ -203,6 +203,19 @@ describe('WhatsNewDialog', () => {
     await closed();
   });
 
+  it('scrolls the list from a wheel anywhere in the window, and leaves a wheel over the list to the browser', () => {
+    open();
+    const list = screen.getByRole('img', { name: 'The new Library' }).parentElement!;
+    const scrollBy = vi.fn();
+    Object.assign(list, { scrollBy });
+    fireEvent.wheel(document.body, { deltaY: 120 });
+    expect(scrollBy).toHaveBeenCalledWith({ top: 120, behavior: 'smooth' });
+    fireEvent.wheel(screen.getByRole('heading', { name: "What's New" }), { deltaY: 40 });
+    expect(scrollBy).toHaveBeenLastCalledWith({ top: 40, behavior: 'smooth' });
+    fireEvent.wheel(screen.getByText('Faster switches.'), { deltaY: 80 });
+    expect(scrollBy).toHaveBeenCalledTimes(2);
+  });
+
   it('closes even when the save fails, so the card returns next start', async () => {
     const bridge = open({ failSave: true });
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));

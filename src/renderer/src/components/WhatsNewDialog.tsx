@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { pickWhatsNew, type WhatsNewRelease, type WhatsNewTone } from '@shared/whats-new';
 import { WHATS_NEW } from '@shared/whats-new-releases';
 import { ipc } from '../lib/ipc';
+import { usePrefersReducedMotion } from '../lib/motion';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { whatsNewImageUrl } from '../lib/whatsNewImages';
 import { useUiStore } from '../store/ui';
@@ -35,8 +36,22 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
   const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const closingRef = useRef(false);
+  const reducedMotion = usePrefersReducedMotion();
   useEffect(() => listRef.current?.focus(), []);
   useFocusTrap(dialogRef);
+
+  // The card is all there is while it is up, so the wheel scrolls its list from anywhere in the window; over the list the browser scrolls as usual.
+  useEffect(() => {
+    const onWheel = (e: WheelEvent): void => {
+      const list = listRef.current;
+      if (!list || (e.target instanceof Node && list.contains(e.target))) return;
+      e.preventDefault();
+      const unit = e.deltaMode === WheelEvent.DOM_DELTA_LINE ? 16 : e.deltaMode === WheelEvent.DOM_DELTA_PAGE ? list.clientHeight : 1;
+      list.scrollBy({ top: e.deltaY * unit, behavior: reducedMotion ? 'auto' : 'smooth' });
+    };
+    window.addEventListener('wheel', onWheel, { passive: false });
+    return () => window.removeEventListener('wheel', onWheel);
+  }, [reducedMotion]);
 
   /** Records the running version as seen, then closes. A save that fails still closes: the card returns next start, which is the truthful outcome. */
   const close = useCallback(async (): Promise<void> => {
