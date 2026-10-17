@@ -1,6 +1,6 @@
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
-import { groupWhatsNew, pickWhatsNew, type WhatsNewRelease, type WhatsNewTone } from '@shared/whats-new';
+import { pickWhatsNew, type WhatsNewRelease, type WhatsNewTone } from '@shared/whats-new';
 import { WHATS_NEW } from '@shared/whats-new-releases';
 import { ipc } from '../lib/ipc';
 import { useFocusTrap } from '../lib/useFocusTrap';
@@ -61,7 +61,6 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
 
-  const groups = groupWhatsNew(release.items);
   const imageUrl = release.image ? whatsNewImageUrl(release.image.file) : null;
   let delay = 120;
   const rise = (): { animationDelay: string } => {
@@ -119,18 +118,16 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
             </p>
           ) : null}
           <div className="flex flex-col gap-8">
-            {groups.map((group, g) => {
-              const tone = TONE[group.heading?.tone ?? 'accent'];
+            {release.sections.map((section, s) => {
+              const tone = TONE[section.tone ?? 'accent'];
               return (
-                <div key={g}>
-                  {group.heading ? (
-                    <h3 className={`guide-rise mb-4 flex items-center gap-3 text-sm font-bold tracking-wider uppercase ${tone.text}`} style={rise()}>
-                      <span>{group.heading.heading}</span>
-                      <span aria-hidden className={`h-px flex-1 ${tone.line}`} />
-                    </h3>
-                  ) : null}
+                <div key={s}>
+                  <h3 className={`guide-rise mb-4 flex items-center gap-3 text-sm font-bold tracking-wider uppercase ${tone.text}`} style={rise()}>
+                    <span>{section.heading}</span>
+                    <span aria-hidden className={`h-px flex-1 ${tone.line}`} />
+                  </h3>
                   <ul className="flex flex-col gap-3.5">
-                    {group.items.map((item) => (
+                    {section.items.map((item) => (
                       <li key={item.lead} className="guide-rise flex gap-3 text-sm leading-relaxed" style={rise()}>
                         <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)]" />
                         <span>

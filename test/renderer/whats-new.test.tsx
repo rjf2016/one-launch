@@ -34,15 +34,16 @@ const RELEASES: readonly WhatsNewRelease[] = [
     date: '2026-10-20',
     intro: 'A quick one.',
     image: { file: 'sample.png', alt: 'The new Library' },
-    items: [
-      { heading: "What's your status", tone: 'success' },
-      { lead: 'Faster switches.', detail: 'Steam comes back in half the time.' },
-      { lead: 'A tidier Library.' },
-      { heading: 'Phones?', tone: 'warning' },
-      { lead: 'Nothing yet.' },
+    sections: [
+      {
+        heading: "What's your status",
+        tone: 'success',
+        items: [{ lead: 'Faster switches.', detail: 'Steam comes back in half the time.' }, { lead: 'A tidier Library.' }],
+      },
+      { heading: 'Phones?', tone: 'warning', items: [{ lead: 'Nothing yet.' }] },
     ],
   },
-  { version: '1.0.0-beta.3', date: '2026-10-01', items: [{ lead: 'Older news.' }] },
+  { version: '1.0.0-beta.3', date: '2026-10-01', sections: [{ heading: 'Older', items: [{ lead: 'Older news.' }] }] },
 ];
 
 const recovery: SwitchRecovery = {
@@ -169,12 +170,12 @@ describe('WhatsNewDialog', () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('img', { name: 'The new Library' }).parentElement));
   });
 
-  it('leaves out the image and the separators when a release has none', () => {
+  it('leaves out the image when a release has none, and colours a heading without a tone in the accent', () => {
     useUiStore.setState({ whatsNew: { release: RELEASES[1]!, version: info.version } });
     main({ settings: { 'whatsNew.lastSeen': info.version } });
     render(<WhatsNewHost releases={RELEASES} />);
     expect(screen.queryByRole('img')).toBeNull();
-    expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
+    expect(screen.getByRole('heading', { level: 3, name: 'Older' }).className).toContain('text-accent');
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 

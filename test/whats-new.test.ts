@@ -1,21 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import {
-  compareVersions,
-  groupWhatsNew,
-  isVersionString,
-  latestWhatsNew,
-  pickWhatsNew,
-  WHATS_NEW_TONES,
-  type WhatsNewEntry,
-  type WhatsNewRelease,
-} from '../src/shared/whats-new';
+import { compareVersions, isVersionString, latestWhatsNew, pickWhatsNew, WHATS_NEW_TONES, type WhatsNewRelease } from '../src/shared/whats-new';
 import { WHATS_NEW } from '../src/shared/whats-new-releases';
 
 const IMAGES = join(__dirname, '..', 'src', 'renderer', 'src', 'assets', 'whats-new');
 
-const release = (version: string): WhatsNewRelease => ({ version, date: '2026-10-01', items: [{ lead: 'Something changed.' }] });
+const release = (version: string): WhatsNewRelease => ({
+  version,
+  date: '2026-10-01',
+  sections: [{ heading: 'Changes', items: [{ lead: 'Something changed.' }] }],
+});
 
 describe('isVersionString', () => {
   it('accepts a semver core with an optional prerelease and refuses the rest', () => {
@@ -74,26 +69,6 @@ describe('pickWhatsNew', () => {
   });
 });
 
-describe('groupWhatsNew', () => {
-  it('puts each separator over the items after it, and items before the first separator in a group of their own', () => {
-    const entries: WhatsNewEntry[] = [
-      { lead: 'Loose.' },
-      { heading: 'Status', tone: 'success' },
-      { lead: 'One.' },
-      { lead: 'Two.', detail: 'More.' },
-      { heading: 'Phones' },
-      { lead: 'Three.' },
-    ];
-    expect(groupWhatsNew(entries)).toEqual([
-      { heading: null, items: [{ lead: 'Loose.' }] },
-      { heading: { heading: 'Status', tone: 'success' }, items: [{ lead: 'One.' }, { lead: 'Two.', detail: 'More.' }] },
-      { heading: { heading: 'Phones' }, items: [{ lead: 'Three.' }] },
-    ]);
-    expect(groupWhatsNew([])).toEqual([]);
-    expect(groupWhatsNew([{ heading: 'Empty' }])).toEqual([{ heading: { heading: 'Empty' }, items: [] }]);
-  });
-});
-
 describe('WHATS_NEW', () => {
   it('is newest first, unique, dated, filled in, with every image on disk, and never ahead of package.json', () => {
     const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')) as { version: string };
@@ -110,15 +85,12 @@ describe('WHATS_NEW', () => {
         expect(r.image.file, r.version).not.toMatch(/[\\/]/);
         expect(existsSync(join(IMAGES, r.image.file)), `${r.version}: ${r.image.file} is not in src/renderer/src/assets/whats-new`).toBe(true);
       }
-      const groups = groupWhatsNew(r.items);
-      expect(groups.flatMap((g) => g.items).length, `${r.version} has no changes`).toBeGreaterThan(0);
-      for (const g of groups) {
-        if (g.heading) {
-          expect(g.heading.heading.trim().length, r.version).toBeGreaterThan(0);
-          if (g.heading.tone) expect(WHATS_NEW_TONES).toContain(g.heading.tone);
-          expect(g.items.length, `${r.version}: the separator "${g.heading.heading}" has nothing under it`).toBeGreaterThan(0);
-        }
-        for (const item of g.items) expect(item.lead.trim().length, r.version).toBeGreaterThan(0);
+      expect(r.sections.length, `${r.version} has no sections`).toBeGreaterThan(0);
+      for (const section of r.sections) {
+        expect(section.heading.trim().length, `${r.version}: a section has no heading`).toBeGreaterThan(0);
+        if (section.tone) expect(WHATS_NEW_TONES).toContain(section.tone);
+        expect(section.items.length, `${r.version}: the section ${section.heading} has no changes`).toBeGreaterThan(0);
+        for (const item of section.items) expect(item.lead.trim().length, `${r.version}: ${section.heading}`).toBeGreaterThan(0);
       }
     }
     for (let i = 1; i < WHATS_NEW.length; i++) expect(compareVersions(WHATS_NEW[i - 1]!.version, WHATS_NEW[i]!.version)).toBe(1);
