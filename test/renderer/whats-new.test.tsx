@@ -9,6 +9,10 @@ import type { AppInfo, SettingKey, SwitchRecovery } from '../../src/shared/model
 import type { WhatsNewRelease } from '../../src/shared/whats-new';
 import { BridgeError, installBridge, resetUi, type Bridge } from './harness';
 
+vi.mock('../../src/renderer/src/lib/whatsNewImages', () => ({
+  whatsNewImageUrl: (file: string) => (file === 'sample.png' ? 'data:image/png;base64,sample' : null),
+}));
+
 resetUi();
 
 const info: AppInfo = {
@@ -29,7 +33,14 @@ const RELEASES: readonly WhatsNewRelease[] = [
     version: '1.0.0-beta.5',
     date: '2026-10-20',
     intro: 'A quick one.',
-    items: [{ lead: 'Faster switches.', detail: 'Steam comes back in half the time.' }, { lead: 'A tidier Library.' }],
+    image: { file: 'sample.png', alt: 'The new Library' },
+    items: [
+      { heading: "What's your status", tone: 'success' },
+      { lead: 'Faster switches.', detail: 'Steam comes back in half the time.' },
+      { lead: 'A tidier Library.' },
+      { heading: 'Phones?', tone: 'warning' },
+      { lead: 'Nothing yet.' },
+    ],
   },
   { version: '1.0.0-beta.3', date: '2026-10-01', items: [{ lead: 'Older news.' }] },
 ];
@@ -137,18 +148,34 @@ describe('WhatsNewDialog', () => {
   const closed = () => waitFor(() => expect(dialog()).toBeNull());
   const recorded = (bridge: Bridge) => waitFor(() => expect(bridge.sent('settings:set')).toEqual([{ key: 'whatsNew.lastSeen', value: info.version }]));
 
-  it('shows the title and the release date, one line per change, and starts with the focus on the list so the keyboard scrolls it', async () => {
+  it('shows the title and the release date, the image, each separator in its tone over its changes, and starts with the focus on the list', async () => {
     open();
     expect(dialog()?.getAttribute('aria-modal')).toBe('true');
-    expect(screen.getByRole('heading', { name: "What's New" })).toBeTruthy();
+    expect(screen.getByRole('heading', { level: 2, name: "What's New" })).toBeTruthy();
     expect(screen.getByText(formatReleaseDate('2026-10-20'))).toBeTruthy();
     expect(dialog()?.textContent).not.toContain('1.0.0-beta.5');
+    expect(screen.getByRole('img', { name: 'The new Library' }).getAttribute('src')).toBe('data:image/png;base64,sample');
     expect(screen.getByText('A quick one.')).toBeTruthy();
+    const status = screen.getByRole('heading', { level: 3, name: "What's your status" });
+    expect(status.className).toContain('text-success');
+    expect(screen.getByRole('heading', { level: 3, name: 'Phones?' }).className).toContain('text-warning');
+    const lists = screen.getAllByRole('list');
+    expect(lists).toHaveLength(2);
+    expect(lists[0]!.querySelectorAll('li')).toHaveLength(2);
+    expect(lists[1]!.querySelectorAll('li')).toHaveLength(1);
     expect(screen.getByText('Faster switches.')).toBeTruthy();
     expect(screen.getByText('Steam comes back in half the time.')).toBeTruthy();
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.queryByRole('button', { name: "Let's go" })).toBeNull();
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('list').parentElement));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('img', { name: 'The new Library' }).parentElement));
+  });
+
+  it('leaves out the image and the separators when a release has none', () => {
+    useUiStore.setState({ whatsNew: { release: RELEASES[1]!, version: info.version } });
+    main({ settings: { 'whatsNew.lastSeen': info.version } });
+    render(<WhatsNewHost releases={RELEASES} />);
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByRole('heading', { level: 3 })).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('the X records the running version as seen and closes', async () => {

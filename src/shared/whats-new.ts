@@ -1,7 +1,25 @@
-/** One change in a release: a bold lead sentence and, optionally, a plain sentence after it. */
+/** The colours a separator may take: the app's accent and status tokens, and one per launcher. */
+export const WHATS_NEW_TONES = ['accent', 'success', 'warning', 'danger', 'steam', 'epic', 'battlenet', 'riot'] as const;
+export type WhatsNewTone = (typeof WHATS_NEW_TONES)[number];
+
+/** One change: a bold lead sentence and, optionally, a plain sentence after it. */
 export interface WhatsNewItem {
   lead: string;
   detail?: string;
+}
+
+/** A separator above the items that follow it: its text and its colour (accent when unset). */
+export interface WhatsNewHeading {
+  heading: string;
+  tone?: WhatsNewTone;
+}
+
+export type WhatsNewEntry = WhatsNewItem | WhatsNewHeading;
+
+/** A picture shown full width at the top of the list: a file in src/renderer/src/assets/whats-new/. */
+export interface WhatsNewImage {
+  file: string;
+  alt?: string;
 }
 
 /** A release that announces itself once, the first time One Launch opens after the update that brought it. `date` is YYYY-MM-DD. */
@@ -9,7 +27,32 @@ export interface WhatsNewRelease {
   version: string;
   date: string;
   intro?: string;
-  items: readonly WhatsNewItem[];
+  image?: WhatsNewImage;
+  items: readonly WhatsNewEntry[];
+}
+
+export function isWhatsNewHeading(entry: WhatsNewEntry): entry is WhatsNewHeading {
+  return 'heading' in entry;
+}
+
+/** The list as rendered: each separator with the items under it; items before the first separator form a group with none. */
+export interface WhatsNewGroup {
+  heading: WhatsNewHeading | null;
+  items: WhatsNewItem[];
+}
+
+export function groupWhatsNew(entries: readonly WhatsNewEntry[]): WhatsNewGroup[] {
+  const groups: WhatsNewGroup[] = [];
+  for (const entry of entries) {
+    if (isWhatsNewHeading(entry)) {
+      groups.push({ heading: entry, items: [] });
+      continue;
+    }
+    const last = groups[groups.length - 1];
+    if (last) last.items.push(entry);
+    else groups.push({ heading: null, items: [entry] });
+  }
+  return groups;
 }
 
 const VERSION_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;

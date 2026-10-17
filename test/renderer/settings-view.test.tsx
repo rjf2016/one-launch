@@ -96,3 +96,16 @@ describe("Settings › General: what's new", () => {
     expect(useUiStore.getState().whatsNew).toBeNull();
   });
 });
+
+describe('Settings › Developer (development builds only)', () => {
+  it('previews any entry in the file, whatever the running version', async () => {
+    settingsPage({}, { ...info, version: '0.0.1' });
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    const preview = await screen.findByRole('button', { name: 'Preview' });
+    await waitFor(() => expect(preview.hasAttribute('disabled')).toBe(false));
+    expect(screen.getByRole('button', { name: "Show what's new" }).hasAttribute('disabled')).toBe(true);
+    await user.click(preview);
+    expect(useUiStore.getState().whatsNew).toEqual({ release: WHATS_NEW[0], version: '0.0.1' });
+  });
+});

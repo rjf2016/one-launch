@@ -1,13 +1,25 @@
 import { X } from 'lucide-react';
 import { useCallback, useEffect, useRef } from 'react';
-import { pickWhatsNew, type WhatsNewRelease } from '@shared/whats-new';
+import { groupWhatsNew, pickWhatsNew, type WhatsNewRelease, type WhatsNewTone } from '@shared/whats-new';
 import { WHATS_NEW } from '@shared/whats-new-releases';
 import { ipc } from '../lib/ipc';
 import { useFocusTrap } from '../lib/useFocusTrap';
+import { whatsNewImageUrl } from '../lib/whatsNewImages';
 import { useUiStore } from '../store/ui';
 
 /** How long the Library gets to paint before the card rises over it. */
 const OPEN_DELAY_MS = 400;
+
+const TONE: Record<WhatsNewTone, { text: string; line: string }> = {
+  accent: { text: 'text-accent', line: 'bg-accent/40' },
+  success: { text: 'text-success', line: 'bg-success/40' },
+  warning: { text: 'text-warning', line: 'bg-warning/40' },
+  danger: { text: 'text-danger', line: 'bg-danger/40' },
+  steam: { text: 'text-steam', line: 'bg-steam/40' },
+  epic: { text: 'text-epic', line: 'bg-epic/40' },
+  battlenet: { text: 'text-battlenet', line: 'bg-battlenet/40' },
+  riot: { text: 'text-riot', line: 'bg-riot/40' },
+};
 
 /** `YYYY-MM-DD` as the user's long date, built from the parts so the day never shifts with the time zone. */
 export function formatReleaseDate(date: string): string {
@@ -16,7 +28,7 @@ export function formatReleaseDate(date: string): string {
   return new Date(year, month - 1, day).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-/** The card: the title and the release's date stay at the top while the list of changes (bold lead, plain detail) scrolls under them. */
+/** The card: the title and the release's date stay at the top while the image, the intro and the list of changes scroll under them. */
 export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease; version: string }) {
   const closeWhatsNew = useUiStore((s) => s.closeWhatsNew);
   const settingsChanged = useUiStore((s) => s.settingsChanged);
@@ -48,6 +60,15 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [close]);
+
+  const groups = groupWhatsNew(release.items);
+  const imageUrl = release.image ? whatsNewImageUrl(release.image.file) : null;
+  let delay = 120;
+  const rise = (): { animationDelay: string } => {
+    const style = { animationDelay: `${Math.min(delay, 700)}ms` };
+    delay += 50;
+    return style;
+  };
 
   return (
     <div
@@ -89,22 +110,46 @@ export function WhatsNewDialog({ release, version }: { release: WhatsNewRelease;
         </header>
 
         <div ref={listRef} tabIndex={-1} className="relative min-h-0 flex-1 overflow-y-auto px-8 py-5 focus:outline-none">
+          {imageUrl ? (
+            <img
+              src={imageUrl}
+              alt={release.image?.alt ?? ''}
+              draggable={false}
+              className="guide-rise mb-5 w-full rounded-lg border border-border/60"
+              style={rise()}
+            />
+          ) : null}
           {release.intro ? (
-            <p className="guide-rise mb-4 text-sm text-text" style={{ animationDelay: '120ms' }}>
+            <p className="guide-rise mb-5 text-sm text-text" style={rise()}>
               {release.intro}
             </p>
           ) : null}
-          <ul className="flex flex-col gap-3.5">
-            {release.items.map((item, i) => (
-              <li key={item.lead} className="guide-rise flex gap-3 text-sm leading-relaxed" style={{ animationDelay: `${160 + i * 60}ms` }}>
-                <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)]" />
-                <span>
-                  <strong className="font-semibold text-text-strong">{item.lead}</strong>
-                  {item.detail ? <span className="text-muted"> {item.detail}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="flex flex-col gap-6">
+            {groups.map((group, g) => {
+              const tone = TONE[group.heading?.tone ?? 'accent'];
+              return (
+                <div key={g}>
+                  {group.heading ? (
+                    <h3 className={`guide-rise mb-3 flex items-center gap-3 text-xs font-bold tracking-wider uppercase ${tone.text}`} style={rise()}>
+                      <span>{group.heading.heading}</span>
+                      <span aria-hidden className={`h-px flex-1 ${tone.line}`} />
+                    </h3>
+                  ) : null}
+                  <ul className="flex flex-col gap-3.5">
+                    {group.items.map((item) => (
+                      <li key={item.lead} className="guide-rise flex gap-3 text-sm leading-relaxed" style={rise()}>
+                        <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-accent shadow-[0_0_8px_var(--color-accent)]" />
+                        <span>
+                          <strong className="font-semibold text-text-strong">{item.lead}</strong>
+                          {item.detail ? <span className="text-muted"> {item.detail}</span> : null}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

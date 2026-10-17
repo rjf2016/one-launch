@@ -1,5 +1,5 @@
 import { FolderOpen, PartyPopper, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { BATTLENET_LAUNCH_FORMS, EPIC_LAUNCH_URI_FORMS, LOG_LEVELS, type BattlenetLaunchForm, type EpicLaunchUriForm, type LogLevel } from '@shared/models';
 import { latestWhatsNew } from '@shared/whats-new';
 import { WHATS_NEW } from '@shared/whats-new-releases';
@@ -18,6 +18,9 @@ import { ipc, useIpcQuery } from '../lib/ipc';
 import { useUiStore } from '../store/ui';
 
 type SelfTest = { state: 'idle' } | { state: 'running' } | { state: 'ok'; ms: number } | { state: 'failed'; message: string };
+
+// A development build only; in a production build this is `null` and the panel's chunk is never emitted.
+const WhatsNewDevPanel = import.meta.env.DEV ? lazy(() => import('../components/WhatsNewDevPanel')) : null;
 
 type EditableSetting =
   | 'dryRun'
@@ -330,6 +333,12 @@ export function SettingsView() {
             <Row label="Build">{info.data ? (info.data.isPackaged ? 'Packaged' : 'Development') : '…'}</Row>
           </Panel>
         </Collapsible>
+
+        {WhatsNewDevPanel ? (
+          <Suspense fallback={null}>
+            <WhatsNewDevPanel />
+          </Suspense>
+        ) : null}
       </div>
     </Page>
   );
