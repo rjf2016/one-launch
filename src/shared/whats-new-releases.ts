@@ -1,10 +1,10 @@
 import type { WhatsNewRelease } from './whats-new';
 
 /**
- * What each release tells the user the first time One Launch opens after that update. Newest first. A release with an
- * entry here announces itself once; leave a release out and nobody is interrupted for it. An `image` is a file in
- * src/renderer/src/assets/whats-new/, shown at the top. Each section is a heading in one of the palette tones over its
- * changes; a change has a bold `lead` and a plain `detail`.
+ * What each release tells the user the first time One Launch opens after that update, and the GitHub release's notes
+ * (scripts/release-notes.mjs renders the entry; the release workflow refuses a version without one). Newest first. An
+ * `image` is a file in src/renderer/src/assets/whats-new/, shown at the top. Each section is a heading in one of the
+ * palette tones over its changes; a change has a bold `lead` and a plain `detail`.
  */
 export const WHATS_NEW: readonly WhatsNewRelease[] = [
   {

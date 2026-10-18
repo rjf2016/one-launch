@@ -27,6 +27,7 @@
     "format": "prettier --write .",
     "drive": "node scripts/drive.mjs",
     "release:keygen": "node scripts/release-keygen.mjs",
+    "release:notes": "node scripts/release-notes.mjs",
     "release:sign": "node scripts/release-sign.mjs"
   },
   "dependencies": {
