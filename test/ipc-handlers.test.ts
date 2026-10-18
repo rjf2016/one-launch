@@ -6,7 +6,7 @@ import type { SwitchRecovery } from '../src/shared/models';
 const handlers = new Map<string, (event: unknown, req: unknown) => Promise<unknown>>();
 vi.mock('electron', () => ({
   app: { getVersion: () => '0.0.0-test', isPackaged: false },
-  shell: { openPath: async () => '' },
+  shell: { openPath: async () => '', openExternal: async () => undefined },
   ipcMain: { handle: (channel: string, fn: (event: unknown, req: unknown) => Promise<unknown>) => handlers.set(channel, fn) },
 }));
 

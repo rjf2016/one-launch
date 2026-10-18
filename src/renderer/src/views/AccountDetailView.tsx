@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRightLeft, Check, Copy, Eye, EyeOff, KeyRound, ListChecks, ShieldCheck, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ACCOUNT_LIMITS,
   LAUNCHER_DISPLAY_NAMES,
@@ -81,6 +81,14 @@ interface AccountFormProps {
   autoFocus?: boolean;
   onChange: (patch: Partial<Draft>) => void;
 }
+
+/** What the first Play on a new account asks of the user, said once, where the account is added. */
+const FIRST_PLAY: Readonly<Record<LauncherId, string>> = {
+  steam: 'First Play: Steam asks you to sign in once; keep “Remember me” ticked.',
+  epic: 'First Play: Epic Games Launcher asks you to sign in once.',
+  battlenet: 'First Play: Battle.net asks you to sign in once; leave “Keep me logged in” on.',
+  riot: 'First Play: the Riot Client asks you to sign in once; tick “Stay signed in”.',
+};
 
 const EXAMPLES: Readonly<Record<LauncherId, { name: string; notes: string }>> = {
   steam: { name: 'CS2 alt', notes: 'Prime · owns Rust and CS2 · Family Sharing on' },
@@ -174,13 +182,25 @@ function LauncherIdField({ draft, launcher, disabled, onChange }: Pick<AccountFo
 // Password controls (edit mode only).
 // ---------------------------------------------------------------------------
 
-function PasswordPanel({ account, onChanged, flash }: { account: Account; onChanged: (a: Account) => void; flash: (t: string, ms?: number) => void }) {
+interface PasswordPanelProps {
+  account: Account;
+  onChanged: (a: Account) => void;
+  /** Whether a typed password is waiting to be stored, so leaving the page can ask first. */
+  onDraft: (pending: boolean) => void;
+  flash: (t: string, ms?: number) => void;
+}
+
+function PasswordPanel({ account, onChanged, onDraft, flash }: PasswordPanelProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmRemove, setConfirmRemove] = useState(false);
+
+  useEffect(() => {
+    onDraft(editing && value !== '');
+  }, [editing, value, onDraft]);
 
   function reset(): void {
     setEditing(false);
@@ -375,6 +395,9 @@ function SwitchPlanPanel({ account }: { account: Account }) {
 function CreateAccount({ launcher }: { launcher: LauncherId }) {
   const back = useUiStore((s) => s.backToAccounts);
   const openAccount = useUiStore((s) => s.openAccount);
+  const returnTo = useUiStore((s) => s.returnTo);
+  const openLaunch = useUiStore((s) => s.openLaunch);
+  const setView = useUiStore((s) => s.setView);
   const setLeaveGuard = useUiStore((s) => s.setLeaveGuard);
   const ask = useUiStore((s) => s.ask);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -409,7 +432,13 @@ function CreateAccount({ launcher }: { launcher: LauncherId }) {
     try {
       const { account } = await ipc.invoke('accounts:create', input);
       setPassword('');
-      openAccount(account.id);
+      // Sent here by a game's Play: back to that game, with the new account picked.
+      if (returnTo && returnTo.launcher === launcher) {
+        setView('library');
+        openLaunch({ game: returnTo, initialAccountId: account.id });
+      } else {
+        openAccount(account.id, { created: true });
+      }
     } catch (err) {
       setError(errorMessage(err));
       setBusy(false);
@@ -441,7 +470,7 @@ function CreateAccount({ launcher }: { launcher: LauncherId }) {
       </header>
 
       <div className="flex flex-col gap-4 pb-6">
-        <Panel title="Details">
+        <Panel title="Details" description={FIRST_PLAY[launcher]}>
           <AccountForm draft={draft} errors={errors} launcher={launcher} disabled={busy} autoFocus onChange={(p) => setDraft((d) => ({ ...d, ...p }))} />
         </Panel>
         <Panel
@@ -484,7 +513,7 @@ function CreateAccount({ launcher }: { launcher: LauncherId }) {
 // Edit.
 // ---------------------------------------------------------------------------
 
-function EditAccount({ id }: { id: string }) {
+function EditAccount({ id, created }: { id: string; created: boolean }) {
   const back = useUiStore((s) => s.backToAccounts);
   const setLeaveGuard = useUiStore((s) => s.setLeaveGuard);
   const ask = useUiStore((s) => s.ask);
@@ -492,10 +521,12 @@ function EditAccount({ id }: { id: string }) {
   const query = useIpcQuery(() => ipc.invoke('accounts:get', { id }), [id]);
   const [account, setAccount] = useState<Account | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [passwordDraft, setPasswordDraft] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [flash, setFlash] = useFlash();
+  const announced = useRef(false);
 
   useEffect(() => {
     if (query.data) {
@@ -504,13 +535,25 @@ function EditAccount({ id }: { id: string }) {
     }
   }, [query.data]);
 
+  useEffect(() => {
+    if (!created || announced.current) return;
+    announced.current = true;
+    setFlash('Account created. Pick a game in the Library and press Play.', 'success', 8000);
+  });
+
   const baseline = useMemo(() => (account ? draftFrom(account) : emptyDraft), [account]);
   const dirty = account !== null && !sameDraft(draft, baseline);
 
   useEffect(() => {
-    setLeaveGuard(dirty ? () => ask({ title: 'Leave without saving?', message: 'Your changes to this account will be lost.' }) : null);
+    setLeaveGuard(
+      dirty
+        ? () => ask({ title: 'Leave without saving?', message: 'Your changes to this account will be lost.' })
+        : passwordDraft
+          ? () => ask({ title: 'Leave without storing the password?', message: 'The password you typed is not stored until you press Store password.' })
+          : null,
+    );
     return () => setLeaveGuard(null);
-  }, [dirty, setLeaveGuard, ask]);
+  }, [dirty, passwordDraft, setLeaveGuard, ask]);
 
   /** A capture or a switch recorded the launcher's account id; show it without losing unsaved edits to other fields. */
   function onLinked(next: Account): void {
@@ -622,7 +665,7 @@ function EditAccount({ id }: { id: string }) {
             title={dirty ? 'Save changes (Ctrl+S)' : 'No unsaved changes'}
             onClick={() => void save()}
           >
-            {busy ? 'Saving…' : dirty ? 'Save changes' : 'Saved'}
+            {busy ? 'Saving…' : 'Save changes'}
           </Button>
         </div>
       </header>
@@ -632,7 +675,7 @@ function EditAccount({ id }: { id: string }) {
           <AccountForm draft={draft} errors={errors} launcher={account.launcher} disabled={busy} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} />
         </Panel>
 
-        <PasswordPanel account={account} onChanged={setAccount} flash={(t, ms) => setFlash(t, 'success', ms)} />
+        <PasswordPanel account={account} onChanged={setAccount} onDraft={setPasswordDraft} flash={(t, ms) => setFlash(t, 'success', ms)} />
 
         {hasSessionPanel(account.launcher) ? <SessionPanel account={account} onAccountChanged={onLinked} /> : null}
 
@@ -672,6 +715,6 @@ function EditAccount({ id }: { id: string }) {
 export function AccountDetailView() {
   const route = useUiStore((s) => s.accountRoute);
   if (route.kind === 'new') return <CreateAccount launcher={route.launcher} />;
-  if (route.kind === 'detail') return <EditAccount key={route.id} id={route.id} />;
+  if (route.kind === 'detail') return <EditAccount key={route.id} id={route.id} created={route.created === true} />;
   return null;
 }

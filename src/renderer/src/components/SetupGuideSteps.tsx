@@ -143,8 +143,8 @@ function SkeletonRow() {
 
 function artworkLine(artworkOn: boolean): string {
   return artworkOn
-    ? "Cover art is downloaded for you: One Launch looks your games up on Steam's store and image servers and, with an API key from Settings, on SteamGridDB. Only game names and store ids are sent, never anything about your accounts. Settings › Artwork turns this off."
-    : "Cover art downloads are off. Settings › Artwork turns them on; One Launch then looks your games up on Steam's store and image servers, and only game names and store ids are sent, never anything about your accounts.";
+    ? 'Covers are downloaded for you from Steam; only game names and store ids are sent, never anything about your accounts. Games Steam does not sell need a free SteamGridDB key (Settings › Artwork).'
+    : 'Cover art downloads are off. Settings › Artwork turns them on; only game names and store ids are ever sent, never anything about your accounts.';
 }
 
 function GamesLine({ games }: { games: number | null }) {
@@ -412,7 +412,7 @@ export function AccountsStep({ launchers, remembered, selected, importedKeys, im
         <h3 id="setup-by-hand" className="text-xs font-medium tracking-wide text-muted uppercase">
           Add by hand
         </h3>
-        <p className="mt-1 text-xs text-faint">Pick a launcher here and its account form opens when you finish.</p>
+        <p className="mt-1 text-xs text-faint">Pick a launcher; its account form opens when you finish the guide.</p>
         <div className="mt-2.5 flex flex-wrap gap-2">
           {LAUNCHER_IDS.map((id) => {
             const on = byHand === id;

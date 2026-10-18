@@ -78,27 +78,41 @@ describe('LaunchDialog: picking an account', () => {
     expect(screen.getByText('Switch Steam to Main')).toBeTruthy();
   });
 
-  it('offers only the Accounts page when the launcher has no account yet, and going there closes the dialog', async () => {
-    const { user, onClose } = open({ 'accounts:list': () => ({ accounts: [EPIC] }) }, { game: game({ needsUpdate: true }) });
-    expect(await screen.findByText(/No Steam accounts yet/)).toBeTruthy();
+  it('offers the import when the launcher has no account yet, and going there closes the dialog and remembers the game', async () => {
+    const dota = game({ needsUpdate: true });
+    const { user, onClose } = open({ 'accounts:list': () => ({ accounts: [EPIC] }) }, { game: dota });
+    expect(await screen.findByText(/No Steam accounts yet\. Import the ones Steam remembers, or add one by hand on the Accounts page\./)).toBeTruthy();
     expect(screen.getByText('Add an account first')).toBeTruthy();
     expect(screen.queryByText(/updates Dota 2 before it starts/)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
-    await user.click(screen.getByRole('button', { name: 'Go to Accounts' }));
+    await user.click(screen.getByRole('button', { name: 'Import Steam accounts' }));
     expect(onClose).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(useUiStore.getState().view).toBe('accounts'));
     expect(useUiStore.getState().accountRoute).toEqual({ kind: 'list' });
+    expect(useUiStore.getState().importIntent).toBe('steam');
+    expect(useUiStore.getState().returnTo).toEqual(dota);
   });
 
-  it('opens the new-account form straight away for a launcher with nothing to import', async () => {
-    const { user, onClose } = open({ 'accounts:list': () => ({ accounts: [MAIN] }) }, { game: game({ launcher: 'epic', name: 'Rocket League' }) });
+  it('opens the new-account form straight away for a launcher with nothing to import, remembering the game', async () => {
+    const rocket = game({ launcher: 'epic', name: 'Rocket League' });
+    const { user, onClose } = open({ 'accounts:list': () => ({ accounts: [MAIN] }) }, { game: rocket });
     expect(await screen.findByText('No Epic Games accounts yet.')).toBeTruthy();
     expect(screen.queryByText(/Accounts page/)).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Add Epic Games account' }));
     expect(onClose).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(useUiStore.getState().accountRoute).toEqual({ kind: 'new', launcher: 'epic' }));
     expect(useUiStore.getState().view).toBe('accounts');
+    expect(useUiStore.getState().returnTo).toEqual(rocket);
+  });
+
+  it('forgets the game on the next navigation, so a later form never jumps back to a stale Play', async () => {
+    const { user } = open({ 'accounts:list': () => ({ accounts: [MAIN] }) }, { game: game({ launcher: 'epic', name: 'Rocket League' }) });
+    await user.click(await screen.findByRole('button', { name: 'Add Epic Games account' }));
+    await waitFor(() => expect(useUiStore.getState().returnTo).not.toBeNull());
+    useUiStore.getState().setView('settings');
+    await waitFor(() => expect(useUiStore.getState().view).toBe('settings'));
+    expect(useUiStore.getState().returnTo).toBeNull();
   });
 });
 
@@ -370,6 +384,7 @@ describe('LaunchDialog: progress and outcome', () => {
       kind: 'sign-in' as const,
       title: 'Steam is asking you to sign in as user_2',
       message: 'Sign in once.',
+      steps: ['In the Steam window, enter the account name user_2 and your password.', 'Keep “Remember me” ticked.', 'Sign in.'],
       reason: 'Expired',
       canCopyPassword: true,
       until: new Date(Date.now() + 300_000).toISOString(),
@@ -383,6 +398,13 @@ describe('LaunchDialog: progress and outcome', () => {
     await user.click(await playButton());
     expect(await shown('Steam is asking you to sign in as user_2')).toBeTruthy();
     expect(status()).toBe('Steam is asking you to sign in as user_2');
+    const steps = within(screen.getByRole('list', { name: 'What to do' })).getAllByRole('listitem');
+    expect(steps.map((s) => s.textContent)).toEqual([
+      'In the Steam window, enter the account name user_2 and your password.',
+      'Keep “Remember me” ticked.',
+      'Sign in.',
+    ]);
+    expect(steps[1]!.querySelector('strong')?.textContent).toBe('“Remember me”');
     await user.click(screen.getByRole('button', { name: 'Copy password' }));
     expect(await screen.findByText('Password copied · clipboard clears in 30s while One Launch is open')).toBeTruthy();
     expect(bridge.sent('accounts:copy')).toEqual([{ id: 'acct-alt', field: 'password' }]);

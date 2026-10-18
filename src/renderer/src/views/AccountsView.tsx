@@ -1,5 +1,5 @@
 import { ChevronRight, Download, KeyRound, Plus, StickyNote, UserRound } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LAUNCHER_DISPLAY_NAMES, LAUNCHER_IDS, type Account } from '@shared/models';
 import { EmptyState } from '../components/EmptyState';
 import { ImportAccountsDialog } from '../components/ImportAccountsDialog';
@@ -89,9 +89,21 @@ export function AccountsView() {
   const accounts = useIpcQuery(() => ipc.invoke('accounts:list'));
   const openAccount = useUiStore((s) => s.openAccount);
   const newAccount = useUiStore((s) => s.newAccount);
+  const importIntent = useUiStore((s) => s.importIntent);
+  const clearImportIntent = useUiStore((s) => s.clearImportIntent);
+  const returnTo = useUiStore((s) => s.returnTo);
+  const openLaunch = useUiStore((s) => s.openLaunch);
+  const setView = useUiStore((s) => s.setView);
   const list = accounts.data?.accounts ?? [];
   const [importing, setImporting] = useState<'steam' | 'battlenet' | null>(null);
   const [flash, setFlash] = useFlash();
+
+  // A game's Play with no account for its launcher lands here with the import dialog already asked for.
+  useEffect(() => {
+    if (!importIntent) return;
+    setImporting(importIntent);
+    clearImportIntent();
+  }, [importIntent, clearImportIntent]);
 
   const importItems: MenuItem[] = [
     {
@@ -133,6 +145,12 @@ export function AccountsView() {
   function onImported(imported: Account[]): void {
     const from = importing === 'battlenet' ? 'Battle.net' : 'Steam';
     setImporting(null);
+    // Sent here by a game's Play: back to that game, with the one imported account picked, or the picker when there are several.
+    if (returnTo && imported.some((a) => a.launcher === returnTo.launcher)) {
+      setView('library');
+      openLaunch({ game: returnTo, initialAccountId: imported.length === 1 ? imported[0]!.id : null });
+      return;
+    }
     if (imported.length === 0) setFlash('Nothing new to import');
     else setFlash(`Imported ${imported.length} account${imported.length === 1 ? '' : 's'} from ${from}`, 'success', 4000);
     accounts.reload();

@@ -16,7 +16,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LAUNCHER_CLIENT_NAMES,
   LAUNCHER_DISPLAY_NAMES,
@@ -119,6 +119,21 @@ function JobProgress({ job }: { job: LaunchJob }) {
   );
 }
 
+/** The one place that says the running launcher will be closed and started again; the preflight's plan leaves its own warning out. */
+function CloseBox({ preflight, clientName, accountName }: { preflight: LaunchPreflight; clientName: string; accountName: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
+      <Power className="mt-0.5 size-4 shrink-0" />
+      <div>
+        <p className="font-medium">{preflight.closeMessage ?? `${sentence(clientName)} is running. Switching closes it.`}</p>
+        <p className="mt-0.5 text-xs">
+          {sentence(clientName)} is then started again as {accountName}.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /** The switch as five plain phases. */
 function PhaseProgress({ job, names }: { job: LaunchJob; names: PhaseNames }) {
   const phases = groupSteps(job.steps, job.state === 'running');
@@ -135,7 +150,9 @@ function PhaseProgress({ job, names }: { job: LaunchJob; names: PhaseNames }) {
               {p.status === 'running' ? '…' : ''}
               {p.status === 'skipped' ? <span className="ml-2 text-[11px] text-faint">not needed</span> : null}
             </div>
-            {p.current && p.status !== 'done' ? <div className="text-xs text-muted">{p.current.title}</div> : null}
+            {p.current && p.status !== 'done' && !(p.status === 'running' && job.attention) ? (
+              <div className="text-xs text-muted">{p.current.title}</div>
+            ) : null}
           </div>
         </li>
       ))}
@@ -143,14 +160,23 @@ function PhaseProgress({ job, names }: { job: LaunchJob; names: PhaseNames }) {
   );
 }
 
-function minutesLeft(until: string): number {
-  return Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 60_000));
-}
-
 function copyNote(field: 'login' | 'password', clearAfterMs: number, historyExcluded: boolean): string {
   const what = field === 'login' ? 'Login' : 'Password';
   const history = field === 'password' && !historyExcluded ? ' · Windows clipboard history may keep it' : '';
   return `${what} copied · clipboard clears in ${Math.round(clearAfterMs / 1000)}s while One Launch is open${history}`;
+}
+
+/** A hand-over step with whatever the adapter quoted (the launcher's checkbox or button) set off, so the one thing to tick stands out. */
+function emphasizeQuoted(text: string): ReactNode[] {
+  return text.split(/(“[^”]+”|"[^"]+")/).map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="font-medium text-text-strong">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  );
 }
 
 /** The switch is parked on the launcher's sign-in form and needs the user there. Calm, explicit, no failure. */
@@ -168,12 +194,6 @@ function AttentionPanel({
   onCancel: () => void;
 }) {
   const [note, setNote] = useState<string | null>(null);
-  const [, tick] = useState(0);
-
-  useEffect(() => {
-    const id = window.setInterval(() => tick((n) => n + 1), 15_000);
-    return () => window.clearInterval(id);
-  }, []);
 
   async function copy(field: 'login' | 'password'): Promise<void> {
     try {
@@ -191,6 +211,13 @@ function AttentionPanel({
         <div className="min-w-0">
           <p className="font-medium text-text-strong">{attention.title}</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">{attention.message}</p>
+          {attention.steps && attention.steps.length > 0 ? (
+            <ol aria-label="What to do" className="mt-2 flex list-decimal flex-col gap-1 pl-5 text-xs leading-relaxed text-text marker:text-muted">
+              {attention.steps.map((step, i) => (
+                <li key={i}>{emphasizeQuoted(step)}</li>
+              ))}
+            </ol>
+          ) : null}
           {attention.reason ? (
             <p className="mt-1 font-mono text-[11px] text-faint">
               {launcherName}: {attention.reason}
@@ -210,7 +237,7 @@ function AttentionPanel({
         <Button variant="ghost" disabled={stopping} onClick={onCancel}>
           {stopping ? 'Stopping…' : 'Stop waiting'}
         </Button>
-        <span className="text-xs text-faint">{note ?? `Waiting up to ${minutesLeft(attention.until)} more min`}</span>
+        {note ? <span className="text-xs text-faint">{note}</span> : null}
       </div>
     </div>
   );
@@ -264,6 +291,7 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
   const accounts = useIpcQuery(() => ipc.invoke('accounts:list'));
   const setView = useUiStore((s) => s.setView);
   const newAccount = useUiStore((s) => s.newAccount);
+  const importAccounts = useUiStore((s) => s.importAccounts);
   const settingsChanged = useUiStore((s) => s.settingsChanged);
   const active = useUiStore((s) => s.activeLaunch);
   const setActiveLaunch = useUiStore((s) => s.setActiveLaunch);
@@ -420,9 +448,11 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
     setStage({ kind: 'pick' });
   }
 
+  /** Sends the user off to add or import an account for this launcher; the game comes along so the form or the import can bring them back to Play. */
   function goToAccounts(): void {
     onClose();
-    if (launcher && !canImport) newAccount(launcher);
+    if (launcher === 'steam' || launcher === 'battlenet') importAccounts(launcher, game);
+    else if (launcher) newAccount(launcher, game);
     else setView('accounts');
   }
 
@@ -489,9 +519,9 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
               <p className="text-sm text-muted">
                 {launcher ? `No ${launcherName} accounts yet.` : 'No accounts yet.'}
                 {launcher === 'steam'
-                  ? ' Add one on the Accounts page, or import the accounts Steam remembers.'
+                  ? ' Import the ones Steam remembers, or add one by hand on the Accounts page.'
                   : launcher === 'battlenet'
-                    ? ' Add one on the Accounts page, or import the logins Battle.net has saved.'
+                    ? ' Import the logins Battle.net has saved, or add one by hand on the Accounts page.'
                     : launcher
                       ? ''
                       : ' Add one on the Accounts page.'}
@@ -504,15 +534,7 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
           {stage.kind === 'confirm' ? (
             <div className="flex flex-col gap-3">
               {stage.preflight.needsConfirmation ? (
-                <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning">
-                  <Power className="mt-0.5 size-4 shrink-0" />
-                  <div>
-                    <p className="font-medium">{stage.preflight.closeMessage ?? `${sentence(clientName)} is running. Switching closes it.`}</p>
-                    <p className="mt-0.5 text-xs">
-                      {sentence(clientName)} is then started again as {account?.displayName}.
-                    </p>
-                  </div>
-                </div>
+                <CloseBox preflight={stage.preflight} clientName={clientName} accountName={account?.displayName ?? ''} />
               ) : null}
               {stage.preflight.plan.warnings.map((w) => (
                 <p key={w} className="flex items-start gap-2 rounded-lg border border-border bg-surface-2/60 px-3 py-2.5 text-xs text-text">
@@ -544,6 +566,9 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
                   </li>
                 ))}
               </ol>
+              {stage.preflight.needsConfirmation ? (
+                <CloseBox preflight={stage.preflight} clientName={clientName} accountName={account?.displayName ?? ''} />
+              ) : null}
               {stage.preflight.plan.warnings.map((w) => (
                 <p key={w} className="flex items-start gap-2 rounded-lg border border-border bg-surface-2/60 px-3 py-2.5 text-xs text-text">
                   <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" />
@@ -651,19 +676,12 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
 
         <footer className="flex items-center justify-between gap-3 border-t border-border px-5 py-3">
           <div className="text-xs text-muted">
-            {note ??
-              (stage.kind === 'running'
-                ? stage.job.attention
-                  ? `Waiting for you in ${clientName}…`
-                  : 'Working…'
-                : stage.kind === 'checking'
-                  ? `Checking ${clientName}…`
-                  : '')}
+            {note ?? (stage.kind === 'running' ? (stage.job.attention ? '' : 'Working…') : stage.kind === 'checking' ? `Checking ${clientName}…` : '')}
           </div>
           <div className="flex items-center gap-2">
             {empty ? (
               <Button variant="primary" icon={<KeyRound />} autoFocus onClick={goToAccounts}>
-                {launcher && !canImport ? `Add ${launcherName} account` : 'Go to Accounts'}
+                {launcher ? (canImport ? `Import ${launcherName} accounts` : `Add ${launcherName} account`) : 'Go to Accounts'}
               </Button>
             ) : stage.kind === 'pick' || stage.kind === 'checking' ? (
               <>

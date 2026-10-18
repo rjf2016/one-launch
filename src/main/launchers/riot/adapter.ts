@@ -58,6 +58,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { readLauncherText } from '../read-file';
@@ -238,9 +239,18 @@ function idTail(uid: string | null): string {
 }
 
 /** The log's verdict as the session panel shows it. A start with no saved sign-in is not an attempt. */
-function sessionLastSignIn(last: SignInOutcome | null): LauncherSessionState['lastSignIn'] {
+/**
+ * The newest run's verdict for the account page. A closed client whose last run signed in by hand but
+ * whose file holds no sign-in kept nothing: “Stay signed in” was not ticked (docs/adapters/riot.md › Session file).
+ */
+function sessionLastSignIn(last: SignInOutcome | null, state: { running: boolean; remembered: boolean }): LauncherSessionState['lastSignIn'] {
   if (!last) return null;
-  if (last.ok) return { ok: true, reason: null };
+  if (last.ok) {
+    if (last.how === 'manual' && !state.running && !state.remembered) {
+      return { ok: false, reason: 'the last sign-in was not kept because “Stay signed in” was not ticked. Sign in to the Riot Client again with it ticked.' };
+    }
+    return { ok: true, reason: null };
+  }
   return last.reason === 'no-session' ? null : { ok: false, reason: last.detail };
 }
 
@@ -285,6 +295,8 @@ interface PlanContext {
   running: boolean;
   /** A Riot game is running, which refuses the switch (hard rule 2). */
   game: RunningGame | null;
+  /** The plan's warning that the running client will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 type SignInWait =
@@ -304,7 +316,12 @@ function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason:
   return {
     kind: 'sign-in',
     title: cause === 'new' ? `Sign in to the Riot Client as ${login}` : `The Riot Client is asking you to sign in as ${login}`,
-    message: `${why} Sign in once in the Riot Client window with “Stay signed in” ticked. One Launch saves the sign-in and continues on its own as soon as the client reports it; later switches are automatic. To change accounts afterwards, switch through One Launch rather than the client's Sign out, which ends the saved sign-in for good.`,
+    message: why,
+    steps: [
+      `In the Riot Client window, enter the login ${login} and your password.`,
+      'Tick “Stay signed in” before you sign in, or the client forgets the account when it closes.',
+      'Press Sign in. One Launch continues on its own, and later switches are automatic.',
+    ],
     reason,
     canCopyPassword,
     until,
@@ -593,7 +610,7 @@ export class RiotAdapter implements LauncherAdapter {
       launcherUid: current.session?.accountId ?? null,
       linkedAccountId: current.owner?.id ?? null,
       launcherRunning: running,
-      lastSignIn: sessionLastSignIn(lastSignIn(currentRunEvents(this.logDir()))),
+      lastSignIn: sessionLastSignIn(lastSignIn(currentRunEvents(this.logDir())), { running, remembered: current.session !== null }),
     };
   }
 
@@ -1025,7 +1042,13 @@ export class RiotAdapter implements LauncherAdapter {
   async preflight(account: AccountRef, forGame?: Pick<InstalledGame, 'launcherGameId' | 'name'>): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account, forGame);
     if (ctx.game) throw this.gameRunningError(ctx.game, 'switch');
-    return { plan, launcherRunning: ctx.running, runningGame: null, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage() };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: ctx.running,
+      runningGame: null,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -1248,14 +1271,14 @@ export class RiotAdapter implements LauncherAdapter {
         `${sessionPath} does not exist. One Launch never creates it: start the Riot Client once by hand (it writes the file at its first start), then try again.`,
       );
     }
+    let closeWarning: string | null = null;
     if (alreadyActive) {
       notes.push(
         `The Riot Client is running and signed in as ${account.displayName}. The real switch would change nothing and would leave the client running.`,
       );
     } else if (running) {
-      warnings.push(
-        `The Riot Client is running${current.owner ? ` as ${current.owner.displayName}` : current.session ? ' with a sign-in no One Launch account owns' : ' on its login page'}. It will be closed.`,
-      );
+      closeWarning = `The Riot Client is running${current.owner ? ` as ${current.owner.displayName}` : current.session ? ' with a sign-in no One Launch account owns' : ' on its login page'}. It will be closed.`;
+      warnings.push(closeWarning);
     } else if (inPlace) {
       notes.push(`The Riot Client already holds ${account.displayName}'s sign-in, so it is only started.`);
     }
@@ -1293,7 +1316,7 @@ export class RiotAdapter implements LauncherAdapter {
       executable: current.text !== null,
       generatedAt: new Date().toISOString(),
     };
-    return { plan, ctx: { install, current, stored, strategy, inPlace, alreadyActive, running, game } };
+    return { plan, ctx: { install, current, stored, strategy, inPlace, alreadyActive, running, game, closeWarning } };
   }
 
   /**

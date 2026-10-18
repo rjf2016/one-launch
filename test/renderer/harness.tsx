@@ -76,6 +76,8 @@ export function resetUi(): void {
       settingsRevision: 0,
       setupGuide: null,
       whatsNew: null,
+      returnTo: null,
+      importIntent: null,
     });
   });
   afterEach(() => cleanup());

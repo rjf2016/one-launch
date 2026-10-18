@@ -54,6 +54,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { readLauncherBytes, readLauncherText } from '../read-file';
@@ -261,6 +262,8 @@ interface PlanContext {
   prefs: UserPrefs | null;
   /** The plan found the target login already first in SavedAccountNames, which is why its file step is skipped. */
   loginFirst: boolean;
+  /** The plan's warning that the running client will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 type SignInWait =
@@ -271,8 +274,6 @@ type SignInWait =
   | { kind: 'cancelled' };
 
 function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason: string | null, canCopyPassword: boolean, until: string): LaunchAttention {
-  const finish =
-    'One Launch stores the new session and continues with the game on its own as soon as the client reports the sign-in. Later switches are automatic.';
   const why =
     cause === 'expired'
       ? 'The client rejected its stored session.'
@@ -282,7 +283,12 @@ function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason:
   return {
     kind: 'sign-in',
     title: cause === 'new' ? `Sign in to Battle.net as ${login}` : `Battle.net is asking you to sign in as ${login}`,
-    message: `${why} The client's login page opens on the password step of the account it last signed in as: click "Switch account" there, pick or type ${login}, enter the password, and leave "Keep me logged in" on. ${finish}`,
+    message: `${why} Its login page opens on the account it last signed in as.`,
+    steps: [
+      'In the Battle.net window, click “Switch account”.',
+      `Pick or type ${login} and enter the password.`,
+      'Leave “Keep me logged in” on and sign in. One Launch continues on its own, and later switches are automatic.',
+    ],
     reason,
     canCopyPassword,
     until,
@@ -573,17 +579,17 @@ export class BattlenetAdapter implements LauncherAdapter {
     const current = await this.currentSession(running);
     if (!current.token) {
       throw new SwitchBlockedError(
-        `Battle.net has no remembered session right now (nothing under ${UNIFIED_AUTH_PATH}). Sign in to the client as ${account.login} with "Keep me logged in" on, then capture again.`,
+        `Battle.net has no remembered session right now (nothing under ${UNIFIED_AUTH_PATH}). Sign in to the client as ${account.login} with "Keep me logged in" on, then save again.`,
       );
     }
     if (running && (!current.lastSignIn?.ok || !current.loggedUid)) {
       throw new SwitchBlockedError(
-        `Battle.net is running but has not signed in during this run${current.lastSignIn && !current.lastSignIn.ok ? ` (${current.lastSignIn.reason})` : ''}. Sign in to it as ${account.login}, then capture again.`,
+        `Battle.net is running but has not signed in during this run${current.lastSignIn && !current.lastSignIn.ok ? ` (${current.lastSignIn.reason})` : ''}. Sign in to it as ${account.login}, then save again.`,
       );
     }
     if (!running && current.signedOut) {
       throw new SwitchBlockedError(
-        'The last Battle.net run ended with a logout, so the remembered session cannot be attributed to an account. Sign in to the client, exit it, then capture again.',
+        'The last Battle.net run ended with a logout, so the remembered session cannot be attributed to an account. Sign in to the client, exit it, then save again.',
       );
     }
     if (current.owner && current.owner.id !== account.id) {
@@ -792,7 +798,13 @@ export class BattlenetAdapter implements LauncherAdapter {
   async preflight(account: AccountRef): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account);
     const runningGame = ctx.running && !ctx.alreadyActive ? await this.runningGame() : null;
-    return { plan, launcherRunning: ctx.running, runningGame, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage(runningGame) };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: ctx.running,
+      runningGame,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(runningGame),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -1058,14 +1070,14 @@ export class BattlenetAdapter implements LauncherAdapter {
       warnings.push(
         `UnifiedAuth holds ${current.tokens.length} values; the client is expected to keep one. The value matching a stored snapshot is treated as the session, the others as leftovers.`,
       );
+    let closeWarning: string | null = null;
     if (alreadyActive) {
       notes.push(`Battle.net is running and signed in as ${account.displayName}. The real switch would change nothing and would leave the client running.`);
     } else if (inPlace) {
       notes.push(`Battle.net already remembers ${account.displayName}'s session, so it is only started.`);
     } else if (running) {
-      warnings.push(
-        `Battle.net is running${current.owner ? ` as ${current.owner.displayName}` : current.loggedUid ? ' as an account not linked to One Launch' : ' on its login page'}. It will be closed.`,
-      );
+      closeWarning = `Battle.net is running${current.owner ? ` as ${current.owner.displayName}` : current.loggedUid ? ' as an account not linked to One Launch' : ' on its login page'}. It will be closed.`;
+      warnings.push(closeWarning);
     }
     if (running && !inPlace && current.loggedUid && current.owner === null) {
       warnings.push(
@@ -1108,7 +1120,7 @@ export class BattlenetAdapter implements LauncherAdapter {
     };
     return {
       plan,
-      ctx: { install, startExe, config, current, stored, strategy, inPlace, alreadyActive, running, prefs, loginFirst: fileWrite?.noop === true },
+      ctx: { install, startExe, config, current, stored, strategy, inPlace, alreadyActive, running, prefs, loginFirst: fileWrite?.noop === true, closeWarning },
     };
   }
 

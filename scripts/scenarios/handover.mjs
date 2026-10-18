@@ -24,7 +24,11 @@ export default async (d) => {
   await startPlay(d, { game: 'Rocket League', account: 'Persona Three', tag: 'stop-waiting' });
   let text = await watchDialog(d, { until: (t) => t.includes('Stop waiting'), tag: 'stop-waiting' });
   d.check('the panel says Steam is asking for the sign-in', text.includes('Steam is asking you to sign in as user_3'));
-  d.check('the footer says it is waiting in the Steam window', text.includes('Waiting for you in the Steam window…'));
+  d.check(
+    'the panel lists what to do, with the box as its own step',
+    text.includes('In the Steam window, enter the account name user_3 and your password.') && text.includes('Keep “Remember me” ticked.'),
+  );
+  d.check('the panel is the one place that says it is waiting', !text.includes('Waiting for you') && !text.includes('Waiting up to'));
   d.check('the Stop button gives way to Stop waiting', !/\nStop\n/.test(text));
   await d.shot('attention');
   await d.click('Copy login');
@@ -55,6 +59,7 @@ export default async (d) => {
   await startPlay(d, { game: 'Rocket League®', account: 'Alt', tag: 'epic-by-hand' });
   text = await watchDialog(d, { until: (t) => t.includes('Stop waiting'), tag: 'epic-by-hand' });
   d.check('Epic hands over after the expired session', text.includes('Epic Games Launcher is asking you to sign in as alt@example.com'));
+  d.check('the Epic checklist is one step', text.includes('Sign in as alt@example.com in the Epic Games Launcher window.'));
   await d.shot('epic-attention');
   text = await watchDialog(d, { until: (t) => t.includes('Launched as'), tag: 'epic-by-hand' });
   await finishDialog(d, 'epic-by-hand');

@@ -40,4 +40,4 @@ Registered as privileged before `ready`, handled in `index.ts`. `LibraryService`
 
 ## Setup guide
 
-The setup guide (renderer, `SetupGuideSteps.tsx`) opens on a new install and carries the artwork notice on its launchers step, under the installed-game count. It is a notice, not a question: it says covers are downloaded from Steam's store and image servers (and SteamGridDB with a key), that only game names and store ids are sent, and where to turn it off; with auto-fetch off it says downloads are off instead. Leaving the guide writes only `firstRun.dismissed`.
+The setup guide (renderer, `SetupGuideSteps.tsx`) opens on a new install and carries the artwork notice on its launchers step, under the installed-game count. It is a notice, not a question: it says covers are downloaded from Steam, that only game names and store ids are sent, and that games Steam does not sell need a free SteamGridDB key (Settings › Artwork, whose "Get a key" button opens the SteamGridDB API page through `app:openUrl`); with auto-fetch off it says downloads are off instead. Leaving the guide writes only `firstRun.dismissed`.

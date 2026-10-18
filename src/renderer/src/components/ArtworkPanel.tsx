@@ -1,4 +1,4 @@
-import { Images, KeyRound, RefreshCw, Trash2 } from 'lucide-react';
+import { ExternalLink, Images, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LAUNCHER_DISPLAY_NAMES, type ArtworkStatus } from '@shared/models';
 import { ipc } from '../lib/ipc';
@@ -19,6 +19,10 @@ interface ArtworkPanelProps {
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
+
+/** What a SteamGridDB key looks like, loosely: one run of letters and digits. A sentence or a URL is not one. */
+const KEY_SHAPE = /^[A-Za-z0-9]{20,64}$/;
+const NOT_A_KEY = 'That does not look like a SteamGridDB API key. Paste the key itself.';
 
 /** Settings > Artwork: SteamGridDB key (vault), auto-fetch, refresh all, rescan, and queue status. */
 export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, settingError, onAutoFetch }: ArtworkPanelProps) {
@@ -42,9 +46,8 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
     return () => window.clearInterval(id);
   }, []);
 
-  async function saveKey(): Promise<void> {
-    const value = key.trim();
-    if (!value) return;
+  /** The field saves itself: a pasted or typed value that looks like a key goes straight to the vault. */
+  async function saveKey(value: string): Promise<void> {
     setBusy('key');
     setMessage(null);
     try {
@@ -57,6 +60,23 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
       setMessage(errorText(err));
     } finally {
       setBusy(null);
+    }
+  }
+
+  /** Enter, or leaving the field: save what looks like a key; say so when it does not (`quiet` leaves the text alone instead). */
+  function trySave(raw: string, quiet: boolean): void {
+    const value = raw.trim();
+    if (!value) return;
+    if (KEY_SHAPE.test(value)) void saveKey(value);
+    else if (!quiet) setMessage(NOT_A_KEY);
+  }
+
+  async function getKey(): Promise<void> {
+    setMessage(null);
+    try {
+      await ipc.invoke('app:openUrl', { target: 'steamgriddb-api-key' });
+    } catch (err) {
+      setMessage(`Could not open the browser: ${errorText(err)}`);
     }
   }
 
@@ -110,7 +130,7 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
   return (
     <Panel
       title="Artwork"
-      description="Covers come from Steam, or from SteamGridDB with a free key."
+      description="Covers come from Steam. Other games need a free SteamGridDB key."
       actions={
         <>
           <Button
@@ -132,34 +152,40 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
         </>
       }
     >
-      <Row
-        label="SteamGridDB API key"
-        hint={status?.hasApiKey ? 'Paste a new key to replace the stored one.' : 'Free at steamgriddb.com/profile/preferences/api.'}
-      >
-        <TextInput
-          type="password"
-          autoComplete="off"
-          aria-label="SteamGridDB API key"
-          placeholder={status?.hasApiKey ? '••••••••' : 'Paste your key'}
-          value={key}
-          disabled={!vaultAvailable || busy === 'key'}
-          onChange={(e) => setKey(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') void saveKey();
-          }}
-          className="max-w-56 min-w-56"
-        />
-        <Button
-          variant="primary"
-          icon={<KeyRound />}
-          aria-label="Save key"
-          title="Save key"
-          disabled={!vaultAvailable || busy === 'key' || key.trim() === ''}
-          onClick={() => void saveKey()}
-        />
+      <Row label="SteamGridDB API key" hint={status?.hasApiKey ? 'Remove it to paste a different one.' : 'Free. Press Get a key, sign in, paste it here.'}>
         {status?.hasApiKey ? (
-          <Button variant="ghost" icon={<Trash2 />} disabled={busy === 'key'} onClick={() => void removeKey()} aria-label="Remove key" title="Remove key" />
-        ) : null}
+          <>
+            <TextInput type="password" aria-label="SteamGridDB API key" placeholder="••••••••" value="" readOnly disabled className="max-w-56 min-w-56" />
+            <Button variant="ghost" icon={<Trash2 />} disabled={busy === 'key'} onClick={() => void removeKey()} aria-label="Remove key" title="Remove key" />
+          </>
+        ) : (
+          <>
+            <Button icon={<ExternalLink />} title="Opens the SteamGridDB API page in your browser" onClick={() => void getKey()}>
+              Get a key
+            </Button>
+            <TextInput
+              type="password"
+              autoComplete="off"
+              aria-label="SteamGridDB API key"
+              placeholder="Paste your key"
+              value={key}
+              disabled={!vaultAvailable || busy === 'key'}
+              onChange={(e) => setKey(e.target.value)}
+              onPaste={(e) => {
+                const pasted = e.clipboardData.getData('text').trim();
+                if (KEY_SHAPE.test(pasted)) {
+                  e.preventDefault();
+                  void saveKey(pasted);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') trySave(key, false);
+              }}
+              onBlur={() => trySave(key, true)}
+              className="max-w-56 min-w-56"
+            />
+          </>
+        )}
       </Row>
       <Row label="Fetch artwork automatically" hint="Looks up missing covers after each scan; only game names and ids are sent." error={settingError ?? null}>
         <Toggle label="Fetch artwork automatically" checked={autoFetch} disabled={settingsLoading} onChange={onAutoFetch} />

@@ -3,12 +3,90 @@ import './setup';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { ArtworkPanel } from '../../src/renderer/src/components/ArtworkPanel';
 import { BackupsPanel } from '../../src/renderer/src/components/BackupsPanel';
 import { LauncherStatusPanel } from '../../src/renderer/src/components/LauncherStatusPanel';
-import type { LauncherStatus } from '../../src/shared/models';
+import type { ArtworkStatus, LauncherStatus } from '../../src/shared/models';
 import { BridgeError, deferred, installBridge, resetUi } from './harness';
 
 resetUi();
+
+describe('ArtworkPanel: getting a SteamGridDB key', () => {
+  const status = (hasApiKey: boolean): ArtworkStatus => ({ queued: 0, running: 0, completed: 0, failed: 0, hasApiKey, revision: 1, scanned: true });
+
+  const KEY = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4';
+
+  /** A main process whose stored key the panel's status reflects, like the real one. */
+  function panel(stored: boolean) {
+    let hasKey = stored;
+    const bridge = installBridge({
+      'artwork:status': () => ({ status: status(hasKey) }),
+      'app:openUrl': () => ({ ok: true }),
+      'vault:setSecret': () => {
+        hasKey = true;
+        return { ok: true };
+      },
+      'vault:deleteSecret': () => {
+        hasKey = false;
+        return { ok: true };
+      },
+      'artwork:refresh': () => ({ queued: 2 }),
+    });
+    render(<ArtworkPanel autoFetch settingsLoading={false} vaultAvailable onAutoFetch={() => undefined} />);
+    return { bridge, user: userEvent.setup() };
+  }
+
+  it('says who needs a key, opens the page to get one through main, and has no Save button', async () => {
+    const { bridge, user } = panel(false);
+    expect(screen.getByText('Covers come from Steam. Other games need a free SteamGridDB key.')).toBeTruthy();
+    expect(await screen.findByText('Free. Press Get a key, sign in, paste it here.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Save key' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Get a key' }));
+    await waitFor(() => expect(bridge.sent('app:openUrl')).toEqual([{ target: 'steamgriddb-api-key' }]));
+  });
+
+  it('saves a pasted key by itself and starts the lookup', async () => {
+    const { bridge, user } = panel(false);
+    await user.click(await screen.findByLabelText('SteamGridDB API key'));
+    await user.paste(`  ${KEY}\n`);
+    await waitFor(() => expect(bridge.sent('vault:setSecret')).toEqual([{ key: 'steamgriddb.apiKey', value: KEY }]));
+    expect(await screen.findByText('Key saved. Fetching artwork for 2 games.')).toBeTruthy();
+    expect(await screen.findByText('Remove it to paste a different one.')).toBeTruthy();
+    expect(bridge.sent('artwork:refresh')).toEqual([{ gameId: null, force: false }]);
+  });
+
+  it('saves a typed key on Enter, and says so when the text is not a key', async () => {
+    const { bridge, user } = panel(false);
+    const field = await screen.findByLabelText('SteamGridDB API key');
+    await user.type(field, 'https://www.steamgriddb.com/profile{Enter}');
+    expect(await screen.findByText('That does not look like a SteamGridDB API key. Paste the key itself.')).toBeTruthy();
+    expect(bridge.sent('vault:setSecret')).toEqual([]);
+    await user.clear(field);
+    await user.type(field, `${KEY}{Enter}`);
+    await waitFor(() => expect(bridge.sent('vault:setSecret')).toEqual([{ key: 'steamgriddb.apiKey', value: KEY }]));
+  });
+
+  it('shows only Remove while a key is stored, and the field comes back once it is removed', async () => {
+    const { bridge, user } = panel(true);
+    expect(await screen.findByText('Remove it to paste a different one.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Get a key' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Save key' })).toBeNull();
+    expect((screen.getByLabelText('SteamGridDB API key') as HTMLInputElement).disabled).toBe(true);
+    await user.click(screen.getByRole('button', { name: 'Remove key' }));
+    await waitFor(() => expect(bridge.sent('vault:deleteSecret')).toEqual([{ key: 'steamgriddb.apiKey' }]));
+    expect(await screen.findByRole('button', { name: 'Get a key' })).toBeTruthy();
+    expect(screen.getByText('Key removed.')).toBeTruthy();
+  });
+
+  it('says when the browser could not be opened', async () => {
+    const { bridge, user } = panel(false);
+    bridge.on('app:openUrl', () => {
+      throw new BridgeError('OPEN_FAILED', 'no browser');
+    });
+    await user.click(await screen.findByRole('button', { name: 'Get a key' }));
+    expect(await screen.findByText('Could not open the browser: no browser')).toBeTruthy();
+  });
+});
 
 function launcher(over: Partial<LauncherStatus> & Pick<LauncherStatus, 'launcher' | 'displayName'>): LauncherStatus {
   return {

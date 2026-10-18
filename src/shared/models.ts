@@ -194,6 +194,10 @@ export type RendererSecretKey = Exclude<SecretKey, 'vault.probe'>;
 
 export const RENDERER_SECRET_KEYS = ['steamgriddb.apiKey', 'diagnostics.roundtrip'] as const satisfies readonly RendererSecretKey[];
 
+/** The web pages the renderer may ask main to open in the system browser (`app:openUrl`). Main holds the URLs; the renderer only names a target. */
+export const OPEN_URL_TARGETS = ['steamgriddb-api-key'] as const;
+export type OpenUrlTarget = (typeof OPEN_URL_TARGETS)[number];
+
 export function isSecretKey(value: unknown): value is SecretKey {
   return typeof value === 'string' && (SECRET_KEYS as readonly string[]).includes(value);
 }
@@ -547,7 +551,10 @@ export type LaunchJobState = 'running' | 'done' | 'failed' | 'needs-sign-in' | '
 export interface LaunchAttention {
   kind: 'sign-in';
   title: string;
+  /** Why the launcher needs the user, in one sentence. */
   message: string;
+  /** What to do in the launcher window, in order; a checkbox the launcher must keep ticked is named in “ ” so the dialog can set it off. */
+  steps?: string[];
   /** The launcher's own reason text, e.g. Steam's "Account Logon Denied". */
   reason: string | null;
   /** The account has a stored password the UI can offer to copy. */

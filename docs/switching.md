@@ -38,7 +38,7 @@ Key files: `src/main/launchers/types.ts` (contract), `src/main/services/launcher
 
 ## The launch job (`LaunchService`)
 
-**Preflight** (`launch:preflight`) is read-only. It calls the adapter's preflight, then adds:
+**Preflight** (`launch:preflight`) is read-only. It calls the adapter's preflight, whose plan leaves out the "is running… It will be closed" warning (`withoutCloseWarning`, `types.ts`: the dialog's confirm box says that once; the dry-run plan keeps it), then adds:
 - `dryRun`: `settings.getBool('dryRun', false)`.
 - `needsConfirmation` = `launcherRunning && !alreadyActive`. `closeMessage` is sent only when confirmation is needed.
 - `blocked`: the plan's first warning when `plan.executable` is false. In practice only Epic or Riot with no settings file, so the dialog's blocked stage offers Back and nothing else.
@@ -77,7 +77,7 @@ In the UI, the launch dialog's Stop and the sign-in panel's Stop waiting both ca
 ## Hand-over (the launcher needs the user)
 
 - Triggers: Steam Guard, a rate limit, an expired or rejected session, the credentials path (no usable saved sign-in), a Battle.net password page, or the Riot Client's login page.
-- The adapter calls `onAttention` with a `LaunchAttention` (`title`, `message`, `reason`, `canCopyPassword`, `until`) and polls for up to `manualSignInMs` (10 min). The dialog offers Copy login, Copy password, and Stop waiting. During the manual wait a failed attempt is not final.
+- The adapter calls `onAttention` with a `LaunchAttention` (`title`; `message`, one sentence saying why; `steps`, what to do in the launcher window in order, with the box the launcher must keep ticked quoted in “ ” as a step of its own: Steam “Remember me”, Battle.net “Keep me logged in”, Riot “Stay signed in”; `reason`, `canCopyPassword`, `until`) and polls for up to `manualSignInMs` (10 min). The dialog shows the steps as a numbered list and offers Copy login, Copy password, and Stop waiting. During the manual wait a failed attempt is not final.
 - A timeout gives `needsSignIn`: nothing is rolled back and the user finishes in the launcher.
 - Steam's `-login <user>` opens its form. A password goes on the command line only when `steam.autoLogin` is on, and if Steam rejects it the switch fails (with rollback) rather than handing over.
 

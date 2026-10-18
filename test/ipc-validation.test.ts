@@ -3,12 +3,16 @@ import type { IpcChannel, IpcEnvelope } from '../src/shared/ipc-contract';
 
 const handlers = new Map<string, (event: unknown, req: unknown) => Promise<unknown>>();
 const opened: string[] = [];
+const openedUrls: string[] = [];
 vi.mock('electron', () => ({
   app: { getVersion: () => '0.0.0-test', isPackaged: false },
   shell: {
     openPath: async (dir: string) => {
       opened.push(dir);
       return '';
+    },
+    openExternal: async (url: string) => {
+      openedUrls.push(url);
     },
   },
   ipcMain: { handle: (channel: string, fn: (event: unknown, req: unknown) => Promise<unknown>) => handlers.set(channel, fn) },
@@ -40,6 +44,7 @@ function service(name: string): unknown {
 beforeEach(() => {
   handlers.clear();
   opened.length = 0;
+  openedUrls.length = 0;
   reached = [];
   answers = {};
   registerIpcHandlers({
@@ -89,6 +94,7 @@ const good = { launcher: 'steam', displayName: 'Main', login: 'user_1' };
 const REFUSED: Partial<Record<IpcChannel, unknown[]>> = {
   'app:ping': [...NOT_AN_OBJECT, {}, { message: 1 }, { message: 'x'.repeat(1001) }],
   'app:openPath': [...NOT_AN_OBJECT, {}, { target: 'secrets' }, { target: 'C:\\Windows' }],
+  'app:openUrl': [...NOT_AN_OBJECT, {}, { target: 'https://example.com' }, { target: 'steamgriddb' }, { target: 5 }],
   'app:reportError': [...NOT_AN_OBJECT, { source: 'render', message: 5, stack: null }, { source: 'render', message: 'm', stack: 5 }],
   'vault:setSecret': [...NOT_AN_OBJECT, { key: 'nope', value: 'x' }, { key: 'steamgriddb.apiKey' }, { key: 'steamgriddb.apiKey', value: 'x'.repeat(4097) }],
   'vault:getSecret': [...NOT_AN_OBJECT, {}, { key: 'vault.probe' }],
@@ -193,6 +199,7 @@ describe('IPC request validation (B19)', () => {
         expect(reached, JSON.stringify(payload)?.slice(0, 80)).toEqual([]);
       }
       expect(opened).toEqual([]);
+      expect(openedUrls).toEqual([]);
     });
   }
 });
@@ -201,6 +208,11 @@ describe('IPC handlers: what reaches the services (B19)', () => {
   it('opens only the three known folders', async () => {
     for (const target of ['logs', 'data', 'backups'] as const) await call('app:openPath', { target });
     expect(opened).toEqual(['D:\\data\\logs', 'D:\\data', 'D:\\data\\backups']);
+  });
+
+  it('opens only the known web page, by name, never a URL the renderer sent', async () => {
+    expect(await call('app:openUrl', { target: 'steamgriddb-api-key' })).toEqual({ ok: true, data: { ok: true } });
+    expect(openedUrls).toEqual(['https://www.steamgriddb.com/profile/preferences/api']);
   });
 
   it('treats only a literal true as a confirmation or a forced refresh', async () => {

@@ -60,7 +60,7 @@ describe('Riot Games in the renderer', () => {
     expect(await screen.findByText(/looks for Steam, Epic Games Launcher, Battle\.net, and the Riot Client/)).toBeTruthy();
   });
 
-  it('gets the saved sign-in panel on its account page, with the Stay signed in instructions', async () => {
+  it('gets the saved sign-in panel on its account page', async () => {
     expect(hasSessionPanel('riot')).toBe(true);
     expect(hasSessionPanel('steam')).toBe(false);
     const riot = account({ id: 'acct-riot', launcher: 'riot', login: 'riot_main', launcherUid: '11111111-1111-4111-8111-111111111111' });
@@ -81,7 +81,7 @@ describe('Riot Games in the renderer', () => {
     });
     render(<SessionPanel account={riot} onAccountChanged={() => undefined} />);
     expect(await screen.findByText('This account (newer than the saved sign-in; press Save again)')).toBeTruthy();
-    expect(screen.getByText(/sign in to the Riot Client as this account with “Stay signed in” ticked, exit the client from its tray icon/)).toBeTruthy();
+    expect(screen.getByText('Saved the first time you play on this account, and put back whenever you switch to it.')).toBeTruthy();
     expect(screen.getByText('Riot Client is signed in as')).toBeTruthy();
     expect(screen.getByText('Riot Client is running.')).toBeTruthy();
     expect(screen.getByText('Linked to …1111')).toBeTruthy();

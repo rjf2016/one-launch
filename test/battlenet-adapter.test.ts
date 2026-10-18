@@ -522,7 +522,9 @@ describe('plans', () => {
     const other = await adapter().preflight(ref(B));
     expect(other.alreadyActive).toBe(false);
     expect(other.launcherRunning).toBe(true);
-    expect(other.plan.warnings[0]).toContain('running as Main');
+    // The dialog's confirm box says the client will be closed, so the preflight's plan leaves that warning out; the preview keeps it.
+    expect(other.plan.warnings.join('\n')).not.toContain('It will be closed');
+    expect((await adapter().switchAccount(ref(B), { dryRun: true })).warnings[0]).toContain('running as Main');
   });
 
   it('warns about sticky preferences it never writes, and skips the file step when the layout cannot be reproduced', async () => {
@@ -652,8 +654,17 @@ describe('real switches', () => {
       detail: 'Signed in as new@example.com. Linked to Battle.net account …4e5f.',
     });
     expect(stepByTitle(result.steps, 'Save the new session').detail).toContain("Stored New's session");
-    expect(user.seen[0]).toMatchObject({ kind: 'sign-in', canCopyPassword: true, title: 'Sign in to Battle.net as new@example.com' });
-    expect(user.seen[0]!.message).toContain('click "Switch account"');
+    expect(user.seen[0]).toMatchObject({
+      kind: 'sign-in',
+      canCopyPassword: true,
+      title: 'Sign in to Battle.net as new@example.com',
+      message: 'No session is stored for this account yet. Its login page opens on the account it last signed in as.',
+    });
+    expect(user.seen[0]!.steps).toEqual([
+      'In the Battle.net window, click “Switch account”.',
+      'Pick or type new@example.com and enter the password.',
+      'Leave “Keep me logged in” on and sign in. One Launch continues on its own, and later switches are automatic.',
+    ]);
     expect(user.seen.at(-1)).toBeNull();
     expect(accounts.require(C.id).launcherUid).toBe(ID_C);
     const tokens = await sim.currentTokens();

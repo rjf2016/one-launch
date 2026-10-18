@@ -168,7 +168,8 @@ export function SetupGuide({ source }: { source: SetupGuideSource }) {
     });
   }
 
-  async function runImport(): Promise<void> {
+  /** Imports the selected entries; true when every import went through. */
+  async function runImport(): Promise<boolean> {
     setImporting(true);
     let total = 0;
     try {
@@ -184,8 +185,10 @@ export function SetupGuide({ source }: { source: SetupGuideSource }) {
         setSelected((s) => new Set([...s].filter((k) => !keys.includes(k))));
       }
       setFlash(total === 0 ? 'Nothing new to import' : `Imported ${total} account${total === 1 ? '' : 's'}`, 'success', 4000);
+      return true;
     } catch (err) {
       setFlash(`Could not import: ${errorMessage(err)}`, 'error');
+      return false;
     } finally {
       setImporting(false);
     }
@@ -217,6 +220,12 @@ export function SetupGuide({ source }: { source: SetupGuideSource }) {
   }
   const previous = SETUP_STEPS[index - 1];
   const following = SETUP_STEPS[index + 1];
+  /** Ticked entries nobody has imported yet: Continue imports them first, so a ticked list never ends the guide with nothing. */
+  const pending = step === 'accounts' ? selected.size : 0;
+
+  async function importThenGo(): Promise<void> {
+    if ((await runImport()) && following) go(following.id);
+  }
 
   useEffect(() => {
     if (busy) return;
@@ -250,6 +259,8 @@ export function SetupGuide({ source }: { source: SetupGuideSource }) {
       primary = { label: 'Open Library', icon: <LayoutGrid />, onClick: () => void finish('library') };
       secondary = accounts.data === 0 ? { label: 'Go to Accounts', onClick: () => void finish('accounts') } : null;
     }
+  } else if (pending > 0) {
+    primary = { label: `Import ${pending} and continue`, icon: <ArrowRight />, onClick: () => void importThenGo() };
   } else {
     primary = { label: step === 'welcome' ? 'Get started' : 'Continue', icon: <ArrowRight />, onClick: () => go(following!.id) };
   }

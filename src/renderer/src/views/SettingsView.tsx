@@ -212,7 +212,7 @@ export function SettingsView() {
                 <Panel title="Play" description="What One Launch does for you when you press Play.">
                   <Row
                     label="Steam automatic sign-in"
-                    hint="Types a stored Steam password for you; other programs can see it while Steam runs."
+                    hint="Passes a stored Steam password to Steam for you; other programs can see it while Steam runs."
                     error={errorFor('steam.autoLogin')}
                   >
                     <Toggle

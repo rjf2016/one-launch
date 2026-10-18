@@ -42,6 +42,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { MAX_VDF_BYTES, readLauncherText } from '../read-file';
@@ -165,6 +166,8 @@ interface PlanContext {
   stale: boolean;
   autoLoginUser: string | null;
   rememberDword: number | null;
+  /** The plan's warning that the running Steam will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 /**
@@ -186,12 +189,14 @@ function attentionFor(why: SignInWait, login: string, canCopyPassword: boolean, 
   const reason = why.kind === 'credentials' ? why.reason || null : null;
   const cause: SignInCause = why.kind === 'credentials' ? why.cause : 'other';
   const base = { kind: 'sign-in' as const, reason, canCopyPassword, until };
-  const finish = 'One Launch continues with the game on its own as soon as Steam reports the sign-in.';
+  const remember = 'Keep “Remember me” ticked.';
+  const finish = 'One Launch continues on its own as soon as Steam reports the sign-in, and later switches are automatic.';
   if (why.kind === 'timeout' && why.updating) {
     return {
       ...base,
       title: 'Steam is still updating itself',
-      message: `Steam has been updating itself for longer than One Launch waits on its own, so it was left to finish. If it shows its sign-in form afterwards, sign in as ${login} with "Remember me" ticked. ${finish}`,
+      message: 'Steam has been updating itself for longer than One Launch waits on its own, so it was left to finish.',
+      steps: [`If Steam shows its sign-in form afterwards, sign in as ${login} with “Remember me” ticked. ${finish}`],
     };
   }
   switch (cause) {
@@ -199,31 +204,42 @@ function attentionFor(why: SignInWait, login: string, canCopyPassword: boolean, 
       return {
         ...base,
         title: 'Steam needs a one-time sign-in on this PC',
-        message: `Steam accepted the sign-in for ${login} but this PC is not yet authorized for the account, so it wants the code it just emailed you. In the Steam window, enter the account name and password, keep "Remember me" ticked, and enter the emailed code. ${finish} Later switches need none of this.`,
+        message: `Steam accepted the sign-in for ${login}, but this PC is not yet authorized for the account, so it wants the code it just emailed you.`,
+        steps: [
+          `In the Steam window, enter the account name ${login} and the password.`,
+          remember,
+          `Enter the code Steam emailed you. ${finish} Later switches need none of this.`,
+        ],
       };
     case 'guard-mobile':
       return {
         ...base,
         title: 'Steam Guard needs your approval',
-        message: `Approve the sign-in for ${login} in the Steam Mobile app, or enter the code in the Steam window with "Remember me" ticked. ${finish}`,
+        message: `Steam wants the sign-in for ${login} approved.`,
+        steps: ['Approve the sign-in in the Steam Mobile app, or enter its code in the Steam window.', `${remember} ${finish}`],
       };
     case 'rate-limit':
       return {
         ...base,
         title: 'Steam is rate-limiting sign-ins',
-        message: `Steam refused the sign-in for ${login} because of too many recent attempts. Wait a few minutes, then sign in in the Steam window with "Remember me" ticked. ${finish}`,
+        message: `Steam refused the sign-in for ${login} because of too many recent attempts.`,
+        steps: ['Wait a few minutes.', `Sign in as ${login} in the Steam window with “Remember me” ticked. ${finish}`],
       };
     default:
       return {
         ...base,
         title: `Steam is asking you to sign in as ${login}`,
-        message: `${
+        message:
           cause === 'expired'
             ? 'Its remembered session has expired.'
             : reason
               ? `Steam did not complete the sign-in on its own (${reason}).`
-              : 'Steam is waiting on its sign-in form.'
-        } Sign in once in the Steam window with "Remember me" ticked; later switches are automatic. ${finish}`,
+              : 'Steam is waiting on its sign-in form.',
+        steps: [
+          `In the Steam window, enter the account name ${login} and your password.`,
+          remember,
+          `Sign in. If Steam Guard asks for a code, enter it. ${finish}`,
+        ],
       };
   }
 }
@@ -466,7 +482,13 @@ export class SteamAdapter implements LauncherAdapter {
   async preflight(account: AccountRef): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account);
     const runningGame = plan.current.running && !ctx.alreadyActive ? await this.runningGame() : null;
-    return { plan, launcherRunning: plan.current.running, runningGame, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage(runningGame) };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: plan.current.running,
+      runningGame,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(runningGame),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -680,6 +702,7 @@ export class SteamAdapter implements LauncherAdapter {
       } and One Launch continues with the game as soon as Steam reports the sign-in, up to ${this.timing.manualSignInMs / 60_000} min. A wrong stored password ends the switch instead.`,
     });
 
+    let closeWarning: string | null = null;
     if (alreadyActive && target) {
       notes.push(
         `Steam is already set to sign in as ${target.accountName}. The real switch would change nothing${running ? ' and would leave Steam running' : ''}.`,
@@ -687,13 +710,13 @@ export class SteamAdapter implements LauncherAdapter {
     } else if (signedInElsewhere && target) {
       const activeId3 = await this.activeUser();
       const other = users.find((u) => steamId3(u.steamId64) === activeId3 && u.steamId64 !== target.steamId64);
-      warnings.push(
-        `Steam's files already name ${target.accountName}, but the Steam that is running is ${
-          other ? `signed in as ${other.accountName}` : `not signed in as ${target.accountName}`
-        }. It will be closed, along with any game running under it, and started again as ${target.accountName}.`,
-      );
+      closeWarning = `Steam's files already name ${target.accountName}, but the Steam that is running is ${
+        other ? `signed in as ${other.accountName}` : `not signed in as ${target.accountName}`
+      }. It will be closed, along with any game running under it, and started again as ${target.accountName}.`;
+      warnings.push(closeWarning);
     } else if (running) {
-      warnings.push('Steam is running. It will be closed, along with any game running under it.');
+      closeWarning = 'Steam is running. It will be closed, along with any game running under it.';
+      warnings.push(closeWarning);
     }
     if (stale && target) {
       const age = ageDays === null ? 'an unknown time' : `${ageDays} days`;
@@ -727,7 +750,7 @@ export class SteamAdapter implements LauncherAdapter {
       executable: true,
       generatedAt: new Date().toISOString(),
     };
-    return { plan, ctx: { install, loginUsersPath, target, alreadyActive, stale, autoLoginUser, rememberDword } };
+    return { plan, ctx: { install, loginUsersPath, target, alreadyActive, stale, autoLoginUser, rememberDword, closeWarning } };
   }
 
   private async activeUser(): Promise<number | null> {
