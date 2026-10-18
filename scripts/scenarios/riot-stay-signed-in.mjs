@@ -61,7 +61,7 @@ export default async (d) => {
 
   await openRiotNew(d);
   d.check('the page says the client holds this account', await d.waitFor('This account'));
-  d.check('the page reads the automatic path first', await d.has('The first time you play on this account you sign in once in the client'));
+  d.check('the panel says it in one line', await d.has('Saved the first time you play on this account, and put back whenever you switch to it.'));
   d.check('nothing says Not saved yet any more', !(await d.has('Not saved yet')));
   await tallShot(d, 'riot-new-page-saved');
 

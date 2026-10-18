@@ -82,6 +82,14 @@ interface AccountFormProps {
   onChange: (patch: Partial<Draft>) => void;
 }
 
+/** What the first Play on a new account asks of the user, said once, where the account is added. */
+const FIRST_PLAY: Readonly<Record<LauncherId, string>> = {
+  steam: 'First Play: Steam asks you to sign in once; keep “Remember me” ticked.',
+  epic: 'First Play: Epic Games Launcher asks you to sign in once.',
+  battlenet: 'First Play: Battle.net asks you to sign in once; leave “Keep me logged in” on.',
+  riot: 'First Play: the Riot Client asks you to sign in once; tick “Stay signed in”.',
+};
+
 const EXAMPLES: Readonly<Record<LauncherId, { name: string; notes: string }>> = {
   steam: { name: 'CS2 alt', notes: 'Prime · owns Rust and CS2 · Family Sharing on' },
   epic: { name: 'Fortnite main', notes: 'Chapter 1 skins · free games claimed every week' },
@@ -462,7 +470,7 @@ function CreateAccount({ launcher }: { launcher: LauncherId }) {
       </header>
 
       <div className="flex flex-col gap-4 pb-6">
-        <Panel title="Details">
+        <Panel title="Details" description={FIRST_PLAY[launcher]}>
           <AccountForm draft={draft} errors={errors} launcher={launcher} disabled={busy} autoFocus onChange={(p) => setDraft((d) => ({ ...d, ...p }))} />
         </Panel>
         <Panel

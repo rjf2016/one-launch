@@ -33,12 +33,11 @@ describe('SessionPanel: a new account, before its first Play', () => {
     open(state());
     expect(await screen.findByText('Nobody')).toBeTruthy();
     expect(screen.getByText('Not saved yet')).toBeTruthy();
-    expect(screen.getByText(/^The Riot Client remembers one sign-in at a time\. The first time you play on this account you sign in once/)).toBeTruthy();
-    expect(screen.getByText(/switch through One Launch: the client’s own Sign out ends the saved sign-in for good/)).toBeTruthy();
+    expect(screen.getByText('Saved the first time you play on this account, and put back whenever you switch to it.')).toBeTruthy();
     const save = screen.getByRole<HTMLButtonElement>('button', { name: 'Save sign-in' });
     expect(save.disabled).toBe(true);
     expect(save.title).toBe('Nothing to save: Riot Client holds no sign-in right now.');
-    expect(screen.getByText(/^To save it now instead: sign in to the Riot Client as this account with “Stay signed in” ticked/)).toBeTruthy();
+    expect(screen.queryByText(/Stay signed in/)).toBeNull();
     expect(screen.queryByText('Last sign-in')).toBeNull();
   });
 

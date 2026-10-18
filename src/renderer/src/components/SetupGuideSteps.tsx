@@ -237,8 +237,7 @@ export function PlayStep({ previewMode }: { previewMode: boolean }) {
             One Launch closes it, signs it in as the account you picked, starts it again and launches the game.
           </Point>
           <Point icon={<KeyRound />} title="Sign in once per account" delay={160}>
-            The first time you play on an account you sign in once, in the launcher's own window, with its remember-me box ticked (Steam: “Remember me”,
-            Battle.net: “Keep me logged in”, Riot: “Stay signed in”). One Launch waits for you and carries on.
+            The first time you play on an account you may have to sign in once, in the launcher's own window. One Launch waits for you and carries on.
           </Point>
           <Point icon={<ShieldCheck />} title="Backed up before every switch" delay={240}>
             The launcher's sign-in files are saved first and put back if anything fails. Settings › Backups can restore one by hand.

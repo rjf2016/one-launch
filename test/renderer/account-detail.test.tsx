@@ -48,6 +48,7 @@ describe('AccountDetailView: creating an account', () => {
     useUiStore.setState({ view: 'accounts', accountRoute: { kind: 'new', launcher: 'riot' } });
     render(<AccountDetailView />);
     expect(await screen.findByRole('heading', { name: 'New Riot Games account' })).toBeTruthy();
+    expect(screen.getByText('First Play: the Riot Client asks you to sign in once; tick “Stay signed in”.')).toBeTruthy();
     await fillAndCreate(user);
     await waitFor(() => expect(bridge.sent('accounts:create')).toHaveLength(1));
     expect(bridge.sent('accounts:create')[0]).toMatchObject({ launcher: 'riot', displayName: 'Smurf', login: 'riot_smurf', password: null });
