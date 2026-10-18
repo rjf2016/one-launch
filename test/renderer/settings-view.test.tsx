@@ -1,13 +1,14 @@
 // @vitest-environment jsdom
 import './setup';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { Sidebar } from '../../src/renderer/src/components/Sidebar';
 import { useUiStore } from '../../src/renderer/src/store/ui';
 import { SettingsView } from '../../src/renderer/src/views/SettingsView';
 import type { AppInfo, SettingKey } from '../../src/shared/models';
 import { WHATS_NEW } from '../../src/shared/whats-new-releases';
-import { installBridge, resetUi } from './harness';
+import { BridgeError, installBridge, resetUi } from './harness';
 
 resetUi();
 
@@ -39,10 +40,12 @@ function settingsPage(initial: Partial<Record<SettingKey, string>> = {}, appInfo
     'launchers:status': () => ({ launchers: [] }),
     'backups:list': () => ({ snapshots: [] }),
     'artwork:status': () => ({ status: { queued: 0, running: 0, completed: 0, failed: 0, hasApiKey: false, revision: 1, scanned: true } }),
+    'updates:status': () => ({ state: 'idle' }),
   });
 }
 
 const traySwitch = () => screen.findByRole('switch', { name: 'Keep running in the system tray' });
+const tab = (name: string) => screen.getByRole('tab', { name });
 
 describe('Settings › General: keep running in the system tray', () => {
   it('is on until the user turns it off, and stores the choice', async () => {
@@ -69,7 +72,7 @@ describe('Settings › General: keep running in the system tray', () => {
   });
 });
 
-describe("Settings › General: what's new", () => {
+describe("Settings › Updates: what's new", () => {
   const whatsNewSwitch = () => screen.findByRole('switch', { name: "Show what's new after an update" });
   const showButton = () => screen.getByRole('button', { name: "Show what's new" });
 
@@ -97,14 +100,127 @@ describe("Settings › General: what's new", () => {
   });
 });
 
+describe('Settings › tabs', () => {
+  it('opens on General and mounts a tab only once it is chosen', async () => {
+    const bridge = settingsPage();
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    await traySwitch();
+    expect(tab('General').getAttribute('aria-selected')).toBe('true');
+    expect(bridge.sent('backups:list')).toHaveLength(0);
+    await user.click(tab('Backups'));
+    expect(tab('Backups').getAttribute('aria-selected')).toBe('true');
+    expect(tab('General').getAttribute('aria-selected')).toBe('false');
+    expect(await screen.findByRole('heading', { name: 'Backups' })).toBeTruthy();
+    await waitFor(() => expect(bridge.sent('backups:list').length).toBeGreaterThan(0));
+    expect(screen.queryByRole('switch', { name: 'Keep running in the system tray' })).toBeNull();
+  });
+
+  it('moves with the arrow keys, Home and End, wrapping at the ends', async () => {
+    settingsPage();
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    await traySwitch();
+    tab('General').focus();
+    await user.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(tab('Launchers'));
+    expect(tab('Launchers').getAttribute('aria-selected')).toBe('true');
+    expect(tab('General').getAttribute('tabindex')).toBe('-1');
+    expect(await screen.findByRole('heading', { name: 'Play' })).toBeTruthy();
+    await user.keyboard('{End}');
+    expect(document.activeElement).toBe(tab('Advanced'));
+    await user.keyboard('{ArrowRight}');
+    expect(document.activeElement).toBe(tab('General'));
+    await user.keyboard('{ArrowLeft}');
+    expect(document.activeElement).toBe(tab('Advanced'));
+    await user.keyboard('{Home}');
+    expect(document.activeElement).toBe(tab('General'));
+    expect(tab('General').getAttribute('tabindex')).toBe('0');
+  });
+
+  it('keeps the chosen tab for the session, and openSettings picks one from anywhere', async () => {
+    const store = useUiStore.getState();
+    store.openSettings('advanced');
+    await waitFor(() => expect(useUiStore.getState()).toMatchObject({ view: 'settings', settingsTab: 'advanced' }));
+    store.setView('library');
+    await waitFor(() => expect(useUiStore.getState().view).toBe('library'));
+    store.setView('settings');
+    await waitFor(() => expect(useUiStore.getState().view).toBe('settings'));
+    expect(useUiStore.getState().settingsTab).toBe('advanced');
+  });
+
+  it('stays put when a form with unsaved edits says no', async () => {
+    useUiStore.setState({ leaveGuard: () => Promise.resolve(false) });
+    useUiStore.getState().openSettings('backups');
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(useUiStore.getState()).toMatchObject({ view: 'library', settingsTab: 'general' });
+  });
+});
+
+describe('Settings › Advanced: preview mode', () => {
+  it('lives under Advanced, off until the user turns it on', async () => {
+    const bridge = settingsPage();
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    await traySwitch();
+    expect(screen.queryByRole('switch', { name: 'Preview mode' })).toBeNull();
+    await user.click(tab('Advanced'));
+    const toggle = await screen.findByRole('switch', { name: 'Preview mode' });
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    await user.click(toggle);
+    await waitFor(() => expect(bridge.sent('settings:set')).toEqual([{ key: 'dryRun', value: 'true' }]));
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+  });
+});
+
+describe('Settings › a setting that will not save', () => {
+  it('says so under its row and puts the control back', async () => {
+    const bridge = settingsPage();
+    bridge.on('settings:set', () => {
+      throw new BridgeError('DB_ERROR', 'disk full');
+    });
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    const toggle = await traySwitch();
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    await user.click(toggle);
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Could not save the setting: disk full');
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    expect(toggle.getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('re-reads every setting when another part of the app changes one', async () => {
+    const bridge = settingsPage();
+    render(<SettingsView />);
+    await traySwitch();
+    const before = bridge.sent('settings:getAll').length;
+    act(() => useUiStore.getState().settingsChanged());
+    await waitFor(() => expect(bridge.sent('settings:getAll')).toHaveLength(before + 1));
+  });
+});
+
+describe('Sidebar › Preview mode card', () => {
+  it('opens Settings on Advanced', async () => {
+    settingsPage({ dryRun: 'true' });
+    const user = userEvent.setup();
+    render(<Sidebar />);
+    await user.click(await screen.findByRole('button', { name: 'Preview mode is on' }));
+    await waitFor(() => expect(useUiStore.getState()).toMatchObject({ view: 'settings', settingsTab: 'advanced' }));
+  });
+});
+
 describe('Settings › Developer (development builds only)', () => {
   it('previews any entry in the file, whatever the running version', async () => {
     settingsPage({}, { ...info, version: '0.0.1' });
     const user = userEvent.setup();
     render(<SettingsView />);
+    const show = await screen.findByRole('button', { name: "Show what's new" });
+    expect(show.hasAttribute('disabled')).toBe(true);
+    await user.click(tab('Advanced'));
     const preview = await screen.findByRole('button', { name: 'Preview' });
     await waitFor(() => expect(preview.hasAttribute('disabled')).toBe(false));
-    expect(screen.getByRole('button', { name: "Show what's new" }).hasAttribute('disabled')).toBe(true);
     await user.click(preview);
     expect(useUiStore.getState().whatsNew).toEqual({ release: WHATS_NEW[0], version: '0.0.1' });
   });

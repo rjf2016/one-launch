@@ -57,10 +57,14 @@ export default async (d) => {
 
   await d.click('Settings');
   await d.waitFor('Advanced');
+  await d.click('Launchers');
+  await d.waitFor('Re-check');
   const notInstalled = await count(d, 'Not installed');
   d.check('every launcher row says Not installed', notInstalled >= 4, String(notInstalled));
   await settle();
   await d.shot('settings-no-launchers');
+  await d.click('General');
+  await d.waitFor('Show again');
   await d.click('Show again');
   await d.waitFor('Welcome to One Launch');
   d.check('Settings brings the guide back', await d.has('Get started'));

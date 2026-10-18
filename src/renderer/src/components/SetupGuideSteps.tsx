@@ -246,7 +246,7 @@ export function PlayStep({ previewMode }: { previewMode: boolean }) {
         {previewMode ? (
           <p className="guide-rise mt-5 flex items-start gap-2 text-xs text-muted" style={{ animationDelay: '320ms' }}>
             <FlaskConical className="mt-0.5 size-3.5 shrink-0 text-warning" />
-            <span>Preview mode is on, so Play only shows what a switch would do and changes nothing. Settings › General turns it off.</span>
+            <span>Preview mode is on, so Play only shows what a switch would do and changes nothing. Settings › Advanced turns it off.</span>
           </p>
         ) : null}
       </div>

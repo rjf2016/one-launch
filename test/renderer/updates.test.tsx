@@ -50,7 +50,7 @@ function updatesBridge(initial: UpdateStatus, settings: Partial<Record<SettingKe
 }
 
 function panel(onAuto: (next: boolean) => void = () => {}, auto = true) {
-  return render(<UpdatesPanel version="1.0.0-beta.2" auto={auto} settingsLoading={false} onAuto={onAuto} />);
+  return render(<UpdatesPanel version="1.0.0-beta.2" auto={auto} whatsNewOn settingsLoading={false} onAuto={onAuto} onWhatsNewOn={() => {}} />);
 }
 
 describe('Settings › Updates', () => {

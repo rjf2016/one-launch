@@ -11,6 +11,8 @@ interface ArtworkPanelProps {
   autoFetch: boolean;
   settingsLoading: boolean;
   vaultAvailable: boolean;
+  /** Why the last change to the auto-fetch switch was not saved. */
+  settingError?: string | null;
   onAutoFetch: (next: boolean) => void;
 }
 
@@ -19,7 +21,7 @@ function errorText(err: unknown): string {
 }
 
 /** Settings > Artwork: SteamGridDB key (vault), auto-fetch, refresh all, rescan, and queue status. */
-export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, onAutoFetch }: ArtworkPanelProps) {
+export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, settingError, onAutoFetch }: ArtworkPanelProps) {
   const [status, setStatus] = useState<ArtworkStatus | null>(null);
   const [key, setKey] = useState('');
   const [busy, setBusy] = useState<'key' | 'refresh' | 'rescan' | null>(null);
@@ -108,49 +110,58 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, onAut
   return (
     <Panel
       title="Artwork"
-      description="Games that are on Steam, whichever launcher they run from, use Steam's CDN with no key. SteamGridDB fills in the rest and needs a free API key. Only game names and IDs are sent."
+      description="Covers come from Steam, or from SteamGridDB with a free key."
       actions={
         <>
-          <Button icon={<RefreshCw className={busy === 'rescan' ? 'animate-spin' : ''} />} disabled={busy !== null} onClick={() => void rescan()}>
-            Rescan library
+          <Button
+            icon={<RefreshCw className={busy === 'rescan' ? 'animate-spin' : ''} />}
+            title="Look for games added or removed since the last scan"
+            disabled={busy !== null}
+            onClick={() => void rescan()}
+          >
+            Rescan
           </Button>
-          <Button icon={<Images />} disabled={busy !== null} onClick={() => void refreshAll()}>
-            Refresh all artwork
+          <Button
+            icon={<Images />}
+            title="Fetch every cover again; images you chose yourself are kept"
+            disabled={busy !== null}
+            onClick={() => void refreshAll()}
+          >
+            Refresh all
           </Button>
         </>
       }
     >
       <Row
         label="SteamGridDB API key"
-        align="center"
-        hint={
-          status?.hasApiKey
-            ? 'A key is stored in the vault. Enter a new one to replace it.'
-            : 'Stored in the vault, sent only to SteamGridDB. Get one at steamgriddb.com/profile/preferences/api.'
-        }
+        hint={status?.hasApiKey ? 'Paste a new key to replace the stored one.' : 'Free at steamgriddb.com/profile/preferences/api.'}
       >
-        <div className="flex items-center gap-2">
-          <TextInput
-            type="password"
-            autoComplete="off"
-            placeholder={status?.hasApiKey ? '••••••••' : 'Paste your key'}
-            value={key}
-            disabled={!vaultAvailable || busy === 'key'}
-            onChange={(e) => setKey(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void saveKey();
-            }}
-            className="w-64"
-          />
-          <Button variant="primary" icon={<KeyRound />} disabled={!vaultAvailable || busy === 'key' || key.trim() === ''} onClick={() => void saveKey()}>
-            Save
-          </Button>
-          {status?.hasApiKey ? (
-            <Button variant="ghost" icon={<Trash2 />} disabled={busy === 'key'} onClick={() => void removeKey()} aria-label="Remove key" />
-          ) : null}
-        </div>
+        <TextInput
+          type="password"
+          autoComplete="off"
+          aria-label="SteamGridDB API key"
+          placeholder={status?.hasApiKey ? '••••••••' : 'Paste your key'}
+          value={key}
+          disabled={!vaultAvailable || busy === 'key'}
+          onChange={(e) => setKey(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') void saveKey();
+          }}
+          className="max-w-56 min-w-56"
+        />
+        <Button
+          variant="primary"
+          icon={<KeyRound />}
+          aria-label="Save key"
+          title="Save key"
+          disabled={!vaultAvailable || busy === 'key' || key.trim() === ''}
+          onClick={() => void saveKey()}
+        />
+        {status?.hasApiKey ? (
+          <Button variant="ghost" icon={<Trash2 />} disabled={busy === 'key'} onClick={() => void removeKey()} aria-label="Remove key" title="Remove key" />
+        ) : null}
       </Row>
-      <Row label="Fetch artwork automatically" hint="Look up missing artwork after each scan. Cached images are never re-fetched unless you ask.">
+      <Row label="Fetch artwork automatically" hint="Looks up missing covers after each scan; only game names and ids are sent." error={settingError ?? null}>
         <Toggle label="Fetch artwork automatically" checked={autoFetch} disabled={settingsLoading} onChange={onAutoFetch} />
       </Row>
       <Row label="Queue" hint="Background downloads since the app started.">

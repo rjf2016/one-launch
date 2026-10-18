@@ -62,6 +62,8 @@ export interface ActiveLaunch {
 /** Why the setup guide is open: a new install opened it by itself, or the user asked for it from Settings. */
 export type SetupGuideSource = 'first-run' | 'settings';
 
+export type SettingsTab = 'general' | 'launchers' | 'artwork' | 'backups' | 'advanced';
+
 /** The release the What's New card shows, and the running version it records as seen when it closes. */
 export interface WhatsNewRequest {
   release: WhatsNewRelease;
@@ -71,6 +73,8 @@ export interface WhatsNewRequest {
 interface UiState {
   view: View;
   accountRoute: AccountRoute;
+  /** The Settings tab in view, kept for the session: the sidebar and Ctrl+3 leave it alone, `openSettings` picks one. */
+  settingsTab: SettingsTab;
   /** Bumped whenever a setting changes, so views that mirror a setting (the sidebar's Preview mode card, the Library's welcome panel) re-read it. */
   settingsRevision: number;
   /** Set by a view with unsaved edits; navigation asks it before leaving and stays put when it resolves false. */
@@ -106,6 +110,9 @@ interface UiState {
   openAccount: (id: string) => void;
   newAccount: (launcher: LauncherId) => void;
   backToAccounts: () => void;
+  setSettingsTab: (tab: SettingsTab) => void;
+  /** Opens Settings on a tab from anywhere: the sidebar's Preview mode card, the Library's artwork-key link. */
+  openSettings: (tab: SettingsTab) => void;
   settingsChanged: () => void;
   setLeaveGuard: (guard: (() => Promise<boolean>) | null) => void;
   /** Shows the app's own confirm dialog and resolves with the answer. A second question while one is open is answered no. */
@@ -125,6 +132,7 @@ export const useUiStore = create<UiState>((set, get) => {
   return {
     view: 'library',
     accountRoute: { kind: 'list' },
+    settingsTab: 'general',
     settingsRevision: 0,
     leaveGuard: null,
     confirm: null,
@@ -167,6 +175,9 @@ export const useUiStore = create<UiState>((set, get) => {
     openAccount: (id) => navigate({ view: 'accounts', accountRoute: { kind: 'detail', id } }),
     newAccount: (launcher) => navigate({ view: 'accounts', accountRoute: { kind: 'new', launcher } }),
     backToAccounts: () => navigate({ view: 'accounts', accountRoute: { kind: 'list' } }),
+    setSettingsTab: (tab) => set({ settingsTab: tab }),
+    // Not through setView, which returns early while Settings is already in view.
+    openSettings: (tab) => navigate({ view: 'settings', settingsTab: tab }),
     settingsChanged: () => set((s) => ({ settingsRevision: s.settingsRevision + 1 })),
     setLeaveGuard: (guard) => set({ leaveGuard: guard }),
     ask: (opts) => {

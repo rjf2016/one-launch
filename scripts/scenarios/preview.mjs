@@ -11,6 +11,8 @@ export default async (d) => {
 
   await d.click('Settings');
   await d.waitFor('Advanced');
+  await d.click('Advanced');
+  await d.waitFor('Launching');
   await d.click({ selector: '[role="switch"][aria-label="Preview mode"]' });
   await d.waitFor('Preview mode is on');
   d.check('the switch stores dryRun=true', (await d.invoke('settings:get', { key: 'dryRun' })).value === 'true');

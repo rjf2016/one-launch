@@ -26,12 +26,8 @@ export default function WhatsNewDevPanel() {
   const release = WHATS_NEW.find((r) => r.version === version) ?? null;
 
   return (
-    <Panel title="Developer" description="Only in a development build. The packaged app carries none of this.">
-      <Row
-        label="Preview What's New"
-        hint="Every entry in src/shared/whats-new-releases.ts, whatever the running version. Under npm run dev, saving the file updates the open card."
-        align="center"
-      >
+    <Panel title="Developer" description="Only in a development build. Under npm run dev, saving the releases file updates the open card.">
+      <Row label="Preview What's New" hint="Any entry in whats-new-releases.ts, whatever the running version.">
         <Dropdown
           label="Release to preview"
           value={version}

@@ -11,7 +11,7 @@ import { healthLabel, StatusPill } from './StatusPill';
 function locationNote(status: LauncherStatus): string {
   if (status.install?.source === 'user') return 'You chose this folder.';
   if (status.chosenPath) return `${LAUNCHER_EXE_NAMES[status.launcher]} is no longer in the folder you chose.`;
-  return status.install ? 'Found automatically.' : `Not found automatically. If it is installed, point One Launch at ${LAUNCHER_EXE_NAMES[status.launcher]}.`;
+  return status.install ? 'Found automatically.' : `Not found. If it is installed, point One Launch at ${LAUNCHER_EXE_NAMES[status.launcher]}.`;
 }
 
 function LauncherRow({ status, refreshing, onChanged }: { status: LauncherStatus; refreshing: boolean; onChanged: () => void }) {
@@ -49,7 +49,7 @@ function LauncherRow({ status, refreshing, onChanged }: { status: LauncherStatus
   );
 
   return (
-    <div className="py-2.5 not-last:border-b not-last:border-border/60">
+    <div className="py-2.5 first:pt-0 last:pb-0 not-last:border-b not-last:border-border/60">
       <div className="flex items-center justify-between gap-6">
         <button
           type="button"
@@ -124,7 +124,7 @@ function LauncherRow({ status, refreshing, onChanged }: { status: LauncherStatus
 /** Same height as a LauncherRow, so the panel does not grow when the real rows arrive. */
 function SkeletonRow() {
   return (
-    <div className="flex items-center justify-between gap-6 py-2.5 not-last:border-b not-last:border-border/60" aria-hidden>
+    <div className="flex items-center justify-between gap-6 py-2.5 first:pt-0 last:pb-0 not-last:border-b not-last:border-border/60" aria-hidden>
       <div className="flex items-center gap-2">
         <span className="inline-block w-3.5" />
         <span className="size-2 rounded-full bg-surface-3" />
@@ -155,7 +155,7 @@ export function LauncherStatusPanel() {
   return (
     <Panel
       title="Launchers"
-      description="Which launchers are installed, and whether they are set up the way One Launch expects."
+      description="Which launchers are installed and set up the way One Launch expects."
       actions={
         <Button icon={<RefreshCw className={status.loading ? 'animate-spin' : ''} />} disabled={status.loading} onClick={status.reload}>
           Re-check

@@ -65,12 +65,58 @@ export default async (d) => {
     );
   }
 
+  const SETTINGS_TABS = [
+    ['General', 'Keep running in the system tray'],
+    ['Launchers', 'Re-check'],
+    ['Artwork', 'Fetch artwork automatically'],
+    ['Backups', 'Snapshots to keep'],
+    ['Advanced', 'Launching'],
+  ];
+  const openTab = async (tab, marker) => {
+    await d.click(tab);
+    await d.waitFor(marker);
+    // The strip's colour transition is still running when the panel's text appears.
+    await sleep(200);
+  };
+
   await d.click('Settings');
-  await d.waitFor('Advanced');
+  await d.waitFor('Keep running in the system tray');
   await d.shot('settings');
+  for (const [tab, marker] of SETTINGS_TABS.slice(1)) {
+    await openTab(tab, marker);
+    await d.shot(`settings-${tab.toLowerCase()}`);
+  }
+
+  // The narrowest a row ever gets: the minimum window with the sidebar held open.
   await d.viewport(960, 600);
-  await d.shot('settings-960x600');
+  await d.key('b', { ctrl: true });
+  await d.waitFor(() => document.querySelector('aside')?.hasAttribute('data-collapsed') === false);
+  for (const [tab, marker] of SETTINGS_TABS) {
+    await openTab(tab, marker);
+    await d.shot(`settings-${tab.toLowerCase()}-960x600`);
+    const wrapped = await d.evaluate(() =>
+      [...document.querySelectorAll('[role="tabpanel"] .text-xs.text-muted')]
+        .filter((el) => {
+          const cs = getComputedStyle(el);
+          return el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) > parseFloat(cs.lineHeight) + 1;
+        })
+        .map((el) => el.textContent),
+    );
+    d.check(`${tab}: no hint or description wraps at 960 px with the sidebar open`, wrapped.length === 0, wrapped.join(' | '));
+  }
   await d.viewport(null);
+
+  await d.focus('General');
+  await d.key('ArrowRight');
+  d.check(
+    'ArrowRight on a settings tab selects and focuses the next one',
+    await d.evaluate(() => {
+      const el = document.activeElement;
+      return el?.getAttribute('role') === 'tab' && el.textContent === 'Launchers' && el.getAttribute('aria-selected') === 'true';
+    }),
+  );
+  await d.click('General');
+  await d.waitFor('Keep running in the system tray');
 
   const hasNotes = await d.evaluate(() => {
     const button = document.querySelector('button[aria-label="Show what\'s new"]');
