@@ -271,8 +271,6 @@ type SignInWait =
   | { kind: 'cancelled' };
 
 function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason: string | null, canCopyPassword: boolean, until: string): LaunchAttention {
-  const finish =
-    'One Launch stores the new session and continues with the game on its own as soon as the client reports the sign-in. Later switches are automatic.';
   const why =
     cause === 'expired'
       ? 'The client rejected its stored session.'
@@ -282,7 +280,12 @@ function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason:
   return {
     kind: 'sign-in',
     title: cause === 'new' ? `Sign in to Battle.net as ${login}` : `Battle.net is asking you to sign in as ${login}`,
-    message: `${why} The client's login page opens on the password step of the account it last signed in as: click "Switch account" there, pick or type ${login}, enter the password, and leave "Keep me logged in" on. ${finish}`,
+    message: `${why} Its login page opens on the account it last signed in as.`,
+    steps: [
+      'In the Battle.net window, click “Switch account”.',
+      `Pick or type ${login} and enter the password.`,
+      'Leave “Keep me logged in” on and sign in. One Launch continues on its own, and later switches are automatic.',
+    ],
     reason,
     canCopyPassword,
     until,
@@ -573,17 +576,17 @@ export class BattlenetAdapter implements LauncherAdapter {
     const current = await this.currentSession(running);
     if (!current.token) {
       throw new SwitchBlockedError(
-        `Battle.net has no remembered session right now (nothing under ${UNIFIED_AUTH_PATH}). Sign in to the client as ${account.login} with "Keep me logged in" on, then capture again.`,
+        `Battle.net has no remembered session right now (nothing under ${UNIFIED_AUTH_PATH}). Sign in to the client as ${account.login} with "Keep me logged in" on, then save again.`,
       );
     }
     if (running && (!current.lastSignIn?.ok || !current.loggedUid)) {
       throw new SwitchBlockedError(
-        `Battle.net is running but has not signed in during this run${current.lastSignIn && !current.lastSignIn.ok ? ` (${current.lastSignIn.reason})` : ''}. Sign in to it as ${account.login}, then capture again.`,
+        `Battle.net is running but has not signed in during this run${current.lastSignIn && !current.lastSignIn.ok ? ` (${current.lastSignIn.reason})` : ''}. Sign in to it as ${account.login}, then save again.`,
       );
     }
     if (!running && current.signedOut) {
       throw new SwitchBlockedError(
-        'The last Battle.net run ended with a logout, so the remembered session cannot be attributed to an account. Sign in to the client, exit it, then capture again.',
+        'The last Battle.net run ended with a logout, so the remembered session cannot be attributed to an account. Sign in to the client, exit it, then save again.',
       );
     }
     if (current.owner && current.owner.id !== account.id) {

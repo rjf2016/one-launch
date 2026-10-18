@@ -225,8 +225,6 @@ type SignInWait =
   | { kind: 'cancelled' };
 
 function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason: string | null, canCopyPassword: boolean, until: string): LaunchAttention {
-  const finish =
-    'One Launch stores the session and continues with the game on its own as soon as the launcher reports the sign-in. Later switches are automatic.';
   const why =
     cause === 'expired'
       ? 'Its remembered session has expired.'
@@ -236,7 +234,8 @@ function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason:
   return {
     kind: 'sign-in',
     title: cause === 'new' ? `Sign in to Epic Games Launcher as ${login}` : `Epic Games Launcher is asking you to sign in as ${login}`,
-    message: `${why} Sign in once in the launcher window. ${finish}`,
+    message: why,
+    steps: [`Sign in as ${login} in the Epic Games Launcher window. One Launch saves the sign-in and continues on its own, and later switches are automatic.`],
     reason,
     canCopyPassword,
     until,
@@ -471,19 +470,19 @@ export class EpicAdapter implements LauncherAdapter {
     const blob = text ? sessionBlobFromIni(text) : null;
     if (!blob || !current.disk.remembered) {
       throw new SwitchBlockedError(
-        `Epic Games Launcher is not remembering a session right now. Sign in to it as ${account.login}, exit it once so it saves the session, then capture again.`,
+        `Epic Games Launcher is not remembering a session right now. Sign in to it as ${account.login}, exit it once so it saves the session, then save again.`,
       );
     }
     if (running) {
       // The file can hold a session the running launcher is not using: only its own log says who is signed in.
       if (!current.lastSignIn?.ok || !current.loggedUid) {
         throw new SwitchBlockedError(
-          `Epic Games Launcher is running but has not signed in during this run${current.lastSignIn && !current.lastSignIn.ok ? ` (${current.lastSignIn.reason})` : ''}. Sign in to it as ${account.login}, then capture again.`,
+          `Epic Games Launcher is running but has not signed in during this run${current.lastSignIn && !current.lastSignIn.ok ? ` (${current.lastSignIn.reason})` : ''}. Sign in to it as ${account.login}, then save again.`,
         );
       }
       if (!current.diskCurrent) {
         throw new SwitchBlockedError(
-          `Epic Games Launcher has not saved its current sign-in to disk yet. Exit the launcher (it writes the session on exit), then capture again.`,
+          `Epic Games Launcher has not saved its current sign-in to disk yet. Exit the launcher (it writes the session on exit), then save again.`,
         );
       }
     }

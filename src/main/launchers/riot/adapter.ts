@@ -238,9 +238,18 @@ function idTail(uid: string | null): string {
 }
 
 /** The log's verdict as the session panel shows it. A start with no saved sign-in is not an attempt. */
-function sessionLastSignIn(last: SignInOutcome | null): LauncherSessionState['lastSignIn'] {
+/**
+ * The newest run's verdict for the account page. A closed client whose last run signed in by hand but
+ * whose file holds no sign-in kept nothing: “Stay signed in” was not ticked (docs/adapters/riot.md › Session file).
+ */
+function sessionLastSignIn(last: SignInOutcome | null, state: { running: boolean; remembered: boolean }): LauncherSessionState['lastSignIn'] {
   if (!last) return null;
-  if (last.ok) return { ok: true, reason: null };
+  if (last.ok) {
+    if (last.how === 'manual' && !state.running && !state.remembered) {
+      return { ok: false, reason: 'the last sign-in was not kept because “Stay signed in” was not ticked. Sign in to the Riot Client again with it ticked.' };
+    }
+    return { ok: true, reason: null };
+  }
   return last.reason === 'no-session' ? null : { ok: false, reason: last.detail };
 }
 
@@ -304,7 +313,12 @@ function attentionFor(login: string, cause: 'expired' | 'new' | 'other', reason:
   return {
     kind: 'sign-in',
     title: cause === 'new' ? `Sign in to the Riot Client as ${login}` : `The Riot Client is asking you to sign in as ${login}`,
-    message: `${why} Sign in once in the Riot Client window with “Stay signed in” ticked. One Launch saves the sign-in and continues on its own as soon as the client reports it; later switches are automatic. To change accounts afterwards, switch through One Launch rather than the client's Sign out, which ends the saved sign-in for good.`,
+    message: why,
+    steps: [
+      `In the Riot Client window, enter the login ${login} and your password.`,
+      'Tick “Stay signed in” before you sign in, or the client forgets the account when it closes.',
+      'Press Sign in. One Launch continues on its own, and later switches are automatic.',
+    ],
     reason,
     canCopyPassword,
     until,
@@ -593,7 +607,7 @@ export class RiotAdapter implements LauncherAdapter {
       launcherUid: current.session?.accountId ?? null,
       linkedAccountId: current.owner?.id ?? null,
       launcherRunning: running,
-      lastSignIn: sessionLastSignIn(lastSignIn(currentRunEvents(this.logDir()))),
+      lastSignIn: sessionLastSignIn(lastSignIn(currentRunEvents(this.logDir())), { running, remembered: current.session !== null }),
     };
   }
 

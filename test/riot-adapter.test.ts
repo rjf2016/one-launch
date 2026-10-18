@@ -1035,9 +1035,12 @@ describe('Riot hand-over', () => {
     expect(staleWhenAsked).toEqual(['the client refused the saved sign-in (401 invalid_grant)']);
     expect(seen.map((a) => a && a.title)).toEqual(['The Riot Client is asking you to sign in as riot_alt', null]);
     expect(seen[0]).toMatchObject({ kind: 'sign-in', reason: 'the client refused the saved sign-in (401 invalid_grant)', canCopyPassword: false });
-    expect(seen[0]!.message).toBe(
-      "The client refused its saved sign-in. Sign in once in the Riot Client window with “Stay signed in” ticked. One Launch saves the sign-in and continues on its own as soon as the client reports it; later switches are automatic. To change accounts afterwards, switch through One Launch rather than the client's Sign out, which ends the saved sign-in for good.",
-    );
+    expect(seen[0]!.message).toBe('The client refused its saved sign-in.');
+    expect(seen[0]!.steps).toEqual([
+      'In the Riot Client window, enter the login riot_alt and your password.',
+      'Tick “Stay signed in” before you sign in, or the client forgets the account when it closes.',
+      'Press Sign in. One Launch continues on its own, and later switches are automatic.',
+    ]);
     const fresh = onDisk()!;
     expect(sessions.get(B.id)).toMatchObject({ fingerprint: fresh.fingerprint, staleReason: null });
     expect(sessions.get(B.id)!.verifiedAt).not.toBeNull();
@@ -1087,8 +1090,13 @@ describe('Riot hand-over', () => {
     expect(signedOutText).toBe(SIGNED_OUT);
     expect(result.steps[6]!.detail).toBe('The client ended on its login page: no saved sign-in.');
     expect(result.steps[7]!.detail).toBe('Signed in as riot_new. Linked to Riot account …4444.');
-    expect(seen[0]).toMatchObject({ title: 'Sign in to the Riot Client as riot_new', reason: null, canCopyPassword: true });
-    expect(seen[0]!.message).toMatch(/^No sign-in is saved for this account yet\. Sign in once/);
+    expect(seen[0]).toMatchObject({
+      title: 'Sign in to the Riot Client as riot_new',
+      reason: null,
+      canCopyPassword: true,
+      message: 'No sign-in is saved for this account yet.',
+    });
+    expect(seen[0]!.steps?.[1]).toBe('Tick “Stay signed in” before you sign in, or the client forgets the account when it closes.');
     expect(accounts.require(C.id).launcherUid).toBe(NEW_SUB);
     expect(sessions.get(C.id)).toMatchObject({ launcherUid: NEW_SUB, fingerprint: onDisk()!.fingerprint, staleReason: null });
     expect(sessions.get(C.id)!.verifiedAt).not.toBeNull();
@@ -1096,14 +1104,29 @@ describe('Riot hand-over', () => {
     noTokens(JSON.stringify({ result, seen }));
   });
 
-  it('a sign-in without “Stay signed in” is stored, and the client forgets it at exit', async () => {
+  it('a sign-in without “Stay signed in” is stored, the client forgets it at exit, and the account page is told why', async () => {
     sim.knobs.staySignedIn = false;
     const result = await adapter().switchAccount(ref(C), { dryRun: false, onAttention: attentionLog(NEW_SUB).onAttention });
     expect(result.ok).toBe(true);
     expect(sessions.get(C.id)).not.toBeNull();
+    // While the client runs the file holds the sign-in, so nothing is wrong yet.
+    expect(await adapter().sessionState()).toMatchObject({ remembered: true, launcherRunning: true, lastSignIn: { ok: true, reason: null } });
     await adapter().shutdown();
     expect(onDisk()).toBeNull();
-    expect((await adapter().sessionState()).remembered).toBe(false);
+    const state = await adapter().sessionState();
+    expect(state.remembered).toBe(false);
+    expect(state.lastSignIn).toEqual({
+      ok: false,
+      reason: 'the last sign-in was not kept because “Stay signed in” was not ticked. Sign in to the Riot Client again with it ticked.',
+    });
+  });
+
+  it('a sign-in with “Stay signed in” kept at exit reports nothing on the account page', async () => {
+    const result = await adapter().switchAccount(ref(C), { dryRun: false, onAttention: attentionLog(NEW_SUB).onAttention });
+    expect(result.ok).toBe(true);
+    await adapter().shutdown();
+    expect(onDisk()).not.toBeNull();
+    expect(await adapter().sessionState()).toMatchObject({ remembered: true, launcherRunning: false, lastSignIn: { ok: true, reason: null } });
   });
 
   it('fails and rolls back when the user signs in as another One Launch account, storing that sign-in for its owner first', async () => {

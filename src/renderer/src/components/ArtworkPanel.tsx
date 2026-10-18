@@ -1,4 +1,4 @@
-import { Images, KeyRound, RefreshCw, Trash2 } from 'lucide-react';
+import { ExternalLink, Images, KeyRound, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { LAUNCHER_DISPLAY_NAMES, type ArtworkStatus } from '@shared/models';
 import { ipc } from '../lib/ipc';
@@ -60,6 +60,15 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
     }
   }
 
+  async function getKey(): Promise<void> {
+    setMessage(null);
+    try {
+      await ipc.invoke('app:openUrl', { target: 'steamgriddb-api-key' });
+    } catch (err) {
+      setMessage(`Could not open the browser: ${errorText(err)}`);
+    }
+  }
+
   async function removeKey(): Promise<void> {
     setBusy('key');
     setMessage(null);
@@ -110,7 +119,7 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
   return (
     <Panel
       title="Artwork"
-      description="Covers come from Steam, or from SteamGridDB with a free key."
+      description="Covers come from Steam. Other games need a free SteamGridDB key."
       actions={
         <>
           <Button
@@ -134,8 +143,13 @@ export function ArtworkPanel({ autoFetch, settingsLoading, vaultAvailable, setti
     >
       <Row
         label="SteamGridDB API key"
-        hint={status?.hasApiKey ? 'Paste a new key to replace the stored one.' : 'Free at steamgriddb.com/profile/preferences/api.'}
+        hint={status?.hasApiKey ? 'Paste a new key to replace the stored one.' : 'Free. Press Get a key, sign in, paste it here.'}
       >
+        {status && !status.hasApiKey ? (
+          <Button icon={<ExternalLink />} title="Opens the SteamGridDB API page in your browser" onClick={() => void getKey()}>
+            Get a key
+          </Button>
+        ) : null}
         <TextInput
           type="password"
           autoComplete="off"

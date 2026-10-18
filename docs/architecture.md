@@ -14,7 +14,7 @@ Request/response only; no push channels. The renderer discovers background progr
 ### Hardening
 
 - `contextIsolation`, `sandbox`, `webSecurity` on; `nodeIntegration`, `allowRunningInsecureContent` off; devtools only in dev.
-- Navigation to untrusted URLs blocked, webviews refused, `window.open` denied. Rule: `isTrustedRendererUrl` in `src/main/window-guard.ts` (packaged `index.html`, plus the dev server origin in dev).
+- Navigation to untrusted URLs blocked, webviews refused, `window.open` denied. Rule: `isTrustedRendererUrl` in `src/main/window-guard.ts` (packaged `index.html`, plus the dev server origin in dev). The renderer can ask main to open one of a fixed list of web pages in the system browser (`app:openUrl`: a target name, mapped to its URL in `src/main/ipc/index.ts`; today the SteamGridDB API page). It never sends a URL.
 - CSP is a build-time `<meta>` from `electron.vite.config.ts`: `'self'` only, images also `data:`, `blob:`, `onelaunch-art:`, `connect-src 'none'`. No header CSP.
 - `session.defaultSession` denies every permission request and check (set in `bootstrap`). The interface uses no permission-gated web API; clipboard writes go through main. Without the handlers Electron grants everything, clipboard reads included.
 - Packaged builds flip Electron fuses (`electronFuses` in `electron-builder.yml`): no run-as-Node, no `NODE_OPTIONS`, no `--inspect`, and the app loads only from the integrity-checked `app.asar`. `--remote-debugging-port` is a Chromium switch that no fuse covers, which is what the driver uses.

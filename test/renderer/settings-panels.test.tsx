@@ -3,12 +3,47 @@ import './setup';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
+import { ArtworkPanel } from '../../src/renderer/src/components/ArtworkPanel';
 import { BackupsPanel } from '../../src/renderer/src/components/BackupsPanel';
 import { LauncherStatusPanel } from '../../src/renderer/src/components/LauncherStatusPanel';
-import type { LauncherStatus } from '../../src/shared/models';
+import type { ArtworkStatus, LauncherStatus } from '../../src/shared/models';
 import { BridgeError, deferred, installBridge, resetUi } from './harness';
 
 resetUi();
+
+describe('ArtworkPanel: getting a SteamGridDB key', () => {
+  const status = (hasApiKey: boolean): ArtworkStatus => ({ queued: 0, running: 0, completed: 0, failed: 0, hasApiKey, revision: 1, scanned: true });
+
+  it('says who needs a key and opens the page to get one through main, never a URL of its own', async () => {
+    const bridge = installBridge({ 'artwork:status': () => ({ status: status(false) }), 'app:openUrl': () => ({ ok: true }) });
+    const user = userEvent.setup();
+    render(<ArtworkPanel autoFetch settingsLoading={false} vaultAvailable onAutoFetch={() => undefined} />);
+    expect(screen.getByText('Covers come from Steam. Other games need a free SteamGridDB key.')).toBeTruthy();
+    expect(await screen.findByText('Free. Press Get a key, sign in, paste it here.')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'Get a key' }));
+    await waitFor(() => expect(bridge.sent('app:openUrl')).toEqual([{ target: 'steamgriddb-api-key' }]));
+  });
+
+  it('drops the button once a key is stored', async () => {
+    installBridge({ 'artwork:status': () => ({ status: status(true) }) });
+    render(<ArtworkPanel autoFetch settingsLoading={false} vaultAvailable onAutoFetch={() => undefined} />);
+    expect(await screen.findByText('Paste a new key to replace the stored one.')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Get a key' })).toBeNull();
+  });
+
+  it('says when the browser could not be opened', async () => {
+    installBridge({
+      'artwork:status': () => ({ status: status(false) }),
+      'app:openUrl': () => {
+        throw new BridgeError('OPEN_FAILED', 'no browser');
+      },
+    });
+    const user = userEvent.setup();
+    render(<ArtworkPanel autoFetch settingsLoading={false} vaultAvailable onAutoFetch={() => undefined} />);
+    await user.click(await screen.findByRole('button', { name: 'Get a key' }));
+    expect(await screen.findByText('Could not open the browser: no browser')).toBeTruthy();
+  });
+});
 
 function launcher(over: Partial<LauncherStatus> & Pick<LauncherStatus, 'launcher' | 'displayName'>): LauncherStatus {
   return {

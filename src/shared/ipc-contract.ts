@@ -24,6 +24,7 @@ import type {
   LauncherSessionState,
   LauncherStatus,
   LibraryScanResult,
+  OpenUrlTarget,
   RecentLaunch,
   RememberedAccount,
   RestoreResult,
@@ -40,6 +41,8 @@ export interface IpcContract {
   'app:ping': { req: { message: string }; res: { echo: string; receivedAt: string } };
   'app:info': { req: undefined; res: AppInfo };
   'app:openPath': { req: { target: 'logs' | 'data' | 'backups' }; res: { ok: true } };
+  /** Opens one of a fixed list of web pages in the system browser; the renderer never names a URL. */
+  'app:openUrl': { req: { target: OpenUrlTarget }; res: { ok: true } };
   /** A renderer-side error (render tree, window error, unhandled rejection), written to the main log after redaction. */
   'app:reportError': { req: { source: 'render' | 'window' | 'promise'; message: string; stack: string | null }; res: { ok: true } };
 
@@ -164,6 +167,7 @@ export const IPC_CHANNELS = [
   'app:ping',
   'app:info',
   'app:openPath',
+  'app:openUrl',
   'app:reportError',
   'vault:status',
   'vault:reset',

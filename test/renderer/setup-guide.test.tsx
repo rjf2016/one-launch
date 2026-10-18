@@ -196,7 +196,7 @@ describe('SetupGuide: the steps', () => {
     expect(locates).toHaveLength(2);
     expect(screen.getByText(/point One Launch at EpicGamesLauncher\.exe/)).toBeTruthy();
     await statusText('1 installed game found');
-    expect(screen.getByText(/Only game names and store ids are sent/)).toBeTruthy();
+    expect(screen.getByText(/only game names and store ids are sent/)).toBeTruthy();
 
     await user.click(locates[0]!);
     await waitFor(() => expect(bridge.sent('launchers:locate')).toEqual([{ launcher: 'epic' }]));
@@ -283,6 +283,38 @@ describe('SetupGuide: accounts', () => {
     await waitFor(() => expect(dialog()).toBeNull());
     expect(bridge.sent('settings:set')).toEqual([{ key: 'firstRun.dismissed', value: 'true' }]);
     expect(useUiStore.getState().view).toBe('library');
+  });
+
+  it('imports what is still ticked when the user presses Continue, so a ticked list never ends the guide with nothing', async () => {
+    const bridge = guide({ remembered: { steam: STEAM_REMEMBERS } });
+    const user = userEvent.setup();
+    open();
+    await forwardTo(user, 'accounts');
+    await screen.findByRole('checkbox', { name: /Persona Two/ });
+    expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
+    await user.click(button('Import 2 and continue'));
+    await waitFor(() =>
+      expect(bridge.sent('launchers:importAccounts')).toEqual([{ launcher: 'steam', launcherUids: ['76561190000000002', '76561190000000003'] }]),
+    );
+    expect(await heading("You're all set")).toBeTruthy();
+  });
+
+  it('stays on the step when the import pressed through Continue fails', async () => {
+    guide({
+      remembered: { steam: STEAM_REMEMBERS },
+      over: {
+        'launchers:importAccounts': () => {
+          throw new BridgeError('ADAPTER_FAILED', 'loginusers.vdf could not be read');
+        },
+      },
+    });
+    const user = userEvent.setup();
+    open();
+    await forwardTo(user, 'accounts');
+    await screen.findByRole('checkbox', { name: /Persona Two/ });
+    await user.click(button('Import 2 and continue'));
+    await statusText('Could not import: loginusers.vdf could not be read');
+    expect(screen.getByRole('heading', { name: 'Add your accounts' })).toBeTruthy();
   });
 
   it('leaves out an entry the user unticks', async () => {

@@ -16,7 +16,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   LAUNCHER_CLIENT_NAMES,
   LAUNCHER_DISPLAY_NAMES,
@@ -153,6 +153,19 @@ function copyNote(field: 'login' | 'password', clearAfterMs: number, historyExcl
   return `${what} copied · clipboard clears in ${Math.round(clearAfterMs / 1000)}s while One Launch is open${history}`;
 }
 
+/** A hand-over step with whatever the adapter quoted (the launcher's checkbox or button) set off, so the one thing to tick stands out. */
+function emphasizeQuoted(text: string): ReactNode[] {
+  return text.split(/(“[^”]+”|"[^"]+")/).map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="font-medium text-text-strong">
+        {part}
+      </strong>
+    ) : (
+      part
+    ),
+  );
+}
+
 /** The switch is parked on the launcher's sign-in form and needs the user there. Calm, explicit, no failure. */
 function AttentionPanel({
   attention,
@@ -191,6 +204,13 @@ function AttentionPanel({
         <div className="min-w-0">
           <p className="font-medium text-text-strong">{attention.title}</p>
           <p className="mt-1 text-xs leading-relaxed text-muted">{attention.message}</p>
+          {attention.steps && attention.steps.length > 0 ? (
+            <ol aria-label="What to do" className="mt-2 flex list-decimal flex-col gap-1 pl-5 text-xs leading-relaxed text-text marker:text-muted">
+              {attention.steps.map((step, i) => (
+                <li key={i}>{emphasizeQuoted(step)}</li>
+              ))}
+            </ol>
+          ) : null}
           {attention.reason ? (
             <p className="mt-1 font-mono text-[11px] text-faint">
               {launcherName}: {attention.reason}
@@ -264,6 +284,7 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
   const accounts = useIpcQuery(() => ipc.invoke('accounts:list'));
   const setView = useUiStore((s) => s.setView);
   const newAccount = useUiStore((s) => s.newAccount);
+  const importAccounts = useUiStore((s) => s.importAccounts);
   const settingsChanged = useUiStore((s) => s.settingsChanged);
   const active = useUiStore((s) => s.activeLaunch);
   const setActiveLaunch = useUiStore((s) => s.setActiveLaunch);
@@ -420,9 +441,11 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
     setStage({ kind: 'pick' });
   }
 
+  /** Sends the user off to add or import an account for this launcher; the game comes along so the form or the import can bring them back to Play. */
   function goToAccounts(): void {
     onClose();
-    if (launcher && !canImport) newAccount(launcher);
+    if (launcher === 'steam' || launcher === 'battlenet') importAccounts(launcher, game);
+    else if (launcher) newAccount(launcher, game);
     else setView('accounts');
   }
 
@@ -489,9 +512,9 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
               <p className="text-sm text-muted">
                 {launcher ? `No ${launcherName} accounts yet.` : 'No accounts yet.'}
                 {launcher === 'steam'
-                  ? ' Add one on the Accounts page, or import the accounts Steam remembers.'
+                  ? ' Import the ones Steam remembers, or add one by hand on the Accounts page.'
                   : launcher === 'battlenet'
-                    ? ' Add one on the Accounts page, or import the logins Battle.net has saved.'
+                    ? ' Import the logins Battle.net has saved, or add one by hand on the Accounts page.'
                     : launcher
                       ? ''
                       : ' Add one on the Accounts page.'}
@@ -663,7 +686,7 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
           <div className="flex items-center gap-2">
             {empty ? (
               <Button variant="primary" icon={<KeyRound />} autoFocus onClick={goToAccounts}>
-                {launcher && !canImport ? `Add ${launcherName} account` : 'Go to Accounts'}
+                {launcher ? (canImport ? `Import ${launcherName} accounts` : `Add ${launcherName} account`) : 'Go to Accounts'}
               </Button>
             ) : stage.kind === 'pick' || stage.kind === 'checking' ? (
               <>

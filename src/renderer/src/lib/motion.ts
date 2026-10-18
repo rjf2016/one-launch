@@ -28,8 +28,9 @@ export function useCountUp(target: number, ms = 600): number {
     }
     const started = performance.now();
     let frame = 0;
-    const tick = (now: number): void => {
-      const t = Math.min(1, (now - started) / ms);
+    // One clock for both ends: jsdom's frame timestamp is not performance.now(), and a skew made the count run negative.
+    const tick = (): void => {
+      const t = Math.min(1, (performance.now() - started) / ms);
       const value = Math.round(from + (target - from) * (1 - (1 - t) ** 3));
       current.current = value;
       setShown(value);

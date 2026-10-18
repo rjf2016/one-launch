@@ -1,5 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { ACCOUNT_LIMITS, isLauncherId, normalizeTags, type Account, type AccountCreateInput, type AccountPatch, type LauncherId } from '@shared/models';
+import {
+  ACCOUNT_LIMITS,
+  isLauncherId,
+  LAUNCHER_DISPLAY_NAMES,
+  normalizeTags,
+  type Account,
+  type AccountCreateInput,
+  type AccountPatch,
+  type LauncherId,
+} from '@shared/models';
 import type { Db } from '../db';
 import { redactAccountNames } from './logger';
 import type { Vault } from './vault';
@@ -32,8 +41,8 @@ export class DuplicateAccountError extends Error {
   ) {
     super(
       field === 'login'
-        ? `"${existing.displayName}" already uses this login on ${existing.launcher}. Edit that account instead, or change its login first.`
-        : `"${existing.displayName}" is already linked to this ${existing.launcher} account id. Edit that account instead, or clear its id first.`,
+        ? `"${existing.displayName}" already uses this login on ${LAUNCHER_DISPLAY_NAMES[existing.launcher]}. Edit that account instead, or change its login first.`
+        : `"${existing.displayName}" is already linked to this ${LAUNCHER_DISPLAY_NAMES[existing.launcher]} account id. Edit that account instead, or clear its id first.`,
     );
     this.name = 'DuplicateAccountError';
   }

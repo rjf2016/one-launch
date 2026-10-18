@@ -215,7 +215,8 @@ export function LibraryView() {
   }
 
   const artworkBusy = status ? status.queued + status.running : 0;
-  const needKey = status !== null && !status.hasApiKey && artworkBusy === 0 && list.some((g) => !g.artwork && g.artworkError?.includes('SteamGridDB'));
+  // Covers the lookup could not find without a key: a game with no artwork and a recorded miss, once the scan and the queue are done.
+  const needKey = status !== null && status.scanned && !status.hasApiKey && artworkBusy === 0 && list.some((g) => !g.artwork && g.artworkError !== null);
   const recentList = recent.data?.recent ?? [];
 
   return (
@@ -240,7 +241,7 @@ export function LibraryView() {
                 title="Games that are not on Steam get artwork from SteamGridDB, which needs a free API key. Add one in Settings › Artwork."
                 className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs whitespace-nowrap text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text"
               >
-                <Images className="size-3.5" /> Artwork needs a SteamGridDB key
+                <Images className="size-3.5" /> Add a free key for missing covers
               </button>
             ) : null}
             <Button icon={<RefreshCw className={scanning ? 'animate-spin' : ''} />} disabled={scanning} onClick={() => void rescan()}>

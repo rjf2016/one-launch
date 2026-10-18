@@ -10,16 +10,22 @@ import {
   LAUNCHER_IDS,
   LAUNCHER_PATH_SETTINGS,
   MAIN_ONLY_SETTING_KEYS,
+  OPEN_URL_TARGETS,
   RENDERER_SECRET_KEYS,
   SETTING_KEYS,
   type AccountPatch,
   type AppInfo,
+  type OpenUrlTarget,
   type PlatformSource,
   type LauncherId,
   type LibraryScanResult,
   type SettingKey,
   type StartupMetrics,
 } from '@shared/models';
+
+const OPEN_URLS: Readonly<Record<OpenUrlTarget, string>> = {
+  'steamgriddb-api-key': 'https://www.steamgriddb.com/profile/preferences/api',
+};
 import { isVersionString } from '@shared/whats-new';
 import type { AppPaths } from '../platform/paths';
 import type { AccountsService } from '../services/accounts';
@@ -121,6 +127,13 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     const dir = target === 'logs' ? deps.paths.logsDir : target === 'backups' ? deps.paths.backupsDir : deps.paths.dataDir;
     const problem = await shell.openPath(dir);
     if (problem) throw new IpcRequestError('OPEN_FAILED', problem);
+    return { ok: true };
+  });
+
+  handle('app:openUrl', async (req) => {
+    const body = expectObject(req, 'app:openUrl');
+    const target = expectOneOf(body['target'], 'target', OPEN_URL_TARGETS);
+    await shell.openExternal(OPEN_URLS[target]);
     return { ok: true };
   });
 

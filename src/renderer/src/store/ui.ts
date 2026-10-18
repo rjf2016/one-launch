@@ -28,8 +28,11 @@ function writeSidebarChoice(choice: SidebarChoice | null): void {
   }
 }
 
-/** Sub-navigation inside the Accounts view. */
-export type AccountRoute = { kind: 'list' } | { kind: 'new'; launcher: LauncherId } | { kind: 'detail'; id: string };
+/** Sub-navigation inside the Accounts view. `created` marks the page a Create account just opened, so it can say what comes next. */
+export type AccountRoute = { kind: 'list' } | { kind: 'new'; launcher: LauncherId } | { kind: 'detail'; id: string; created?: boolean };
+
+/** The launchers whose remembered accounts the Accounts page can import. */
+export type ImportLauncher = Extract<LauncherId, 'steam' | 'battlenet'>;
 
 /** A yes/no question shown by ConfirmDialog; `resolve` answers the `ask()` that opened it. */
 export interface ConfirmRequest {
@@ -75,8 +78,16 @@ interface UiState {
   accountRoute: AccountRoute;
   /** The Settings tab in view, kept for the session: the sidebar and Ctrl+3 leave it alone, `openSettings` picks one. */
   settingsTab: SettingsTab;
-  /** Bumped whenever a setting changes, so views that mirror a setting (the sidebar's Preview mode card, the Library's welcome panel) re-read it. */
+  /** Bumped whenever a setting changes, so views that mirror a setting (the sidebar's Preview mode card, Settings) re-read it. */
   settingsRevision: number;
+  /**
+   * The game whose Play sent the user off to add or import an account. Set by the navigation that leaves the launch
+   * dialog and cleared by the next one, so the account form or the import can bring the user straight back to Play.
+   */
+  returnTo: Game | null;
+  /** The Accounts page opens this launcher's import dialog as soon as it shows, then clears it. */
+  importIntent: ImportLauncher | null;
+  clearImportIntent: () => void;
   /** Set by a view with unsaved edits; navigation asks it before leaving and stays put when it resolves false. */
   leaveGuard: (() => Promise<boolean>) | null;
   /** The question ConfirmDialog is showing, if any. */
@@ -107,8 +118,11 @@ interface UiState {
   toggleSidebar: () => void;
   setSidebarNarrow: (narrow: boolean) => void;
   setView: (view: View) => void;
-  openAccount: (id: string) => void;
-  newAccount: (launcher: LauncherId) => void;
+  openAccount: (id: string, opts?: { created: boolean }) => void;
+  /** Opens the new-account form; with `returnTo`, creating the account reopens that game's launch dialog. */
+  newAccount: (launcher: LauncherId, returnTo?: Game | null) => void;
+  /** Opens the Accounts page with the launcher's import dialog up; with `returnTo`, an import reopens that game's launch dialog. */
+  importAccounts: (launcher: ImportLauncher, returnTo?: Game | null) => void;
   backToAccounts: () => void;
   setSettingsTab: (tab: SettingsTab) => void;
   /** Opens Settings on a tab from anywhere: the sidebar's Preview mode card, the Library's artwork-key link. */
@@ -124,9 +138,10 @@ export const useUiStore = create<UiState>((set, get) => {
   const mayLeave = (): Promise<boolean> => get().leaveGuard?.() ?? Promise.resolve(true);
   const narrow = typeof window !== 'undefined' && window.matchMedia(SIDEBAR_NARROW_QUERY).matches;
   const choice = readSidebarChoice();
+  // A navigation keeps `returnTo` only when it carries one: the hop that leaves the launch dialog sets it, the next one drops it.
   const navigate = (next: Partial<UiState>): void => {
     void mayLeave().then((ok) => {
-      if (ok) set({ ...next, leaveGuard: null });
+      if (ok) set({ returnTo: null, ...next, leaveGuard: null });
     });
   };
   return {
@@ -134,6 +149,9 @@ export const useUiStore = create<UiState>((set, get) => {
     accountRoute: { kind: 'list' },
     settingsTab: 'general',
     settingsRevision: 0,
+    returnTo: null,
+    importIntent: null,
+    clearImportIntent: () => set({ importIntent: null }),
     leaveGuard: null,
     confirm: null,
     sidebarNarrow: narrow,
@@ -172,8 +190,10 @@ export const useUiStore = create<UiState>((set, get) => {
       if (view === get().view && (view !== 'accounts' || get().accountRoute.kind === 'list')) return;
       navigate(view === 'accounts' ? { view, accountRoute: { kind: 'list' } } : { view });
     },
-    openAccount: (id) => navigate({ view: 'accounts', accountRoute: { kind: 'detail', id } }),
-    newAccount: (launcher) => navigate({ view: 'accounts', accountRoute: { kind: 'new', launcher } }),
+    openAccount: (id, opts) => navigate({ view: 'accounts', accountRoute: opts?.created ? { kind: 'detail', id, created: true } : { kind: 'detail', id } }),
+    newAccount: (launcher, returnTo) => navigate({ view: 'accounts', accountRoute: { kind: 'new', launcher }, ...(returnTo ? { returnTo } : {}) }),
+    importAccounts: (launcher, returnTo) =>
+      navigate({ view: 'accounts', accountRoute: { kind: 'list' }, importIntent: launcher, ...(returnTo ? { returnTo } : {}) }),
     backToAccounts: () => navigate({ view: 'accounts', accountRoute: { kind: 'list' } }),
     setSettingsTab: (tab) => set({ settingsTab: tab }),
     // Not through setView, which returns early while Settings is already in view.

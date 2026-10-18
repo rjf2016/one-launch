@@ -186,12 +186,14 @@ function attentionFor(why: SignInWait, login: string, canCopyPassword: boolean, 
   const reason = why.kind === 'credentials' ? why.reason || null : null;
   const cause: SignInCause = why.kind === 'credentials' ? why.cause : 'other';
   const base = { kind: 'sign-in' as const, reason, canCopyPassword, until };
-  const finish = 'One Launch continues with the game on its own as soon as Steam reports the sign-in.';
+  const remember = 'Keep “Remember me” ticked.';
+  const finish = 'One Launch continues on its own as soon as Steam reports the sign-in, and later switches are automatic.';
   if (why.kind === 'timeout' && why.updating) {
     return {
       ...base,
       title: 'Steam is still updating itself',
-      message: `Steam has been updating itself for longer than One Launch waits on its own, so it was left to finish. If it shows its sign-in form afterwards, sign in as ${login} with "Remember me" ticked. ${finish}`,
+      message: 'Steam has been updating itself for longer than One Launch waits on its own, so it was left to finish.',
+      steps: [`If Steam shows its sign-in form afterwards, sign in as ${login} with “Remember me” ticked. ${finish}`],
     };
   }
   switch (cause) {
@@ -199,31 +201,42 @@ function attentionFor(why: SignInWait, login: string, canCopyPassword: boolean, 
       return {
         ...base,
         title: 'Steam needs a one-time sign-in on this PC',
-        message: `Steam accepted the sign-in for ${login} but this PC is not yet authorized for the account, so it wants the code it just emailed you. In the Steam window, enter the account name and password, keep "Remember me" ticked, and enter the emailed code. ${finish} Later switches need none of this.`,
+        message: `Steam accepted the sign-in for ${login}, but this PC is not yet authorized for the account, so it wants the code it just emailed you.`,
+        steps: [
+          `In the Steam window, enter the account name ${login} and the password.`,
+          remember,
+          `Enter the code Steam emailed you. ${finish} Later switches need none of this.`,
+        ],
       };
     case 'guard-mobile':
       return {
         ...base,
         title: 'Steam Guard needs your approval',
-        message: `Approve the sign-in for ${login} in the Steam Mobile app, or enter the code in the Steam window with "Remember me" ticked. ${finish}`,
+        message: `Steam wants the sign-in for ${login} approved.`,
+        steps: ['Approve the sign-in in the Steam Mobile app, or enter its code in the Steam window.', `${remember} ${finish}`],
       };
     case 'rate-limit':
       return {
         ...base,
         title: 'Steam is rate-limiting sign-ins',
-        message: `Steam refused the sign-in for ${login} because of too many recent attempts. Wait a few minutes, then sign in in the Steam window with "Remember me" ticked. ${finish}`,
+        message: `Steam refused the sign-in for ${login} because of too many recent attempts.`,
+        steps: ['Wait a few minutes.', `Sign in as ${login} in the Steam window with “Remember me” ticked. ${finish}`],
       };
     default:
       return {
         ...base,
         title: `Steam is asking you to sign in as ${login}`,
-        message: `${
+        message:
           cause === 'expired'
             ? 'Its remembered session has expired.'
             : reason
               ? `Steam did not complete the sign-in on its own (${reason}).`
-              : 'Steam is waiting on its sign-in form.'
-        } Sign in once in the Steam window with "Remember me" ticked; later switches are automatic. ${finish}`,
+              : 'Steam is waiting on its sign-in form.',
+        steps: [
+          `In the Steam window, enter the account name ${login} and your password.`,
+          remember,
+          `Sign in. If Steam Guard asks for a code, enter it. ${finish}`,
+        ],
       };
   }
 }

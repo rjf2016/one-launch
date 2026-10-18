@@ -31,6 +31,18 @@ export default async (d) => {
   await d.waitFor('Display name');
   await d.shot('account-detail');
 
+  // A launcher that signs in from a saved sign-in shows the Saved sign-in panel; read-only against a real client.
+  const withPanel = accounts.find((a) => a.launcher === 'riot') ?? accounts.find((a) => a.launcher === 'epic' || a.launcher === 'battlenet');
+  if (withPanel) {
+    await d.click('Accounts');
+    await d.waitFor(withPanel.displayName);
+    await d.click({ contains: withPanel.displayName });
+    await d.waitFor('Saved sign-in');
+    await d.viewport(1280, 1500);
+    await d.shot('account-detail-saved-sign-in');
+    await d.viewport(null);
+  }
+
   await d.click('Library');
   await d.waitFor('Rescan');
   const { games } = await d.invoke('library:list');
