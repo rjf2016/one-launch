@@ -33,7 +33,6 @@ describe('SessionPanel: a new account, before its first Play', () => {
     open(state());
     expect(await screen.findByText('Nobody')).toBeTruthy();
     expect(screen.getByText('Not saved yet')).toBeTruthy();
-    expect(screen.getByText('Saved by itself the first time you play on this account.')).toBeTruthy();
     expect(screen.getByText(/^The Riot Client remembers one sign-in at a time\. The first time you play on this account you sign in once/)).toBeTruthy();
     expect(screen.getByText(/switch through One Launch: the client’s own Sign out ends the saved sign-in for good/)).toBeTruthy();
     const save = screen.getByRole<HTMLButtonElement>('button', { name: 'Save sign-in' });

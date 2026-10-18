@@ -42,6 +42,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { MAX_VDF_BYTES, readLauncherText } from '../read-file';
@@ -165,6 +166,8 @@ interface PlanContext {
   stale: boolean;
   autoLoginUser: string | null;
   rememberDword: number | null;
+  /** The plan's warning that the running Steam will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 /**
@@ -479,7 +482,13 @@ export class SteamAdapter implements LauncherAdapter {
   async preflight(account: AccountRef): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account);
     const runningGame = plan.current.running && !ctx.alreadyActive ? await this.runningGame() : null;
-    return { plan, launcherRunning: plan.current.running, runningGame, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage(runningGame) };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: plan.current.running,
+      runningGame,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(runningGame),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -693,6 +702,7 @@ export class SteamAdapter implements LauncherAdapter {
       } and One Launch continues with the game as soon as Steam reports the sign-in, up to ${this.timing.manualSignInMs / 60_000} min. A wrong stored password ends the switch instead.`,
     });
 
+    let closeWarning: string | null = null;
     if (alreadyActive && target) {
       notes.push(
         `Steam is already set to sign in as ${target.accountName}. The real switch would change nothing${running ? ' and would leave Steam running' : ''}.`,
@@ -700,13 +710,13 @@ export class SteamAdapter implements LauncherAdapter {
     } else if (signedInElsewhere && target) {
       const activeId3 = await this.activeUser();
       const other = users.find((u) => steamId3(u.steamId64) === activeId3 && u.steamId64 !== target.steamId64);
-      warnings.push(
-        `Steam's files already name ${target.accountName}, but the Steam that is running is ${
-          other ? `signed in as ${other.accountName}` : `not signed in as ${target.accountName}`
-        }. It will be closed, along with any game running under it, and started again as ${target.accountName}.`,
-      );
+      closeWarning = `Steam's files already name ${target.accountName}, but the Steam that is running is ${
+        other ? `signed in as ${other.accountName}` : `not signed in as ${target.accountName}`
+      }. It will be closed, along with any game running under it, and started again as ${target.accountName}.`;
+      warnings.push(closeWarning);
     } else if (running) {
-      warnings.push('Steam is running. It will be closed, along with any game running under it.');
+      closeWarning = 'Steam is running. It will be closed, along with any game running under it.';
+      warnings.push(closeWarning);
     }
     if (stale && target) {
       const age = ageDays === null ? 'an unknown time' : `${ageDays} days`;
@@ -740,7 +750,7 @@ export class SteamAdapter implements LauncherAdapter {
       executable: true,
       generatedAt: new Date().toISOString(),
     };
-    return { plan, ctx: { install, loginUsersPath, target, alreadyActive, stale, autoLoginUser, rememberDword } };
+    return { plan, ctx: { install, loginUsersPath, target, alreadyActive, stale, autoLoginUser, rememberDword, closeWarning } };
   }
 
   private async activeUser(): Promise<number | null> {

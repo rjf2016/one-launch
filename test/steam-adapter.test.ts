@@ -427,7 +427,9 @@ describe('SteamAdapter.switchAccount (dry run)', () => {
     sim.steamSays('SetLoginState: WaitingForCredentials - License expired');
     const onForm = await adapter().preflight(main);
     expect(onForm.alreadyActive).toBe(false);
-    expect(onForm.plan.warnings[0]).toMatch(/is not signed in as user_1\. It will be closed/);
+    // The dialog's confirm box says Steam will be closed, so the preflight's plan leaves that warning out; the preview keeps it.
+    expect(onForm.plan.warnings.join('\n')).not.toContain('It will be closed');
+    expect((await adapter().switchAccount(main, { dryRun: true })).warnings[0]).toMatch(/is not signed in as user_1\. It will be closed/);
   });
 
   it('plans the credentials path for an unknown account without any password in the plan', async () => {

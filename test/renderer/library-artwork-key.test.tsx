@@ -47,10 +47,10 @@ describe('Library: the free-key nudge', () => {
       [{}, [game({ artwork: null, artworkError: null })]],
     ];
     for (const [status, games] of cases) {
-      const view = render(<LibraryView />);
       library(status, games);
-      await screen.findByText('Library');
-      await waitFor(() => expect(screen.queryByRole('button', { name: 'Add a free key for missing covers' })).toBeNull());
+      const view = render(<LibraryView />);
+      await waitFor(() => expect(screen.getAllByRole('button', { name: /^Play / })).toHaveLength(games.length));
+      expect(screen.queryByRole('button', { name: 'Add a free key for missing covers' })).toBeNull();
       view.unmount();
     }
   });

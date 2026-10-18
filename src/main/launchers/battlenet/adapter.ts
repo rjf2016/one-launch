@@ -54,6 +54,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { readLauncherBytes, readLauncherText } from '../read-file';
@@ -261,6 +262,8 @@ interface PlanContext {
   prefs: UserPrefs | null;
   /** The plan found the target login already first in SavedAccountNames, which is why its file step is skipped. */
   loginFirst: boolean;
+  /** The plan's warning that the running client will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 type SignInWait =
@@ -795,7 +798,13 @@ export class BattlenetAdapter implements LauncherAdapter {
   async preflight(account: AccountRef): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account);
     const runningGame = ctx.running && !ctx.alreadyActive ? await this.runningGame() : null;
-    return { plan, launcherRunning: ctx.running, runningGame, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage(runningGame) };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: ctx.running,
+      runningGame,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(runningGame),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -1061,14 +1070,14 @@ export class BattlenetAdapter implements LauncherAdapter {
       warnings.push(
         `UnifiedAuth holds ${current.tokens.length} values; the client is expected to keep one. The value matching a stored snapshot is treated as the session, the others as leftovers.`,
       );
+    let closeWarning: string | null = null;
     if (alreadyActive) {
       notes.push(`Battle.net is running and signed in as ${account.displayName}. The real switch would change nothing and would leave the client running.`);
     } else if (inPlace) {
       notes.push(`Battle.net already remembers ${account.displayName}'s session, so it is only started.`);
     } else if (running) {
-      warnings.push(
-        `Battle.net is running${current.owner ? ` as ${current.owner.displayName}` : current.loggedUid ? ' as an account not linked to One Launch' : ' on its login page'}. It will be closed.`,
-      );
+      closeWarning = `Battle.net is running${current.owner ? ` as ${current.owner.displayName}` : current.loggedUid ? ' as an account not linked to One Launch' : ' on its login page'}. It will be closed.`;
+      warnings.push(closeWarning);
     }
     if (running && !inPlace && current.loggedUid && current.owner === null) {
       warnings.push(
@@ -1111,7 +1120,7 @@ export class BattlenetAdapter implements LauncherAdapter {
     };
     return {
       plan,
-      ctx: { install, startExe, config, current, stored, strategy, inPlace, alreadyActive, running, prefs, loginFirst: fileWrite?.noop === true },
+      ctx: { install, startExe, config, current, stored, strategy, inPlace, alreadyActive, running, prefs, loginFirst: fileWrite?.noop === true, closeWarning },
     };
   }
 

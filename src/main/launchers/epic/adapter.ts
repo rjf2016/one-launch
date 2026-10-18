@@ -50,6 +50,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { readLauncherBytes, readLauncherText } from '../read-file';
@@ -215,6 +216,8 @@ interface PlanContext {
   inPlace: boolean;
   alreadyActive: boolean;
   running: boolean;
+  /** The plan's warning that the running launcher will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 type SignInWait =
@@ -643,7 +646,13 @@ export class EpicAdapter implements LauncherAdapter {
   async preflight(account: AccountRef): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account);
     const runningGame = ctx.running && !ctx.alreadyActive ? await this.runningGame() : null;
-    return { plan, launcherRunning: ctx.running, runningGame, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage(runningGame) };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: ctx.running,
+      runningGame,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(runningGame),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -867,6 +876,7 @@ export class EpicAdapter implements LauncherAdapter {
         `[RememberMe] Enable is ${current.disk.enable} in ${iniPath}, so the launcher does not sign in on its own at start. The switch sets it back to True.`,
       );
     }
+    let closeWarning: string | null = null;
     if (alreadyActive) {
       notes.push(
         `Epic Games Launcher is running and signed in as ${account.displayName}. The real switch would change nothing and would leave the launcher running.`,
@@ -874,9 +884,8 @@ export class EpicAdapter implements LauncherAdapter {
     } else if (inPlace) {
       notes.push(`Epic Games Launcher already remembers ${account.displayName}'s session, so it is only started.`);
     } else if (running) {
-      warnings.push(
-        `Epic Games Launcher is running${current.owner ? ` as ${current.owner.displayName}` : current.loggedUid ? ' as an account not linked to One Launch' : ' on its sign-in page'}. It will be closed, along with any game running under it.`,
-      );
+      closeWarning = `Epic Games Launcher is running${current.owner ? ` as ${current.owner.displayName}` : current.loggedUid ? ' as an account not linked to One Launch' : ' on its sign-in page'}. It will be closed, along with any game running under it.`;
+      warnings.push(closeWarning);
     }
     if (running && inPlace === false && current.loggedUid && current.owner === null) {
       warnings.push(
@@ -917,7 +926,7 @@ export class EpicAdapter implements LauncherAdapter {
       executable: iniText !== null,
       generatedAt: new Date().toISOString(),
     };
-    return { plan, ctx: { install, iniPath, iniText, current, stored, strategy, inPlace, alreadyActive, running } };
+    return { plan, ctx: { install, iniPath, iniText, current, stored, strategy, inPlace, alreadyActive, running, closeWarning } };
   }
 
   /**

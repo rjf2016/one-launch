@@ -39,7 +39,10 @@ export default async (d) => {
       text.includes('Tick “Stay signed in” before you sign in, or the client forgets the account when it closes.') &&
       text.includes('Press Sign in. One Launch continues on its own'),
   );
-  d.check('the footer says it is waiting in the Riot Client', text.includes('Waiting for you in the Riot Client…'));
+  d.check(
+    'nothing else on the dialog repeats that it is waiting',
+    !text.includes('Waiting for you') && !text.includes('Waiting up to') && !text.includes('Wait for you to sign in'),
+  );
   await d.shot('riot-new-checklist');
 
   text = await watchDialog(d, { until: (t) => t.includes('Press Play in the Riot Client window'), tag: 'riot-new', timeoutMs: 90_000 });

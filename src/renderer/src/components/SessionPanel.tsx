@@ -114,11 +114,7 @@ export function SessionPanel({ account, onAccountChanged }: { account: Account; 
   const disk = state ? describeState(state, account, session) : null;
   const nothingToSave = state !== null && !state.remembered;
   const signedInHint = [state?.launcherRunning ? `${copy.launcherName} is running.` : null, disk?.hint ?? null].filter((h) => h !== null).join(' ');
-  const savedHint = session
-    ? session.verifiedAt
-      ? `Last used for a switch ${formatRelative(session.verifiedAt)}.`
-      : null
-    : 'Saved by itself the first time you play on this account.';
+  const savedHint = session?.verifiedAt ? `Last used for a switch ${formatRelative(session.verifiedAt)}.` : null;
 
   return (
     <Panel

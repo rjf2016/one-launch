@@ -38,7 +38,7 @@ Key files: `src/main/launchers/types.ts` (contract), `src/main/services/launcher
 
 ## The launch job (`LaunchService`)
 
-**Preflight** (`launch:preflight`) is read-only. It calls the adapter's preflight, then adds:
+**Preflight** (`launch:preflight`) is read-only. It calls the adapter's preflight, whose plan leaves out the "is running… It will be closed" warning (`withoutCloseWarning`, `types.ts`: the dialog's confirm box says that once; the dry-run plan keeps it), then adds:
 - `dryRun`: `settings.getBool('dryRun', false)`.
 - `needsConfirmation` = `launcherRunning && !alreadyActive`. `closeMessage` is sent only when confirmation is needed.
 - `blocked`: the plan's first warning when `plan.executable` is false. In practice only Epic or Riot with no settings file, so the dialog's blocked stage offers Back and nothing else.

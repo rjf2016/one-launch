@@ -58,6 +58,7 @@ import {
   type SwitchOptions,
   type SwitchPreflight,
   type SwitchResult,
+  withoutCloseWarning,
 } from '../types';
 import { chosenFolder, chosenFolderCheck, isNamed } from '../chosen-folder';
 import { readLauncherText } from '../read-file';
@@ -294,6 +295,8 @@ interface PlanContext {
   running: boolean;
   /** A Riot game is running, which refuses the switch (hard rule 2). */
   game: RunningGame | null;
+  /** The plan's warning that the running client will be closed; preflight leaves it out, the dialog's confirm box says it. */
+  closeWarning: string | null;
 }
 
 type SignInWait =
@@ -1039,7 +1042,13 @@ export class RiotAdapter implements LauncherAdapter {
   async preflight(account: AccountRef, forGame?: Pick<InstalledGame, 'launcherGameId' | 'name'>): Promise<SwitchPreflight> {
     const { plan, ctx } = await this.buildSwitchPlan(account, forGame);
     if (ctx.game) throw this.gameRunningError(ctx.game, 'switch');
-    return { plan, launcherRunning: ctx.running, runningGame: null, alreadyActive: ctx.alreadyActive, closeMessage: this.closeMessage() };
+    return {
+      plan: withoutCloseWarning(plan, ctx.closeWarning),
+      launcherRunning: ctx.running,
+      runningGame: null,
+      alreadyActive: ctx.alreadyActive,
+      closeMessage: this.closeMessage(),
+    };
   }
 
   switchAccount(account: AccountRef, opts: SwitchOptions & { dryRun: true }): Promise<SwitchPlan>;
@@ -1262,14 +1271,14 @@ export class RiotAdapter implements LauncherAdapter {
         `${sessionPath} does not exist. One Launch never creates it: start the Riot Client once by hand (it writes the file at its first start), then try again.`,
       );
     }
+    let closeWarning: string | null = null;
     if (alreadyActive) {
       notes.push(
         `The Riot Client is running and signed in as ${account.displayName}. The real switch would change nothing and would leave the client running.`,
       );
     } else if (running) {
-      warnings.push(
-        `The Riot Client is running${current.owner ? ` as ${current.owner.displayName}` : current.session ? ' with a sign-in no One Launch account owns' : ' on its login page'}. It will be closed.`,
-      );
+      closeWarning = `The Riot Client is running${current.owner ? ` as ${current.owner.displayName}` : current.session ? ' with a sign-in no One Launch account owns' : ' on its login page'}. It will be closed.`;
+      warnings.push(closeWarning);
     } else if (inPlace) {
       notes.push(`The Riot Client already holds ${account.displayName}'s sign-in, so it is only started.`);
     }
@@ -1307,7 +1316,7 @@ export class RiotAdapter implements LauncherAdapter {
       executable: current.text !== null,
       generatedAt: new Date().toISOString(),
     };
-    return { plan, ctx: { install, current, stored, strategy, inPlace, alreadyActive, running, game } };
+    return { plan, ctx: { install, current, stored, strategy, inPlace, alreadyActive, running, game, closeWarning } };
   }
 
   /**

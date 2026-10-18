@@ -28,7 +28,7 @@ export default async (d) => {
     'the panel lists what to do, with the box as its own step',
     text.includes('In the Steam window, enter the account name user_3 and your password.') && text.includes('Keep “Remember me” ticked.'),
   );
-  d.check('the footer says it is waiting in Steam', text.includes('Waiting for you in Steam…'));
+  d.check('the panel is the one place that says it is waiting', !text.includes('Waiting for you') && !text.includes('Waiting up to'));
   d.check('the Stop button gives way to Stop waiting', !/\nStop\n/.test(text));
   await d.shot('attention');
   await d.click('Copy login');

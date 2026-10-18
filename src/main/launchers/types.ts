@@ -276,3 +276,11 @@ export class SwitchBlockedError extends Error {
     this.name = 'SwitchBlockedError';
   }
 }
+
+/**
+ * The plan a preflight answers with. The warning that the running launcher will be closed is left out, since the
+ * dialog says that once, in its own confirm box; the dry-run plan the account page previews keeps it.
+ */
+export function withoutCloseWarning(plan: SwitchPlan, closeWarning: string | null): SwitchPlan {
+  return closeWarning ? { ...plan, warnings: plan.warnings.filter((w) => w !== closeWarning) } : plan;
+}

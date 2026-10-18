@@ -522,7 +522,9 @@ describe('plans', () => {
     const other = await adapter().preflight(ref(B));
     expect(other.alreadyActive).toBe(false);
     expect(other.launcherRunning).toBe(true);
-    expect(other.plan.warnings[0]).toContain('running as Main');
+    // The dialog's confirm box says the client will be closed, so the preflight's plan leaves that warning out; the preview keeps it.
+    expect(other.plan.warnings.join('\n')).not.toContain('It will be closed');
+    expect((await adapter().switchAccount(ref(B), { dryRun: true })).warnings[0]).toContain('running as Main');
   });
 
   it('warns about sticky preferences it never writes, and skips the file step when the layout cannot be reproduced', async () => {
