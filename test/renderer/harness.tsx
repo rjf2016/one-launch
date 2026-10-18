@@ -66,6 +66,7 @@ export function resetUi(): void {
     const { useUiStore } = await import('../../src/renderer/src/store/ui');
     useUiStore.setState({
       view: 'library',
+      settingsTab: 'general',
       launchRequest: null,
       activeLaunch: null,
       launcherStatus: null,

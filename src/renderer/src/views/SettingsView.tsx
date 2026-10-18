@@ -1,26 +1,32 @@
-import { FolderOpen, PartyPopper, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
-import { lazy, Suspense, useState } from 'react';
+import { FolderOpen, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
+import { lazy, Suspense, useRef, useState } from 'react';
 import { BATTLENET_LAUNCH_FORMS, EPIC_LAUNCH_URI_FORMS, LOG_LEVELS, type BattlenetLaunchForm, type EpicLaunchUriForm, type LogLevel } from '@shared/models';
-import { latestWhatsNew } from '@shared/whats-new';
-import { WHATS_NEW } from '@shared/whats-new-releases';
 import { ArtworkPanel } from '../components/ArtworkPanel';
 import { BackupsPanel } from '../components/BackupsPanel';
 import { Button } from '../components/Button';
-import { Collapsible } from '../components/Collapsible';
 import { Dropdown } from '../components/Dropdown';
 import { LauncherStatusPanel } from '../components/LauncherStatusPanel';
 import { Page } from '../components/Page';
 import { PageHeader } from '../components/PageHeader';
 import { Panel, Row } from '../components/Panel';
+import { TabList, TabPanel, type Tab } from '../components/Tabs';
 import { Toggle } from '../components/Toggle';
 import { UpdatesPanel } from '../components/UpdatesPanel';
 import { ipc, useIpcQuery } from '../lib/ipc';
-import { useUiStore } from '../store/ui';
+import { useUiStore, type SettingsTab } from '../store/ui';
 
 type SelfTest = { state: 'idle' } | { state: 'running' } | { state: 'ok'; ms: number } | { state: 'failed'; message: string };
 
 // A development build only; in a production build this is `null` and the panel's chunk is never emitted.
 const WhatsNewDevPanel = import.meta.env.DEV ? lazy(() => import('../components/WhatsNewDevPanel')) : null;
+
+const TABS: readonly Tab<SettingsTab>[] = [
+  { id: 'general', label: 'General' },
+  { id: 'launchers', label: 'Launchers' },
+  { id: 'artwork', label: 'Artwork' },
+  { id: 'backups', label: 'Backups' },
+  { id: 'advanced', label: 'Advanced' },
+];
 
 type EditableSetting =
   | 'dryRun'
@@ -34,23 +40,36 @@ type EditableSetting =
   | 'updates.auto'
   | 'whatsNew.enabled';
 
+interface SettingError {
+  key: EditableSetting;
+  message: string;
+}
+
 function formatMs(ms: number | null): string {
   return ms === null ? 'pending' : `${ms} ms`;
 }
 
 export function SettingsView() {
+  const tab = useUiStore((s) => s.settingsTab);
+  const setSettingsTab = useUiStore((s) => s.setSettingsTab);
+  const settingsRevision = useUiStore((s) => s.settingsRevision);
+  const settingsChanged = useUiStore((s) => s.settingsChanged);
+  const openSetupGuide = useUiStore((s) => s.openSetupGuide);
   const info = useIpcQuery(() => ipc.invoke('app:info'));
   const vault = useIpcQuery(() => ipc.invoke('vault:status'));
-  const settings = useIpcQuery(() => ipc.invoke('settings:getAll'));
+  const settings = useIpcQuery(() => ipc.invoke('settings:getAll'), [settingsRevision]);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const [selfTest, setSelfTest] = useState<SelfTest>({ state: 'idle' });
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [resetNote, setResetNote] = useState<string | null>(null);
-  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [settingError, setSettingError] = useState<SettingError | null>(null);
   const [pathError, setPathError] = useState<string | null>(null);
-  const settingsChanged = useUiStore((s) => s.settingsChanged);
-  const openSetupGuide = useUiStore((s) => s.openSetupGuide);
-  const openWhatsNew = useUiStore((s) => s.openWhatsNew);
+
+  function selectTab(next: SettingsTab): void {
+    setSettingsTab(next);
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+  }
 
   async function resetVault(): Promise<void> {
     setResetting(true);
@@ -77,20 +96,19 @@ export function SettingsView() {
   const riotPressPlay = settings.data?.settings['riot.pressPlay'] !== 'false';
   const closeToTray = settings.data?.settings['window.closeToTray'] !== 'false';
   const whatsNewOn = settings.data?.settings['whatsNew.enabled'] !== 'false';
-  const version = info.data?.version ?? null;
-  const latestNotes = version ? latestWhatsNew(WHATS_NEW, version) : null;
 
   async function setSetting(key: EditableSetting, value: string): Promise<void> {
-    setSettingsError(null);
+    setSettingError(null);
     try {
       await ipc.invoke('settings:set', { key, value });
       settingsChanged();
     } catch (err) {
-      setSettingsError(err instanceof Error ? err.message : String(err));
-    } finally {
+      setSettingError({ key, message: err instanceof Error ? err.message : String(err) });
       settings.reload();
     }
   }
+
+  const errorFor = (key: EditableSetting): string | null => (settingError?.key === key ? settingError.message : null);
 
   async function openPath(target: 'logs' | 'data'): Promise<void> {
     setPathError(null);
@@ -117,8 +135,8 @@ export function SettingsView() {
   }
 
   return (
-    <Page narrow>
-      <PageHeader title="Settings" />
+    <Page narrow scrollRef={scrollRef}>
+      <PageHeader title="Settings" toolbar={<TabList idBase="settings" label="Settings sections" tabs={TABS} value={tab} onChange={selectTab} />} />
 
       <div className="flex flex-col gap-4 pb-6">
         {vault.data?.readable === false ? (
@@ -151,194 +169,196 @@ export function SettingsView() {
           </div>
         ) : null}
 
-        <Panel title="General">
-          {settingsError ? <p className="mb-3 text-xs text-danger">Could not save the setting: {settingsError}</p> : null}
-          <Row label="Keep running in the system tray" hint="Closing the window keeps One Launch running in the tray, where you can reopen or quit it.">
-            <Toggle
-              label="Keep running in the system tray"
-              checked={closeToTray}
-              disabled={settings.loading}
-              onChange={(next) => void setSetting('window.closeToTray', String(next))}
-            />
-          </Row>
-          <Row label="Preview mode" hint="Play shows what a switch would do instead of doing it.">
-            <Toggle label="Preview mode" checked={dryRun} disabled={settings.loading} onChange={(next) => void setSetting('dryRun', String(next))} />
-          </Row>
-          <Row
-            label="Steam automatic sign-in"
-            hint="Let One Launch type a stored Steam password for you. The password is visible to other programs on this PC while Steam runs."
-          >
-            <Toggle
-              label="Steam automatic sign-in"
-              checked={steamAutoLogin}
-              disabled={settings.loading}
-              onChange={(next) => void setSetting('steam.autoLogin', String(next))}
-            />
-          </Row>
-          <Row
-            label="Start Riot games for you"
-            hint="Sends the Riot Client the launch request its Play button sends. Off, the client opens the game's page and you press Play."
-          >
-            <Toggle
-              label="Start Riot games for you"
-              checked={riotPressPlay}
-              disabled={settings.loading}
-              onChange={(next) => void setSetting('riot.pressPlay', String(next))}
-            />
-          </Row>
-          <Row label="Show what's new after an update" hint="The first time you open One Launch after an update, a short list of what changed.">
-            <Toggle
-              label="Show what's new after an update"
-              checked={whatsNewOn}
-              disabled={settings.loading}
-              onChange={(next) => void setSetting('whatsNew.enabled', String(next))}
-            />
-          </Row>
-          <Row label="What's new" hint="The changes in the latest update.">
-            <Button
-              icon={<PartyPopper />}
-              aria-label="Show what's new"
-              disabled={!latestNotes}
-              onClick={() => {
-                if (latestNotes && version) openWhatsNew({ release: latestNotes, version });
-              }}
-            >
-              Show
-            </Button>
-          </Row>
-          <Row label="Setup guide" hint="The welcome steps: your launchers, how Play works, and adding accounts.">
-            <Button icon={<Sparkles />} onClick={() => openSetupGuide('settings')}>
-              Show again
-            </Button>
-          </Row>
-        </Panel>
-
-        <UpdatesPanel
-          version={info.data?.version ?? null}
-          auto={settings.data?.settings['updates.auto'] !== 'false'}
-          settingsLoading={settings.loading}
-          onAuto={(next) => void setSetting('updates.auto', String(next))}
-        />
-
-        <LauncherStatusPanel />
-
-        <BackupsPanel />
-
-        <ArtworkPanel
-          autoFetch={settings.data?.settings['artwork.autoFetch'] !== 'false'}
-          settingsLoading={settings.loading}
-          vaultAvailable={vault.data?.available ?? false}
-          onAutoFetch={(next) => void setSetting('artwork.autoFetch', String(next))}
-        />
-
-        <Collapsible title="Advanced" hint="Launch commands, logging, encryption, and diagnostics">
-          <Panel title="Launch commands">
-            <Row label="Epic launch link" hint="How Epic games are started. Change this only if launching stops working after an Epic update." align="center">
-              <Dropdown
-                label="Epic launch link"
-                value={epicUri}
-                disabled={settings.loading}
-                onChange={(v) => void setSetting('epic.launchUri', v)}
-                options={EPIC_LAUNCH_URI_FORMS.map((f) => ({ value: f, label: f === 'catalog' ? 'Catalog link (default)' : 'App name link' }))}
-              />
-            </Row>
-            <Row
-              label="Battle.net launch"
-              hint="How Battle.net games are started. Change this only if launching stops working after a Battle.net update."
-              align="center"
-            >
-              <Dropdown
-                label="Battle.net launch"
-                value={battlenetLaunch}
-                disabled={settings.loading}
-                onChange={(v) => void setSetting('battlenet.launch', v)}
-                options={BATTLENET_LAUNCH_FORMS.map((f) => ({ value: f, label: f === 'exec' ? 'Launch command (default)' : 'battlenet:// link' }))}
-              />
-            </Row>
-          </Panel>
-
-          <Panel title="Logging">
-            <Row label="Log level" hint="Logs stay on this PC. Passwords, tokens, emails, and account ids are removed before writing." align="center">
-              <Dropdown
-                label="Log level"
-                value={logLevel}
-                disabled={settings.loading}
-                onChange={(v) => void setSetting('logLevel', v)}
-                options={LOG_LEVELS.map((l) => ({ value: l, label: l[0]!.toUpperCase() + l.slice(1) }))}
-              />
-            </Row>
-          </Panel>
-
-          <Panel
-            title="Encryption"
-            description="Passwords and saved sign-ins are encrypted by Windows for your user account. Nothing is stored in plain text."
-            actions={
-              <Button onClick={() => void runSelfTest()} disabled={selfTest.state === 'running' || vault.data?.available === false}>
-                {selfTest.state === 'running' ? 'Testing…' : 'Run test'}
-              </Button>
-            }
-          >
-            <Row label="Status">
-              {vault.loading ? (
-                'Checking…'
-              ) : vault.data?.available ? (
-                vault.data.readable === false ? (
-                  <span className="inline-flex items-center gap-1.5 text-danger">
-                    <ShieldOff className="size-4" /> Key lost
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-success">
-                    <ShieldCheck className="size-4" /> Working
-                  </span>
-                )
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-danger">
-                  <ShieldOff className="size-4" /> Unavailable · passwords and sign-ins cannot be stored
-                </span>
-              )}
-            </Row>
-            <Row label="Last test" hint="Stores a random value, reads it back, deletes it.">
-              {selfTest.state === 'idle' && 'Not run'}
-              {selfTest.state === 'running' && 'Running…'}
-              {selfTest.state === 'ok' && <span className="text-success">Passed in {selfTest.ms} ms</span>}
-              {selfTest.state === 'failed' && <span className="text-danger">Failed: {selfTest.message}</span>}
-            </Row>
-          </Panel>
-
-          <Panel
-            title="Diagnostics"
-            actions={
+        <TabPanel idBase="settings" id={tab}>
+          <div className="flex flex-col gap-4">
+            {tab === 'general' ? (
               <>
-                <Button icon={<FolderOpen />} onClick={() => void openPath('logs')}>
-                  Logs
-                </Button>
-                <Button icon={<FolderOpen />} onClick={() => void openPath('data')}>
-                  Data folder
-                </Button>
-              </>
-            }
-          >
-            {pathError ? <p className="mb-3 text-xs text-danger">Could not open the folder: {pathError}</p> : null}
-            <Row label="Version">{info.data ? `${info.data.version} · Electron ${info.data.electron} · Node ${info.data.node}` : '…'}</Row>
-            <Row label="Startup" hint="From process start until the window appeared / the interface finished loading.">
-              {info.data
-                ? `${formatMs(info.data.startup.windowShownMs)} / ${formatMs(info.data.startup.didFinishLoadMs)}${
-                    info.data.startup.processToNodeMs === null ? '' : ` (${info.data.startup.processToNodeMs} ms of that before app code ran)`
-                  }`
-                : '…'}
-            </Row>
-            <Row label="Data folder">
-              <span className="font-mono text-xs select-text">{info.data?.dataDir ?? '…'}</span>
-            </Row>
-            <Row label="Build">{info.data ? (info.data.isPackaged ? 'Packaged' : 'Development') : '…'}</Row>
-          </Panel>
-        </Collapsible>
+                <Panel title="General">
+                  <Row
+                    label="Keep running in the system tray"
+                    hint="Closing the window keeps One Launch running in the tray, where you can reopen or quit it."
+                    error={errorFor('window.closeToTray')}
+                  >
+                    <Toggle
+                      label="Keep running in the system tray"
+                      checked={closeToTray}
+                      disabled={settings.loading}
+                      onChange={(next) => void setSetting('window.closeToTray', String(next))}
+                    />
+                  </Row>
+                  <Row label="Setup guide" hint="The welcome steps: your launchers, how Play works, and adding accounts.">
+                    <Button icon={<Sparkles />} onClick={() => openSetupGuide('settings')}>
+                      Show again
+                    </Button>
+                  </Row>
+                </Panel>
 
-        {WhatsNewDevPanel ? (
-          <Suspense fallback={null}>
-            <WhatsNewDevPanel />
-          </Suspense>
-        ) : null}
+                <UpdatesPanel
+                  version={info.data?.version ?? null}
+                  auto={settings.data?.settings['updates.auto'] !== 'false'}
+                  whatsNewOn={whatsNewOn}
+                  settingsLoading={settings.loading}
+                  settingError={settingError}
+                  onAuto={(next) => void setSetting('updates.auto', String(next))}
+                  onWhatsNewOn={(next) => void setSetting('whatsNew.enabled', String(next))}
+                />
+              </>
+            ) : null}
+
+            {tab === 'launchers' ? (
+              <>
+                <LauncherStatusPanel />
+
+                <Panel title="Play" description="What One Launch does for you when you press Play.">
+                  <Row
+                    label="Steam automatic sign-in"
+                    hint="Types a stored Steam password for you; other programs can see it while Steam runs."
+                    error={errorFor('steam.autoLogin')}
+                  >
+                    <Toggle
+                      label="Steam automatic sign-in"
+                      checked={steamAutoLogin}
+                      disabled={settings.loading}
+                      onChange={(next) => void setSetting('steam.autoLogin', String(next))}
+                    />
+                  </Row>
+                  <Row
+                    label="Start Riot games for you"
+                    hint="Presses Play in the Riot Client for you. Off, it opens the game's page and you press Play."
+                    error={errorFor('riot.pressPlay')}
+                  >
+                    <Toggle
+                      label="Start Riot games for you"
+                      checked={riotPressPlay}
+                      disabled={settings.loading}
+                      onChange={(next) => void setSetting('riot.pressPlay', String(next))}
+                    />
+                  </Row>
+                </Panel>
+              </>
+            ) : null}
+
+            {tab === 'artwork' ? (
+              <ArtworkPanel
+                autoFetch={settings.data?.settings['artwork.autoFetch'] !== 'false'}
+                settingsLoading={settings.loading}
+                vaultAvailable={vault.data?.available ?? false}
+                settingError={errorFor('artwork.autoFetch')}
+                onAutoFetch={(next) => void setSetting('artwork.autoFetch', String(next))}
+              />
+            ) : null}
+
+            {tab === 'backups' ? <BackupsPanel /> : null}
+
+            {tab === 'advanced' ? (
+              <>
+                <Panel title="Launching" description="How Play switches and starts games.">
+                  <Row label="Preview mode" hint="Play shows what a switch would do instead of doing it." error={errorFor('dryRun')}>
+                    <Toggle label="Preview mode" checked={dryRun} disabled={settings.loading} onChange={(next) => void setSetting('dryRun', String(next))} />
+                  </Row>
+                  <Row label="Epic launch link" hint="Change only if Epic games stop launching after an Epic update." error={errorFor('epic.launchUri')}>
+                    <Dropdown
+                      label="Epic launch link"
+                      value={epicUri}
+                      disabled={settings.loading}
+                      onChange={(v) => void setSetting('epic.launchUri', v)}
+                      options={EPIC_LAUNCH_URI_FORMS.map((f) => ({ value: f, label: f === 'catalog' ? 'Catalog link (default)' : 'App name link' }))}
+                    />
+                  </Row>
+                  <Row label="Battle.net launch" hint="Change only if games stop launching after a Battle.net update." error={errorFor('battlenet.launch')}>
+                    <Dropdown
+                      label="Battle.net launch"
+                      value={battlenetLaunch}
+                      disabled={settings.loading}
+                      onChange={(v) => void setSetting('battlenet.launch', v)}
+                      options={BATTLENET_LAUNCH_FORMS.map((f) => ({ value: f, label: f === 'exec' ? 'Launch command (default)' : 'battlenet:// link' }))}
+                    />
+                  </Row>
+                </Panel>
+
+                <Panel
+                  title="Encryption"
+                  description="Windows encrypts passwords and saved sign-ins for your account; nothing is in plain text."
+                  actions={
+                    <Button onClick={() => void runSelfTest()} disabled={selfTest.state === 'running' || vault.data?.available === false}>
+                      {selfTest.state === 'running' ? 'Testing…' : 'Run test'}
+                    </Button>
+                  }
+                >
+                  <Row label="Status">
+                    {vault.loading ? (
+                      'Checking…'
+                    ) : vault.data?.available ? (
+                      vault.data.readable === false ? (
+                        <span className="inline-flex items-center gap-1.5 text-danger">
+                          <ShieldOff className="size-4" /> Key lost
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-success">
+                          <ShieldCheck className="size-4" /> Working
+                        </span>
+                      )
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-danger">
+                        <ShieldOff className="size-4" /> Unavailable · passwords and sign-ins cannot be stored
+                      </span>
+                    )}
+                  </Row>
+                  <Row label="Last test" hint="Stores a random value, reads it back, deletes it.">
+                    {selfTest.state === 'idle' && 'Not run'}
+                    {selfTest.state === 'running' && 'Running…'}
+                    {selfTest.state === 'ok' && <span className="text-success">Passed in {selfTest.ms} ms</span>}
+                    {selfTest.state === 'failed' && <span className="text-danger">Failed: {selfTest.message}</span>}
+                  </Row>
+                </Panel>
+
+                <Panel
+                  title="Diagnostics"
+                  actions={
+                    <>
+                      <Button icon={<FolderOpen />} onClick={() => void openPath('logs')}>
+                        Logs
+                      </Button>
+                      <Button icon={<FolderOpen />} onClick={() => void openPath('data')}>
+                        Data folder
+                      </Button>
+                    </>
+                  }
+                >
+                  {pathError ? <p className="mb-3 text-xs text-danger">Could not open the folder: {pathError}</p> : null}
+                  <Row label="Log level" hint="Logs stay on this PC, with passwords, tokens, emails and account ids removed." error={errorFor('logLevel')}>
+                    <Dropdown
+                      label="Log level"
+                      value={logLevel}
+                      disabled={settings.loading}
+                      onChange={(v) => void setSetting('logLevel', v)}
+                      options={LOG_LEVELS.map((l) => ({ value: l, label: l[0]!.toUpperCase() + l.slice(1) }))}
+                    />
+                  </Row>
+                  <Row label="Runtime">{info.data ? `Electron ${info.data.electron} · Node ${info.data.node}` : '…'}</Row>
+                  <Row
+                    label="Startup"
+                    hint={`From process start to the window, then to the interface${
+                      info.data?.startup.processToNodeMs == null ? '' : `; ${info.data.startup.processToNodeMs} ms before app code ran`
+                    }.`}
+                  >
+                    {info.data ? `${formatMs(info.data.startup.windowShownMs)} / ${formatMs(info.data.startup.didFinishLoadMs)}` : '…'}
+                  </Row>
+                  <Row label="Data folder">
+                    <span className="font-mono text-xs select-text">{info.data?.dataDir ?? '…'}</span>
+                  </Row>
+                  <Row label="Build">{info.data ? (info.data.isPackaged ? 'Packaged' : 'Development') : '…'}</Row>
+                </Panel>
+
+                {WhatsNewDevPanel ? (
+                  <Suspense fallback={null}>
+                    <WhatsNewDevPanel />
+                  </Suspense>
+                ) : null}
+              </>
+            ) : null}
+          </div>
+        </TabPanel>
       </div>
     </Page>
   );

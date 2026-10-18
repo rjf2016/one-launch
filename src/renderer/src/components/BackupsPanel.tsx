@@ -176,7 +176,7 @@ export function BackupsPanel() {
   return (
     <Panel
       title="Backups"
-      description="Before every real account switch (and before every restore), One Launch snapshots the launcher files it is about to change."
+      description="The launcher files One Launch changes, saved before every switch."
       actions={
         <>
           <Button icon={<RefreshCw />} onClick={() => setRevision((r) => r + 1)}>
@@ -208,11 +208,7 @@ export function BackupsPanel() {
       ) : null}
 
       {keepError ? <p className="mb-3 text-xs text-danger">Could not save the setting: {keepError}</p> : null}
-      <Row
-        label="Snapshots to keep"
-        hint="For each launcher. Older ones are removed when the next snapshot is taken. Snapshots marked Kept are not counted: they hold a sign-in that no One Launch account owns."
-        align="center"
-      >
+      <Row label="Snapshots to keep" hint="Per launcher. Older ones go as new ones are taken; Kept snapshots never count.">
         <Dropdown
           label="Snapshots to keep"
           value={String(keep)}
@@ -222,7 +218,7 @@ export function BackupsPanel() {
         />
       </Row>
 
-      <div className="-mb-4">
+      <div className="-mb-3">
         {LAUNCHER_IDS.map((launcher) => (
           <LauncherBackups key={launcher} launcher={launcher} revision={revision} onRestore={setPending} />
         ))}

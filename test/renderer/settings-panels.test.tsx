@@ -102,7 +102,7 @@ describe('BackupsPanel: snapshots kept out of the clean-up (B23)', () => {
     });
     const user = userEvent.setup();
     render(<BackupsPanel />);
-    expect(screen.getByText(/Snapshots marked Kept are not counted/)).toBeTruthy();
+    expect(screen.getByText(/Kept snapshots never count/)).toBeTruthy();
     await user.click(await screen.findByRole('button', { name: /Epic Games.*2 snapshots/ }));
     const rows = screen.getAllByRole('listitem');
     expect(rows).toHaveLength(2);

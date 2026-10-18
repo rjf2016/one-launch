@@ -58,10 +58,14 @@ export const name = 'check';
 export default async (d) => {
   await d.click('Settings');
   await d.waitFor('Advanced');
-  await d.shot('settings');
+  await d.click('Launchers');
+  await d.waitFor('Re-check');
+  await d.shot('settings-launchers');
   d.check('the Steam row is healthy', await d.has('Healthy'));
 };
 ```
+
+Settings has tabs (General, Launchers, Artwork, Backups, Advanced): `click('<tab>')` selects one, then wait for that panel's own text. "Advanced" is a tab label, so `waitFor('Advanced')` only proves the page painted.
 
 Driver API (`d`): `invoke(channel, payload)` (unwrapped IPC; throws with `.code`), `invokeRaw`, `evaluate(fn, ...args)`, `text()`, `has(text)`, `waitFor(text | fn, { timeoutMs, absent })`, `waitForJob(jobId, state | fn)`, `click(name | { contains } | { selector }, { nth })`, `focus(...)`, `type(text)`, `key('Enter' | 'ArrowDown' | 'a', { ctrl, shift, alt })`, `viewport(w, h)` / `viewport(null)`, `shot(name)`, `timeline(fn, everyMs, forMs)`, `readLog()`, `assertNoErrorLines([allowRegex])`, `fakeReport()`, `launcherFile(rel)`, `restart({ knobs })` (a second start; `knobs` replaces the run's `knobs.json`), `secondInstance()` (a second copy on the same folder while the first runs; it hands over, shows the first's window, and exits 0), `killHard()`, `closeWindow()` + `waitForExit()`, `close()`, `check(name, ok, detail)`, `env` (extra child environment; set it in `before(d)`, it applies to every spawn). The runner closes the app and checks for ERROR lines itself when the scenario has not. A function given to `waitFor` runs in the page, so it cannot use `d` or outer variables; a string is page text, not an expression. Optional `export async function before(d)` / `after(d)` run around the whole scenario (a local server whose port the child must know).
 

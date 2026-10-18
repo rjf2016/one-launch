@@ -41,6 +41,8 @@ export default async (d) => {
   // Settings › Backups lists Epic's snapshot first, so the restore below is Epic's; Riot's pinned snapshot is checked above.
   await d.click('Settings');
   await d.waitFor('Advanced');
+  await d.click('Backups');
+  await d.waitFor('Snapshots to keep');
   await d.click({ contains: '1 snapshot' });
   await d.waitFor('Kept');
   await d.find('Restore', 0);

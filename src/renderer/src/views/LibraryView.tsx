@@ -44,7 +44,7 @@ interface Menu {
 export function LibraryView() {
   const games = useIpcQuery(() => ipc.invoke('library:list'));
   const recent = useIpcQuery(() => ipc.invoke('launch:recent', { limit: 8 }));
-  const setView = useUiStore((s) => s.setView);
+  const openSettings = useUiStore((s) => s.openSettings);
   const openLaunch = useUiStore((s) => s.openLaunch);
   const activeState = useUiStore((s) => s.activeLaunch?.job.state ?? null);
   const launcherStatus = useUiStore((s) => s.launcherStatus);
@@ -236,8 +236,8 @@ export function LibraryView() {
             {needKey ? (
               <button
                 type="button"
-                onClick={() => setView('settings')}
-                title="Games that are not on Steam get artwork from SteamGridDB, which needs a free API key. Add one in Settings."
+                onClick={() => openSettings('artwork')}
+                title="Games that are not on Steam get artwork from SteamGridDB, which needs a free API key. Add one in Settings › Artwork."
                 className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs whitespace-nowrap text-muted transition-colors duration-150 hover:bg-surface-2 hover:text-text"
               >
                 <Images className="size-3.5" /> Artwork needs a SteamGridDB key

@@ -26,6 +26,7 @@ const UPDATE_POLL_MS = 60_000;
 export function Sidebar() {
   const view = useUiStore((s) => s.view);
   const setView = useUiStore((s) => s.setView);
+  const openSettings = useUiStore((s) => s.openSettings);
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const settingsRevision = useUiStore((s) => s.settingsRevision);
@@ -72,7 +73,7 @@ export function Sidebar() {
         {dryRun ? (
           <button
             type="button"
-            onClick={() => setView('settings')}
+            onClick={() => openSettings('advanced')}
             aria-label="Preview mode is on"
             title="Preview mode is on: Play shows what a switch would do instead of doing it. Turn it off in Settings, or from the preview itself."
             className={`flex items-start gap-2 rounded-lg border px-[11px] py-2 text-left text-xs transition-colors duration-150 ${

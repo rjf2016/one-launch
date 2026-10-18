@@ -1,6 +1,8 @@
-import { RefreshCw, RotateCw } from 'lucide-react';
+import { PartyPopper, RefreshCw, RotateCw } from 'lucide-react';
 import { useState } from 'react';
-import type { UpdateStatus, UpdateUnavailableReason } from '@shared/models';
+import type { SettingKey, UpdateStatus, UpdateUnavailableReason } from '@shared/models';
+import { latestWhatsNew } from '@shared/whats-new';
+import { WHATS_NEW } from '@shared/whats-new-releases';
 import { ipc } from '../lib/ipc';
 import { isUpdateBusy, restartToUpdate, useUpdateStatus } from '../lib/updates';
 import { useUiStore } from '../store/ui';
@@ -14,7 +16,7 @@ const UNAVAILABLE: Record<UpdateUnavailableReason, string> = {
   development: 'Updates work only in the installed app.',
   'custom-data-folder': 'Updates are off while One Launch runs from a custom data folder.',
   'not-installed': 'Updates work only in a copy installed with the One Launch installer.',
-  'all-users-install': 'Updates need a copy installed for your Windows account only. Reinstall and choose "Only for me".',
+  'all-users-install': 'Updates need a per-user install. Reinstall and choose "Only for me".',
 };
 
 function stateText(status: UpdateStatus | null) {
@@ -54,18 +56,25 @@ function failureText(status: Extract<UpdateStatus, { state: 'failed' }>): string
 interface UpdatesPanelProps {
   version: string | null;
   auto: boolean;
+  whatsNewOn: boolean;
   settingsLoading: boolean;
+  /** The last setting change on the page that was not saved, shown under its row when it is one of this panel's. */
+  settingError?: { key: SettingKey; message: string } | null;
   onAuto: (next: boolean) => void;
+  onWhatsNewOn: (next: boolean) => void;
 }
 
-export function UpdatesPanel({ version, auto, settingsLoading, onAuto }: UpdatesPanelProps) {
+export function UpdatesPanel({ version, auto, whatsNewOn, settingsLoading, settingError, onAuto, onWhatsNewOn }: UpdatesPanelProps) {
   const status = useUpdateStatus(PANEL_POLL_MS);
   const setStatus = useUiStore((s) => s.setUpdateStatus);
+  const openWhatsNew = useUiStore((s) => s.openWhatsNew);
   const running = useUiStore((s) => s.activeLaunch?.job.state === 'running');
   const [error, setError] = useState<string | null>(null);
   const [restarting, setRestarting] = useState(false);
   const busy = isUpdateBusy(status);
   const hint = stateHint(status, auto);
+  const latestNotes = version ? latestWhatsNew(WHATS_NEW, version) : null;
+  const errorFor = (key: SettingKey): string | null => (settingError?.key === key ? settingError.message : null);
 
   async function check(): Promise<void> {
     setError(null);
@@ -90,7 +99,7 @@ export function UpdatesPanel({ version, auto, settingsLoading, onAuto }: Updates
   return (
     <Panel
       title="Updates"
-      description="New versions come from One Launch's releases on GitHub. Nothing about your accounts is sent."
+      description="Updates come from the GitHub releases; nothing about your accounts is sent."
       actions={
         status?.state === 'ready' ? (
           <Button variant="primary" icon={<RotateCw />} disabled={restarting || running} onClick={() => void restart()}>
@@ -107,13 +116,36 @@ export function UpdatesPanel({ version, auto, settingsLoading, onAuto }: Updates
         )
       }
     >
-      <Row label="Keep One Launch updated automatically" hint="Downloads new versions in the background and installs them the next time One Launch restarts.">
+      <Row
+        label="Keep One Launch updated automatically"
+        hint="Downloads new versions in the background and installs them the next time One Launch restarts."
+        error={errorFor('updates.auto')}
+      >
         <Toggle label="Keep One Launch updated automatically" checked={auto} disabled={settingsLoading} onChange={onAuto} />
       </Row>
       <Row label="Version" {...(hint ? { hint } : {})}>
         <span className="truncate">
           {version ?? '…'} · {stateText(status)}
         </span>
+      </Row>
+      <Row
+        label="Show what's new after an update"
+        hint="The first time you open One Launch after an update, a short list of what changed."
+        error={errorFor('whatsNew.enabled')}
+      >
+        <Toggle label="Show what's new after an update" checked={whatsNewOn} disabled={settingsLoading} onChange={onWhatsNewOn} />
+      </Row>
+      <Row label="What's new" hint="The changes in the latest update.">
+        <Button
+          icon={<PartyPopper />}
+          aria-label="Show what's new"
+          disabled={!latestNotes}
+          onClick={() => {
+            if (latestNotes && version) openWhatsNew({ release: latestNotes, version });
+          }}
+        >
+          Show
+        </Button>
       </Row>
       {status?.state === 'failed' ? (
         <p role="alert" className="pt-2 text-xs text-danger">

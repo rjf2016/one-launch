@@ -21,6 +21,8 @@ export default async (d) => {
   await d.waitFor('Rescan');
   await d.click('Settings');
   await d.waitFor('Advanced');
+  await d.click('Backups');
+  await d.waitFor('Snapshots to keep');
   await d.click({ contains: '1 snapshot' });
   await d.waitFor('Before switching to Persona Three');
   await d.find('Restore', 0);
