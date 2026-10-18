@@ -25,6 +25,7 @@ npm run notices          # writes build/THIRD-PARTY-NOTICES.txt and build/licens
 npm run build:installer  # as build, but NSIS -> dist/OneLaunch-<version>-setup.exe (plus dist/win-unpacked)
 npm run smoke:packaged   # starts dist/win-unpacked/One Launch.exe on a scratch folder and checks it over CDP
 npm run release:keygen   # owner only, once: creates the release signing keys (see "Releases")
+npm run release:notes    # prints the GitHub release notes rendered from the version's What's New entry (what the release workflow drafts)
 npm run release:sign     # owner only, per release: signs a draft release's latest.yml and offers to publish it
 ```
 
@@ -150,8 +151,8 @@ Once: in PowerShell or Windows Terminal (the passphrase prompt needs a real cons
 
 Per release:
 
-1. Bump `version` in `package.json` on a branch, add the release's entry to `src/shared/whats-new-releases.ts` if it should announce itself (an entry opens the What's New card once after the update; no entry, no card; its image, if any, goes in `src/renderer/src/assets/whats-new/`; preview it from Settings › Developer in a dev run), and merge it through a PR.
-2. Tag the merge commit `v<version>` and push the tag. The release workflow checks that the tag matches the version and is on master, runs the CI checks and scenarios, builds the installer, attests its build provenance, and creates a draft release with the installer, its `.blockmap`, and `latest.yml`.
+1. Bump `version` in `package.json` on a branch, add the release's entry to `src/shared/whats-new-releases.ts` (it is both the What's New card that opens once after the update and the GitHub release's notes, so every release needs one; its image, if any, goes in `src/renderer/src/assets/whats-new/`; preview the card from Settings › Developer in a dev run and the notes with `npm run release:notes`), and merge it through a PR.
+2. Tag the merge commit `v<version>` and push the tag. The release workflow checks that the tag matches the version and is on master, renders the release notes from the version's entry (no entry: it stops there, before the build), runs the CI checks and scenarios, builds the installer, attests its build provenance, and creates a draft release with those notes, the installer, its `.blockmap`, and `latest.yml`.
 3. `npm run release:sign -- v<version> --key=<primary .pem>` downloads the draft's installer and `latest.yml`, refuses unless they describe the same file, signs what it measured, uploads the signed `latest.yml`, downloads it again to verify it, and offers to publish.
 
 - Copies see a release only once it is published: drafts are invisible to `releases/latest`. Publishing is the rollout; there is no staged rollout.

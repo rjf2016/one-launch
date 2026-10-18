@@ -1,7 +1,8 @@
 name: Release
 
-# A pushed v<version> tag builds the installer and leaves it in a draft release. Nothing reaches users until the
-# owner signs latest.yml offline (npm run release:sign) and publishes the draft; see docs/development.md, "Releases".
+# A pushed v<version> tag builds the installer and leaves it in a draft release whose notes are the version's What's New
+# entry. Nothing reaches users until the owner signs latest.yml offline (npm run release:sign) and publishes the draft;
+# see docs/development.md, "Releases".
 on:
   push:
     tags: ['v*']
@@ -38,6 +39,12 @@ jobs:
           git merge-base --is-ancestor $env:GITHUB_SHA origin/master
           if ($LASTEXITCODE -ne 0) { throw "Tag $env:GITHUB_REF_NAME is not on master" }
       - run: npm ci
+      # The entry is the release's notes, so a version without one stops here, before the build.
+      - name: Release notes from the What's New entry
+        shell: pwsh
+        run: |
+          $notes = Join-Path $env:RUNNER_TEMP release-notes.md
+          node scripts/release-notes.mjs $env:GITHUB_REF_NAME "--out=$notes"
       # Electron has no install script: its binary is fetched on the first import of the package. Fetch it here, not inside a vitest worker mid-suite.
       - run: node node_modules/electron/install.js
       - run: npm run typecheck
@@ -67,7 +74,7 @@ jobs:
           $installer = "dist/OneLaunch-$version-setup.exe"
           $files = @($installer, "$installer.blockmap", 'dist/latest.yml')
           foreach ($f in $files) { if (-not (Test-Path $f)) { throw "$f is missing" } }
-          gh release create $env:GITHUB_REF_NAME @files --draft --verify-tag --title "One Launch $version" --notes "Not signed yet. Sign with: npm run release:sign -- $env:GITHUB_REF_NAME"
+          gh release create $env:GITHUB_REF_NAME @files --draft --verify-tag --title "One Launch $version" --notes-file (Join-Path $env:RUNNER_TEMP release-notes.md)
           if ($LASTEXITCODE -ne 0) { throw 'gh release create failed' }
       - name: Upload the driver output
         if: failure()
