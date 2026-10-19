@@ -3,12 +3,13 @@
 //   node scripts/drive.mjs scripts/scenarios/<scenario>.mjs [--packaged] [--fake[=<name|folder>]] [--knobs=<json>] [--keep] [--shots=<dir>] [--port=<n>] [--hold[=<minutes>]] [--args="<chromium switches>"]
 // Unpackaged runs need `npx electron-vite build` first; --packaged needs `npm run build` and never combines with --fake.
 // --args passes extra Chromium switches to the app (a startup trace: --args="--trace-startup=devtools.timeline,v8 --trace-startup-file=<file>"); never --data-dir.
+// Inside --args, quote a value with spaces: --args='--trace-startup-file="C:\trace files\startup.json"'.
 // --hold keeps the app up at the scenario's end state for an interactive look over CDP (see the run-one-launch skill).
 // .claude/settings.json lets an agent run this on scripts/scenarios/ without asking, so it imports from nowhere else and starts only the repo's own builds.
 import { realpathSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { parseArgs, repoRoot, runScenario } from './app-driver.mjs';
+import { parseArgs, repoRoot, runScenario, splitSwitches } from './app-driver.mjs';
 
 const USAGE =
   'Usage: node scripts/drive.mjs scripts/scenarios/<scenario>.mjs [--packaged] [--fake[=<name|folder>]] [--knobs=<json>] [--keep] [--shots=<dir>] [--port=<n>] [--hold[=<minutes>]]';
@@ -38,6 +39,14 @@ if (flags.exe !== undefined)
   refuse('--exe is not supported: the driver starts only the electron.exe in node_modules or, with --packaged, dist/win-unpacked/One Launch.exe.');
 const hold = flags.hold === undefined ? undefined : flags.hold === true ? true : Number(flags.hold);
 if (hold !== undefined && hold !== true && !(hold > 0)) refuse('--hold takes minutes: --hold or --hold=<minutes>');
+let args;
+if (typeof flags.args === 'string') {
+  try {
+    args = splitSwitches(flags.args);
+  } catch (err) {
+    refuse(err instanceof Error ? err.message : String(err));
+  }
+}
 const mod = await import(pathToFileURL(scenarioFile(positional[0])).href);
 if (typeof mod.default !== 'function') refuse(`${positional[0]} does not export a default async function`);
 const { failures } = await runScenario(mod, {
@@ -49,6 +58,6 @@ const { failures } = await runScenario(mod, {
   keep: flags.keep ? true : undefined,
   shots: typeof flags.shots === 'string' ? flags.shots : undefined,
   port: typeof flags.port === 'string' ? Number(flags.port) : undefined,
-  args: typeof flags.args === 'string' ? flags.args.split(/\s+/).filter(Boolean) : undefined,
+  args,
 });
 process.exit(failures === 0 ? 0 : 1);

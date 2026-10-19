@@ -65,6 +65,34 @@ export function parseArgs(argv) {
 }
 
 /**
+ * Splits one `--args` value into Chromium switches the way a shell would: whitespace separates, a "…" or '…' span keeps
+ * its spaces and loses its quotes (a path with spaces: --trace-startup-file="C:\trace files\startup.json"). No escapes,
+ * so a Windows path reads as typed. An unclosed quote throws.
+ */
+export function splitSwitches(text) {
+  const out = [];
+  let current = null;
+  let quote = null;
+  for (const ch of text) {
+    if (quote !== null) {
+      if (ch === quote) quote = null;
+      else current += ch;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      current ??= '';
+    } else if (/\s/.test(ch)) {
+      if (current !== null) out.push(current);
+      current = null;
+    } else {
+      current = (current ?? '') + ch;
+    }
+  }
+  if (quote !== null) throw new Error(`--args has an unclosed ${quote} quote: ${text}`);
+  if (current !== null) out.push(current);
+  return out;
+}
+
+/**
  * Copies a committed scenario (test/fake-launchers/<name>, or an absolute folder) into `launchersDir`:
  * scenario.json as is, every entry of its `files` map materialized, and `knobs.json` when knobs are given.
  * The app only ever sees the copy, so a run can never modify the committed fixtures.

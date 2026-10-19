@@ -82,6 +82,11 @@ export function LibraryView() {
     return () => window.clearInterval(timer);
   }, []);
   const revision = useRef<number | null>(null);
+  // The list on screen carries the revision it was read at. The startup answer predates the first poll, and on a slow
+  // start the startup scan too, so the poll compares against the list's own revision, never one it merely saw earlier.
+  useEffect(() => {
+    if (games.data) revision.current = games.data.revision;
+  }, [games.data]);
   const lastActiveState = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const list = useMemo(() => games.data?.games ?? [], [games.data]);

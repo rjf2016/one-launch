@@ -74,7 +74,8 @@ export interface IpcContract {
    */
   'accounts:copy': { req: { id: string; field: 'login' | 'password' }; res: { clearAfterMs: number; historyExcluded: boolean } };
 
-  'library:list': { req: undefined; res: { games: Game[] } };
+  /** `revision` is the library revision the list was read at, for the Library's `artwork:status` poll to compare against. */
+  'library:list': { req: undefined; res: { games: Game[]; revision: number } };
   /** Re-reads every implemented launcher's files and updates the games table. A launcher that is missing or fails never stops the others. */
   'library:rescan': { req: undefined; res: { games: Game[]; scanned: LibraryScanResult[] } };
 

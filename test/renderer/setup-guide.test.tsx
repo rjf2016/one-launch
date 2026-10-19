@@ -82,7 +82,7 @@ function guide(opts: GuideOptions = {}) {
     'accounts:list': () => ({ accounts: [...accounts] }),
     'launchers:status': () => ({ launchers: opts.launchers ?? TWO_FOUND }),
     'artwork:status': () => ({ status: { queued: 0, running: 0, completed: 0, failed: 0, hasApiKey: false, revision: 1, scanned: true } }),
-    'library:list': () => ({ games: opts.games ?? [game()] }),
+    'library:list': () => ({ games: opts.games ?? [game()], revision: 1 }),
     'launchers:rememberedAccounts': (req) => ({ accounts: opts.remembered?.[req.launcher as 'steam' | 'battlenet'] ?? [] }),
     'launchers:importAccounts': (req) => {
       const created = req.launcherUids.map((uid) => account({ id: `acct-${uid}`, launcher: req.launcher, login: uid, launcherUid: uid || null }));

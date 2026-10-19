@@ -322,7 +322,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // --- library -------------------------------------------------------------
 
-  handle('library:list', () => ({ games: deps.library.list() }));
+  handle('library:list', () => ({ games: deps.library.list(), revision: deps.library.revision }));
 
   handle('library:rescan', async () => {
     const scanned = await deps.rescan();

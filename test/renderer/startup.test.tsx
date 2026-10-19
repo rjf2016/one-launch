@@ -33,7 +33,7 @@ function everyday(over: Handlers = {}): Handlers {
     'app:info': () => info,
     'settings:getAll': () => ({ settings: { 'firstRun.dismissed': 'true', 'whatsNew.lastSeen': info.version } }),
     'accounts:list': () => ({ accounts: [account()] }),
-    'library:list': () => ({ games: [game({ id: 'g1', name: 'Dota 2' }), game({ id: 'g2', name: 'Hades' })] }),
+    'library:list': () => ({ games: [game({ id: 'g1', name: 'Dota 2' }), game({ id: 'g2', name: 'Hades' })], revision: 1 }),
     'launch:recent': () => ({ recent: [] }),
     'recovery:get': () => ({ recovery: null }),
     'updates:status': () => ({ state: 'idle', version: null, error: null, checkedAt: null, reason: null }) as never,
@@ -93,7 +93,7 @@ describe('startup prefetch (lib/startup.ts)', () => {
       everyday({
         'library:list': () => {
           served++;
-          return { games: [] };
+          return { games: [], revision: 1 };
         },
       }),
     );
@@ -135,6 +135,22 @@ describe('the first commit holds the library', () => {
     expect(screen.queryByText('Scanning your launchers…')).toBeNull();
     await act(async () => undefined);
     expect(bridge.sent('library:list')).toHaveLength(1);
+  });
+
+  it('lists again when the startup scan finished between the prefetch and the first poll', async () => {
+    let scanned = false;
+    const bridge = installBridge(
+      everyday({
+        'library:list': () => ({ games: scanned ? [game({ id: 'g1', name: 'Dota 2' })] : [], revision: scanned ? 2 : 1 }),
+        'artwork:status': () => ({ status: { ...status, revision: scanned ? 2 : 1 } }),
+      }),
+    );
+    await prefetchStartup(window.oneLaunch, 30);
+    scanned = true;
+    render(<App />);
+    expect(screen.queryByRole('button', { name: 'Play Dota 2' })).toBeNull();
+    expect(await screen.findByRole('button', { name: 'Play Dota 2' })).toBeTruthy();
+    expect(bridge.sent('library:list')).toHaveLength(2);
   });
 
   it('shows the usual error when the prefetched list failed, after one call in total', async () => {
