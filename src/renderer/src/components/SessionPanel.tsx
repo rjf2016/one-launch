@@ -93,7 +93,15 @@ export function SessionPanel({ account, onAccountChanged }: { account: Account; 
   const disk = state ? describeState(state, account, session) : null;
   const nothingToSave = state !== null && !state.remembered;
   const signedInHint = [state?.launcherRunning ? `${copy.launcherName} is running.` : null, disk?.hint ?? null].filter((h) => h !== null).join(' ');
-  const savedHint = session?.verifiedAt ? `Last used for a switch ${formatRelative(session.verifiedAt)}.` : null;
+  const firstLoad = query.data === null && query.error === null;
+  // A blank line holds the hint's place until the session loads, so the panel does not jump when the hint arrives.
+  const savedHint = session
+    ? session.verifiedAt
+      ? `Last used for a switch ${formatRelative(session.verifiedAt)}.`
+      : 'Not used for a switch yet.'
+    : firstLoad && account.hasSession
+      ? ' '
+      : null;
 
   return (
     <Panel
@@ -122,6 +130,8 @@ export function SessionPanel({ account, onAccountChanged }: { account: Account; 
             {session.staleReason ? <AlertTriangle className="size-4" /> : <ShieldCheck className="size-4" />}
             {session.staleReason ? 'Saved, but needs a fresh sign-in' : `Saved ${formatRelative(session.capturedAt)}`}
           </span>
+        ) : firstLoad && account.hasSession ? (
+          'Checking…'
         ) : (
           <span className="inline-flex items-center gap-1.5 text-muted">
             <ShieldOff className="size-4" /> Not saved yet
