@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { Agent, request } from 'node:https';
 
 /**
  * The one thing One Launch asks the Riot Client's local server for: the launch request its own Play
@@ -53,9 +52,13 @@ export interface LocalRequest {
 
 export type LocalRequester = (req: LocalRequest) => Promise<{ status: number }>;
 
-/** node:https alone: it honours no proxy and follows no redirect. A fresh agent accepts the client's self-signed certificate for this one loopback connection. */
-export const httpsRequester: LocalRequester = (req) =>
-  new Promise((resolve, reject) => {
+/**
+ * node:https alone: it honours no proxy and follows no redirect. A fresh agent accepts the client's self-signed certificate for this
+ * one loopback connection. The module loads on the first launch, not at startup: it is the heaviest builtin main would otherwise pull in.
+ */
+export const httpsRequester: LocalRequester = async (req) => {
+  const { Agent, request } = await import('node:https');
+  return new Promise((resolve, reject) => {
     const r = request(
       {
         host: req.host,
@@ -78,6 +81,7 @@ export const httpsRequester: LocalRequester = (req) =>
     r.on('error', reject);
     r.end();
   });
+};
 
 /** A code or a name, never a message: nothing from the request ends up in a log line or a job detail. */
 function errorLabel(err: unknown): string {
