@@ -3,8 +3,8 @@ import './setup';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { SessionPanel } from '../../src/renderer/src/components/SessionPanel';
-import type { LauncherSessionState } from '../../src/shared/models';
-import { account, installBridge, resetUi } from './harness';
+import type { LauncherSession, LauncherSessionState } from '../../src/shared/models';
+import { account, deferred, installBridge, resetUi } from './harness';
 
 resetUi();
 
@@ -76,5 +76,68 @@ describe('SessionPanel: a new account, before its first Play', () => {
     );
     expect(await screen.findByText('Another of your accounts')).toBeTruthy();
     expect(screen.getByText('Riot Client is running.')).toBeTruthy();
+  });
+});
+
+type SessionsGet = { session: LauncherSession | null; state: LauncherSessionState; stateError: string | null };
+
+function session(over: Partial<LauncherSession> = {}): LauncherSession {
+  return {
+    accountId: 'acct-riot',
+    launcher: 'riot',
+    launcherUid: null,
+    fingerprint: 'f'.repeat(64),
+    capturedAt: '2026-10-01T10:00:00.000Z',
+    verifiedAt: null,
+    staleReason: null,
+    ...over,
+  };
+}
+
+/** The "Saved sign-in" row's label; the panel title says the same words in an h2. */
+function savedRowLabel(): HTMLElement {
+  const label = screen.getAllByText('Saved sign-in').find((el) => el.tagName === 'DIV');
+  if (!label) throw new Error('no Saved sign-in row');
+  return label;
+}
+
+describe('SessionPanel: the Saved sign-in row keeps its height while the session loads', () => {
+  const saved = account({ id: 'acct-riot', launcher: 'riot', login: 'riot_new', hasSession: true });
+  const owned = state({ remembered: true, fingerprint: 'f'.repeat(64), linkedAccountId: 'acct-riot' });
+
+  it('holds the hint’s line open for an account with a saved sign-in, then fills it', async () => {
+    const pending = deferred<SessionsGet>();
+    installBridge({ 'sessions:get': () => pending.promise });
+    render(<SessionPanel account={saved} onAccountChanged={() => undefined} />);
+    const label = savedRowLabel();
+    expect(label.nextElementSibling?.textContent).toBe(' ');
+    expect(screen.queryByText('Not saved yet')).toBeNull();
+    expect(screen.getAllByText('Checking…')).toHaveLength(2);
+
+    pending.resolve({ session: session({ verifiedAt: '2026-10-12T10:00:00.000Z' }), state: owned, stateError: null });
+    expect(await screen.findByRole('button', { name: 'Save again' })).toBeTruthy();
+    expect(screen.queryByText('Checking…')).toBeNull();
+    expect(label.nextElementSibling?.textContent).toMatch(/^Last used for a switch .*\.$/);
+  });
+
+  it('keeps the row two lines for a saved sign-in no switch has used yet', async () => {
+    installBridge({ 'sessions:get': () => ({ session: session(), state: owned, stateError: null }) });
+    render(<SessionPanel account={saved} onAccountChanged={() => undefined} />);
+    expect(await screen.findByRole('button', { name: 'Save again' })).toBeTruthy();
+    expect(savedRowLabel().nextElementSibling?.textContent).toBe('Not used for a switch yet.');
+  });
+
+  it('reserves nothing for an account with no saved sign-in', async () => {
+    const pending = deferred<SessionsGet>();
+    installBridge({ 'sessions:get': () => pending.promise });
+    render(<SessionPanel account={riot} onAccountChanged={() => undefined} />);
+    const label = savedRowLabel();
+    expect(label.nextElementSibling).toBeNull();
+    expect(screen.getByText('Not saved yet')).toBeTruthy();
+
+    pending.resolve({ session: null, state: state(), stateError: null });
+    expect(await screen.findByText('Nobody')).toBeTruthy();
+    expect(label.nextElementSibling).toBeNull();
+    expect(screen.getByText('Not saved yet')).toBeTruthy();
   });
 });

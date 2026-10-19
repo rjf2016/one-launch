@@ -17,3 +17,14 @@ export function isShortcut(e: KeyboardEvent, key: string, { inFields = true }: {
   if (!inFields && inField(e)) return false;
   return !modalOpen();
 }
+
+const MOUSE_BACK_BUTTON = 3;
+
+/**
+ * True for the Back gesture a browser answers: the mouse's Back (thumb) button, or Alt+Left, which some
+ * mouse drivers send in its place. Never while a modal dialog is open.
+ */
+export function isBack(e: KeyboardEvent | MouseEvent): boolean {
+  if ('button' in e) return e.button === MOUSE_BACK_BUTTON && !modalOpen();
+  return e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey && e.key === 'ArrowLeft' && !modalOpen();
+}
