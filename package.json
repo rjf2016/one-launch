@@ -3,7 +3,7 @@
   "version": "1.0.0-beta.3",
   "description": "Launch any game, from any launcher, on any account.",
   "private": true,
-  "main": "./out/main/index.js",
+  "main": "./out/main/boot.js",
   "author": "rjf2016",
   "license": "MIT",
   "type": "module",

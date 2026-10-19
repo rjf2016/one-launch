@@ -65,7 +65,8 @@ export default defineConfig({
     build: {
       // Not minified: it never leaves the machine, and readable stack traces in onelaunch.log matter more than a few kB.
       minify: false,
-      rollupOptions: { input: resolve(__dirname, 'src/main/index.ts') },
+      // boot.ts switches Node's compile cache on and then imports index.ts, which must therefore stay its own chunk.
+      rollupOptions: { input: { boot: resolve(__dirname, 'src/main/boot.ts'), index: resolve(__dirname, 'src/main/index.ts') } },
     },
   },
   preload: {
