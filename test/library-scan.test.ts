@@ -154,6 +154,18 @@ describe('scanLibrary', () => {
     expect(deps.library.list()).toHaveLength(0);
   });
 
+  it('leaves the revision alone when a rescan finds the same games', async () => {
+    const deps = setup([
+      new FakeAdapter('steam', { kind: 'games', games: [game('steam', '1'), game('steam', '2')] }),
+      new FakeAdapter('epic', { kind: 'not-installed' }),
+    ]);
+    await scanLibrary(deps);
+    const rev = deps.library.revision;
+    expect(rev).toBeGreaterThan(0);
+    await scanLibrary(deps);
+    expect(deps.library.revision).toBe(rev);
+  });
+
   it('reports a failing launcher on its own entry and leaves its games alone', async () => {
     const epic = new FakeAdapter('epic', { kind: 'games', games: [game('epic', 'Sugar')] });
     const deps = setup([epic, new FakeAdapter('battlenet', { kind: 'games', games: [game('battlenet', 'pro')] })]);

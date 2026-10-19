@@ -29,6 +29,13 @@ const ARTWORK_SOURCE_NAMES: Readonly<Record<ArtworkSource, string>> = {
   launcher: "the game's own icon",
 };
 
+const STATUS_FIELDS = ['queued', 'running', 'completed', 'failed', 'hasApiKey', 'revision', 'scanned'] as const;
+
+/** The poll answers every few seconds; an unchanged answer must not re-render the grid. */
+function sameArtworkStatus(a: ArtworkStatus, b: ArtworkStatus): boolean {
+  return STATUS_FIELDS.every((k) => a[k] === b[k]);
+}
+
 function readSort(): Sort {
   try {
     return window.localStorage.getItem(SORT_KEY) === 'name' ? 'name' : 'lastPlayed';
@@ -67,6 +74,13 @@ export function LibraryView() {
   const [sort, setSort] = useState<Sort>(readSort);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [status, setStatus] = useState<ArtworkStatus | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const openCard = useCallback((g: Game) => openLaunch({ game: g, initialAccountId: null }), [openLaunch]);
+  const openCardMenu = useCallback((g: Game, x: number, y: number) => setMenu({ game: g, x, y }), []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const revision = useRef<number | null>(null);
   const lastActiveState = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -159,7 +173,7 @@ export function LibraryView() {
       try {
         const { status } = await ipc.invoke('artwork:status');
         if (stopped) return;
-        setStatus(status);
+        setStatus((prev) => (prev && sameArtworkStatus(prev, status) ? prev : status));
         if (revision.current !== null && revision.current !== status.revision) {
           games.reload();
           recent.reload();
@@ -389,7 +403,11 @@ export function LibraryView() {
                       className="flex w-60 shrink-0 items-center gap-3 rounded-lg border border-border bg-surface py-1.5 pr-3 pl-1.5 text-left transition-colors duration-150 hover:border-border-strong focus-visible:border-accent focus-visible:outline-none"
                     >
                       <span className="flex h-12 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-surface-3">
-                        {grid ? <img src={grid} alt="" draggable={false} className="size-full object-cover" /> : <LauncherDot launcher={r.launcher} />}
+                        {grid ? (
+                          <img src={grid} alt="" loading="lazy" decoding="async" draggable={false} className="size-full object-cover" />
+                        ) : (
+                          <LauncherDot launcher={r.launcher} />
+                        )}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-text-strong">{r.gameName}</span>
@@ -429,7 +447,7 @@ export function LibraryView() {
             // auto-rows-max: with overflow-hidden cards, auto rows would be squeezed to fit the scroll container instead of growing.
             <div className="grid auto-rows-max grid-cols-[repeat(auto-fill,minmax(160px,1fr))] content-start gap-4 2xl:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] 2xl:gap-5">
               {visible.map((g) => (
-                <GameCard key={g.id} game={g} onOpen={() => openLaunch({ game: g, initialAccountId: null })} onMenu={(x, y) => setMenu({ game: g, x, y })} />
+                <GameCard key={g.id} game={g} now={now} onOpen={openCard} onMenu={openCardMenu} />
               ))}
             </div>
           )}

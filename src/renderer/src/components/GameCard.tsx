@@ -1,14 +1,16 @@
 import { AlertTriangle, MoreHorizontal, Play } from 'lucide-react';
-import { useState, type MouseEvent } from 'react';
+import { memo, useState, type MouseEvent } from 'react';
 import { LAUNCHER_DISPLAY_NAMES, type Game } from '@shared/models';
 import { formatRelative } from '../lib/time';
 import { LauncherDot } from './LauncherBadge';
 
 interface GameCardProps {
   game: Game;
-  onOpen: () => void;
+  /** The clock the "last played" caption is read against; the grid moves it once a minute. */
+  now: number;
+  onOpen: (game: Game) => void;
   /** Opens the card menu at the given screen position. */
-  onMenu: (x: number, y: number) => void;
+  onMenu: (game: Game, x: number, y: number) => void;
 }
 
 /** Last played by whichever source is newer: the launcher's own record or a One Launch launch. */
@@ -29,7 +31,8 @@ function monogram(name: string): string {
     .join('');
 }
 
-export function GameCard({ game, onOpen, onMenu }: GameCardProps) {
+/** Memoised: a hundred of these sit in the grid, and the Library re-renders on every status poll and keystroke. */
+export const GameCard = memo(function GameCard({ game, now, onOpen, onMenu }: GameCardProps) {
   const [loaded, setLoaded] = useState(false);
   const grid = game.artwork?.grid ?? null;
   /** The launcher's own icon stands in for a cover: a square mark on the poster background, with the name kept. */
@@ -41,10 +44,10 @@ export function GameCard({ game, onOpen, onMenu }: GameCardProps) {
     e.stopPropagation();
     if (e.clientX === 0 && e.clientY === 0) {
       const r = e.currentTarget.getBoundingClientRect();
-      onMenu(r.left, r.bottom + 4);
+      onMenu(game, r.left, r.bottom + 4);
       return;
     }
-    onMenu(e.clientX, e.clientY);
+    onMenu(game, e.clientX, e.clientY);
   }
 
   return (
@@ -52,7 +55,7 @@ export function GameCard({ game, onOpen, onMenu }: GameCardProps) {
       className="group relative overflow-hidden rounded-panel border border-border bg-surface text-left transition-colors duration-150 hover:border-border-strong focus-within:border-accent"
       onContextMenu={openMenu}
     >
-      <button type="button" onClick={onOpen} className="block w-full text-left focus-visible:outline-none" aria-label={`Play ${game.name}`}>
+      <button type="button" onClick={() => onOpen(game)} className="block w-full text-left focus-visible:outline-none" aria-label={`Play ${game.name}`}>
         <div className="relative flex aspect-[2/3] items-end overflow-hidden bg-gradient-to-b from-surface-2 to-surface-3 p-3">
           {!grid || !loaded ? (
             <span
@@ -68,6 +71,8 @@ export function GameCard({ game, onOpen, onMenu }: GameCardProps) {
               key={grid}
               src={grid}
               alt=""
+              loading="lazy"
+              decoding="async"
               draggable={false}
               onLoad={() => setLoaded(true)}
               onError={() => setLoaded(false)}
@@ -104,10 +109,10 @@ export function GameCard({ game, onOpen, onMenu }: GameCardProps) {
           <LauncherDot launcher={game.launcher} />
           <span className="truncate">
             {game.lastLaunch ? (game.lastLaunch.accountName ?? 'removed account') : LAUNCHER_DISPLAY_NAMES[game.launcher]}
-            {played ? ` · ${formatRelative(played)}` : ''}
+            {played ? ` · ${formatRelative(played, new Date(now))}` : ''}
           </span>
         </div>
       </div>
     </div>
   );
-}
+});

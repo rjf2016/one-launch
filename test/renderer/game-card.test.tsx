@@ -10,10 +10,17 @@ const art = (source: 'steamcdn' | 'launcher', grid: string) => ({ source, grid, 
 describe('GameCard artwork', () => {
   it('fills the poster with a cover and drops the name once it has loaded', () => {
     const { container } = render(
-      <GameCard game={game({ name: 'Dota 2', artwork: art('steamcdn', 'onelaunch-art://art/x/grid.jpg') })} onOpen={vi.fn()} onMenu={vi.fn()} />,
+      <GameCard
+        game={game({ name: 'Dota 2', artwork: art('steamcdn', 'onelaunch-art://art/x/grid.jpg') })}
+        now={Date.now()}
+        onOpen={vi.fn()}
+        onMenu={vi.fn()}
+      />,
     );
     const img = container.querySelector('img')!;
     expect(img.className).toContain('object-cover');
+    expect(img.getAttribute('loading')).toBe('lazy');
+    expect(img.getAttribute('decoding')).toBe('async');
     expect(screen.getAllByText('Dota 2').length).toBeGreaterThan(1);
     fireEvent.load(img);
     expect(screen.getAllByText('Dota 2')).toHaveLength(1);
@@ -24,6 +31,7 @@ describe('GameCard artwork', () => {
     const { container } = render(
       <GameCard
         game={game({ launcher: 'riot', name: 'VALORANT', artwork: art('launcher', 'onelaunch-art://art/x/grid.ico') })}
+        now={Date.now()}
         onOpen={vi.fn()}
         onMenu={vi.fn()}
       />,
