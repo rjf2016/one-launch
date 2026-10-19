@@ -388,6 +388,16 @@ function SwitchPlanPanel({ account }: { account: Account }) {
   );
 }
 
+/** The way back to the Accounts list. Outdented so the arrow lines up with the title under it. */
+function BackToAccounts({ className = '' }: { className?: string }) {
+  const back = useUiStore((s) => s.backToAccounts);
+  return (
+    <Button variant="ghost" icon={<ArrowLeft />} onClick={back} className={`-ml-3 text-text ${className}`}>
+      Accounts
+    </Button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Create.
 // ---------------------------------------------------------------------------
@@ -450,9 +460,7 @@ function CreateAccount({ launcher }: { launcher: LauncherId }) {
     <Page narrow>
       <header className={`${stickyHeaderClass} flex items-end justify-between gap-4`}>
         <div>
-          <button type="button" onClick={back} className="mb-1 inline-flex items-center gap-1 rounded text-xs text-muted hover:text-text [&>svg]:size-3.5">
-            <ArrowLeft /> Accounts
-          </button>
+          <BackToAccounts className="mb-1" />
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-semibold tracking-tight text-text-strong">New {LAUNCHER_DISPLAY_NAMES[launcher]} account</h1>
             <LauncherBadge launcher={launcher} />
@@ -611,13 +619,7 @@ function EditAccount({ id, created }: { id: string; created: boolean }) {
   if (query.error) {
     return (
       <Page narrow>
-        <button
-          type="button"
-          onClick={back}
-          className="mt-7 mb-4 inline-flex items-center gap-1 self-start rounded text-xs text-muted hover:text-text [&>svg]:size-3.5"
-        >
-          <ArrowLeft /> Accounts
-        </button>
+        <BackToAccounts className="mt-7 mb-4" />
         <p className="text-sm text-danger">Could not load this account: {query.error}</p>
       </Page>
     );
@@ -628,9 +630,7 @@ function EditAccount({ id, created }: { id: string; created: boolean }) {
     <Page narrow>
       <header className={`${stickyHeaderClass} flex items-end justify-between gap-4`}>
         <div className="min-w-0">
-          <button type="button" onClick={back} className="mb-1 inline-flex items-center gap-1 rounded text-xs text-muted hover:text-text [&>svg]:size-3.5">
-            <ArrowLeft /> Accounts
-          </button>
+          <BackToAccounts className="mb-1" />
           <div className="flex items-center gap-3">
             <h1 className="truncate text-xl font-semibold tracking-tight text-text-strong">{account.displayName}</h1>
             <LauncherBadge launcher={account.launcher} />

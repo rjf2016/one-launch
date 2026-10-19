@@ -6,7 +6,7 @@ import { SetupGuideHost } from './components/SetupGuide';
 import { NAV_ITEMS, Sidebar } from './components/Sidebar';
 import { TitleBar } from './components/TitleBar';
 import { WhatsNewHost } from './components/WhatsNewDialog';
-import { isShortcut } from './lib/shortcuts';
+import { isBack, isShortcut } from './lib/shortcuts';
 import { SIDEBAR_NARROW_QUERY, useUiStore } from './store/ui';
 import { AccountDetailView } from './views/AccountDetailView';
 import { AccountsView } from './views/AccountsView';
@@ -23,14 +23,26 @@ function CurrentView() {
 
 export function App() {
   const setView = useUiStore((s) => s.setView);
+  const backToAccounts = useUiStore((s) => s.backToAccounts);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const setSidebarNarrow = useUiStore((s) => s.setSidebarNarrow);
 
   useEffect(() => {
+    // Back leaves an account's page for the Accounts list; nowhere else has anywhere to go back to.
+    const back = (): boolean => {
+      const { view, accountRoute } = useUiStore.getState();
+      if (view !== 'accounts' || accountRoute.kind === 'list') return false;
+      backToAccounts();
+      return true;
+    };
     const onKey = (e: KeyboardEvent): void => {
       if (isShortcut(e, 'b', { inFields: false })) {
         e.preventDefault();
         toggleSidebar();
+        return;
+      }
+      if (isBack(e)) {
+        if (back()) e.preventDefault();
         return;
       }
       const item = NAV_ITEMS.find((_, i) => isShortcut(e, String(i + 1), { inFields: false }));
@@ -38,9 +50,16 @@ export function App() {
       e.preventDefault();
       setView(item.view);
     };
+    const onMouseUp = (e: MouseEvent): void => {
+      if (isBack(e)) back();
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [setView, toggleSidebar]);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [backToAccounts, setView, toggleSidebar]);
 
   useEffect(() => {
     const mq = window.matchMedia(SIDEBAR_NARROW_QUERY);
