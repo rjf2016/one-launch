@@ -61,6 +61,9 @@ import { resolveUpdateTestFeed, type UpdateTestFeed } from './updates/test-feed'
 import { UpdateService } from './updates/update-service';
 import { closeRequestAction, isTrustedRendererUrl, placementFrom } from './window-guard';
 
+// The first statement of the module body runs once every static import above has been evaluated.
+const moduleLoadedAt = Date.now();
+
 // ---------------------------------------------------------------------------
 // Process-level setup. Everything here runs before 'ready'.
 // ---------------------------------------------------------------------------
@@ -99,13 +102,14 @@ const log = createLogger('main');
 // process.uptime() only starts once Node runs inside the process; the user's wait starts at the process's creation.
 const processCreatedAt = process.getCreationTime();
 const nodeStartedAt = Date.now() - process.uptime() * 1000;
+const moduleLoadedMs = processCreatedAt === null ? null : Math.round(moduleLoadedAt - processCreatedAt);
 const startup: StartupMetrics = {
   processToNodeMs: processCreatedAt === null ? null : Math.round(nodeStartedAt - processCreatedAt),
   windowShownMs: null,
   readyToShowMs: null,
   didFinishLoadMs: null,
 };
-const phases: { ready?: number; db?: number; vault?: number; ipc?: number } = {};
+const phases: { ready?: number; db?: number; vault?: number; ipc?: number; windowCreated?: number } = {};
 const DB_COPIES_TO_KEEP = 5;
 const sinceStart = (): number => Math.round(processCreatedAt === null ? process.uptime() * 1000 : Date.now() - processCreatedAt);
 
@@ -304,6 +308,7 @@ function createMainWindow(settings: SettingsService, title: string): BrowserWind
       devTools: isDev,
     },
   });
+  phases.windowCreated = sinceStart();
 
   // Shown before the page loads: the window is on screen at once, in its background colour, and the renderer's first frame is already at the final size and state.
   if (placement.maximized) win.maximize();
@@ -317,10 +322,12 @@ function createMainWindow(settings: SettingsService, title: string): BrowserWind
     log.info('startup', {
       creationEpochMs: processCreatedAt === null ? null : Math.round(processCreatedAt),
       processToNodeMs: startup.processToNodeMs,
+      moduleLoadedMs,
       readyMs: phases.ready,
       dbMs: phases.db,
       vaultMs: phases.vault,
       ipcMs: phases.ipc,
+      windowCreatedMs: phases.windowCreated,
       windowShownMs: startup.windowShownMs,
       readyToShowMs: startup.readyToShowMs,
       didFinishLoadMs: startup.didFinishLoadMs,

@@ -1,4 +1,5 @@
 import { ipc, useIpcQuery } from '../lib/ipc';
+import { peekStartup } from '../lib/startup';
 import { BrandMark } from './BrandMark';
 
 /**
@@ -6,7 +7,11 @@ import { BrandMark } from './BrandMark';
  * on top of its right end (titleBarOverlay in main, one pixel shorter than the strip so the bottom border shows under the buttons).
  */
 export function TitleBar() {
-  const info = useIpcQuery(() => ipc.invoke('app:info'));
+  const info = useIpcQuery(
+    () => ipc.invoke('app:info'),
+    [],
+    () => peekStartup('app:info'),
+  );
   const fake = info.data?.platformSource === 'fake';
   return (
     <header className="app-drag flex h-9 shrink-0 items-center gap-2 border-b border-border/50 bg-surface pl-3 select-none">

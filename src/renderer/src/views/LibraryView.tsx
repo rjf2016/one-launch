@@ -1,5 +1,6 @@
 import { ArrowDownUp, Clock, Filter, Gamepad2, ImagePlus, Images, RefreshCw, Search, SearchX, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { RECENT_LIMIT } from '@shared/ipc-contract';
 import { LAUNCHER_DISPLAY_NAMES, LAUNCHER_IDS, type ArtworkSource, type ArtworkStatus, type Game, type LauncherId, type RecentLaunch } from '@shared/models';
 import { Button } from '../components/Button';
 import { CardMenu } from '../components/CardMenu';
@@ -12,6 +13,7 @@ import { Page } from '../components/Page';
 import { PageHeader } from '../components/PageHeader';
 import { ipc, useIpcQuery } from '../lib/ipc';
 import { isShortcut } from '../lib/shortcuts';
+import { markOnce, peekStartup } from '../lib/startup';
 import { formatRelative } from '../lib/time';
 import { flashClassOf, useFlash } from '../lib/useFlash';
 import { useUiStore } from '../store/ui';
@@ -42,8 +44,16 @@ interface Menu {
 }
 
 export function LibraryView() {
-  const games = useIpcQuery(() => ipc.invoke('library:list'));
-  const recent = useIpcQuery(() => ipc.invoke('launch:recent', { limit: 8 }));
+  const games = useIpcQuery(
+    () => ipc.invoke('library:list'),
+    [],
+    () => peekStartup('library:list'),
+  );
+  const recent = useIpcQuery(
+    () => ipc.invoke('launch:recent', { limit: RECENT_LIMIT }),
+    [],
+    () => peekStartup('launch:recent', { limit: RECENT_LIMIT }),
+  );
   const openSettings = useUiStore((s) => s.openSettings);
   const openLaunch = useUiStore((s) => s.openLaunch);
   const activeState = useUiStore((s) => s.activeLaunch?.job.state ?? null);
@@ -61,6 +71,14 @@ export function LibraryView() {
   const lastActiveState = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const list = useMemo(() => games.data?.games ?? [], [games.data]);
+  const hasData = games.data !== null;
+  useLayoutEffect(() => {
+    if (!hasData) return;
+    markOnce('startup:library-data');
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => markOnce('startup:library-frame')));
+    }
+  }, [hasData]);
   const libraryEmpty = !games.loading && games.error === null && list.length === 0;
   // Main's startup scan runs after the first paint; until it has finished an empty list says nothing.
   const scanned = status?.scanned ?? false;

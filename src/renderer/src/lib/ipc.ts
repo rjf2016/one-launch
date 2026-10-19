@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { IpcClient } from '@shared/ipc-contract';
+import type { IpcChannel, IpcClient } from '@shared/ipc-contract';
+import { pendingStartup } from './startup';
 
 /** A failed IPC call. `code` is stable and safe to branch on; `message` is for display. */
 export class IpcError extends Error {
@@ -15,7 +16,8 @@ export class IpcError extends Error {
 const invoke = async (channel: string, req?: unknown): Promise<unknown> => {
   // The preload bridge is typed; this shim only exists to unwrap the envelope generically.
   const bridge = window.oneLaunch as unknown as { invoke(c: string, r?: unknown): Promise<unknown> };
-  const envelope = (await bridge.invoke(channel, req)) as Awaited<ReturnType<typeof window.oneLaunch.invoke>>;
+  // During the startup window a call for an answer already on its way joins it instead of asking main twice.
+  const envelope = (await (pendingStartup(channel as IpcChannel, req) ?? bridge.invoke(channel, req))) as Awaited<ReturnType<typeof window.oneLaunch.invoke>>;
   if (envelope.ok) return envelope.data;
   throw new IpcError(envelope.error.code, envelope.error.message);
 };
@@ -30,15 +32,24 @@ export interface QueryState<T> {
   reload: () => void;
 }
 
-/** Minimal async query hook. Re-runs when `deps` change; ignores stale results. A new run drops the last run's error, so it never sits next to data it does not describe. */
-export function useIpcQuery<T>(fetcher: () => Promise<T>, deps: readonly unknown[] = []): QueryState<T> {
-  const [data, setData] = useState<T | null>(null);
+/**
+ * Minimal async query hook. Re-runs when `deps` change; ignores stale results. A new run drops the last run's error, so it never
+ * sits next to data it does not describe. `seed` is read once at mount: a startup answer that is already in (lib/startup.ts) becomes
+ * the first render's data and the first fetch is skipped; reloads and dep changes always fetch.
+ */
+export function useIpcQuery<T>(fetcher: () => Promise<T>, deps: readonly unknown[] = [], seed?: () => T | undefined): QueryState<T> {
+  const [data, setData] = useState<T | null>(() => seed?.() ?? null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(data === null);
   const [tick, setTick] = useState(0);
   const latest = useRef(0);
+  const seeded = useRef(data !== null);
 
   useEffect(() => {
+    if (seeded.current) {
+      seeded.current = false;
+      return;
+    }
     const id = ++latest.current;
     setLoading(true);
     setError(null);

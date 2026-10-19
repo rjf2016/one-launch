@@ -1,9 +1,11 @@
+import { startupReady } from './boot';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ipc } from './lib/ipc';
 import { installScrollbarHover } from './lib/scrollbarHover';
+import { markOnce } from './lib/startup';
 import './index.css';
 
 const root = document.getElementById('root');
@@ -18,10 +20,14 @@ function report(source: 'window' | 'promise', reason: unknown): void {
 window.addEventListener('error', (e) => report('window', e.error ?? e.message));
 window.addEventListener('unhandledrejection', (e) => report('promise', e.reason));
 
-createRoot(root).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
-  </StrictMode>,
-);
+// A .then, not a top-level await: an awaited module delays the load event, which main times as didFinishLoadMs.
+void startupReady.then(() => {
+  markOnce('startup:render');
+  createRoot(root).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </StrictMode>,
+  );
+});

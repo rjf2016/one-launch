@@ -1,7 +1,8 @@
 // Runs one scenario against the built app on a fresh scratch folder.
 //   node scripts/drive.mjs scripts/scenarios/views.mjs --shots=<folder>
-//   node scripts/drive.mjs scripts/scenarios/<scenario>.mjs [--packaged] [--fake[=<name|folder>]] [--knobs=<json>] [--keep] [--shots=<dir>] [--port=<n>] [--hold[=<minutes>]]
+//   node scripts/drive.mjs scripts/scenarios/<scenario>.mjs [--packaged] [--fake[=<name|folder>]] [--knobs=<json>] [--keep] [--shots=<dir>] [--port=<n>] [--hold[=<minutes>]] [--args="<chromium switches>"]
 // Unpackaged runs need `npx electron-vite build` first; --packaged needs `npm run build` and never combines with --fake.
+// --args passes extra Chromium switches to the app (a startup trace: --args="--trace-startup=devtools.timeline,v8 --trace-startup-file=<file>"); never --data-dir.
 // --hold keeps the app up at the scenario's end state for an interactive look over CDP (see the run-one-launch skill).
 // .claude/settings.json lets an agent run this on scripts/scenarios/ without asking, so it imports from nowhere else and starts only the repo's own builds.
 import { realpathSync } from 'node:fs';
@@ -48,5 +49,6 @@ const { failures } = await runScenario(mod, {
   keep: flags.keep ? true : undefined,
   shots: typeof flags.shots === 'string' ? flags.shots : undefined,
   port: typeof flags.port === 'string' ? Number(flags.port) : undefined,
+  args: typeof flags.args === 'string' ? flags.args.split(/\s+/).filter(Boolean) : undefined,
 });
 process.exit(failures === 0 ? 0 : 1);

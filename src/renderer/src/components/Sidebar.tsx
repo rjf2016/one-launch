@@ -1,6 +1,7 @@
 import { CircleArrowDown, FlaskConical, LayoutGrid, PanelLeftClose, PanelLeftOpen, Settings, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { ipc, useIpcQuery } from '../lib/ipc';
+import { peekStartup } from '../lib/startup';
 import { restartToUpdate, useUpdateStatus } from '../lib/updates';
 import { useUiStore, type View } from '../store/ui';
 
@@ -30,8 +31,16 @@ export function Sidebar() {
   const collapsed = useUiStore((s) => s.sidebarCollapsed);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const settingsRevision = useUiStore((s) => s.settingsRevision);
-  const settings = useIpcQuery(() => ipc.invoke('settings:getAll'), [settingsRevision]);
-  const info = useIpcQuery(() => ipc.invoke('app:info'));
+  const settings = useIpcQuery(
+    () => ipc.invoke('settings:getAll'),
+    [settingsRevision],
+    () => peekStartup('settings:getAll'),
+  );
+  const info = useIpcQuery(
+    () => ipc.invoke('app:info'),
+    [],
+    () => peekStartup('app:info'),
+  );
   const dryRun = settings.data?.settings.dryRun === 'true';
   const update = useUpdateStatus(UPDATE_POLL_MS);
   const switchRunning = useUiStore((s) => s.activeLaunch?.job.state === 'running');

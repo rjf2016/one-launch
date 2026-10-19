@@ -117,6 +117,10 @@ export class Driver {
     this.keep = Boolean(opts.keep);
     this.port = opts.port ?? 9400 + Math.floor(Math.random() * 400);
     this.readyText = opts.readyText ?? 'Library';
+    // Extra Chromium switches for one-off measurements (--trace-startup and friends); never the data folder, which this driver owns.
+    this.extraArgs = Array.isArray(opts.args) ? opts.args.filter((a) => typeof a === 'string' && a.length > 0) : [];
+    if (this.extraArgs.some((a) => a.startsWith('--data-dir')))
+      throw new Error('--args must not set --data-dir; the driver always starts the app on its own scratch folder');
     this.shotsDir = resolve(opts.shots ?? join(tmpdir(), 'onelaunch-shots', `${slug(this.name)}-${stamp()}`));
     this.scratch = null;
     this.dataDir = null;
@@ -180,7 +184,7 @@ export class Driver {
 
   spawn() {
     const args = this.packaged ? [] : [repoRoot];
-    args.push(`--remote-debugging-port=${this.port}`, `--data-dir=${this.dataDir}`);
+    args.push(`--remote-debugging-port=${this.port}`, `--data-dir=${this.dataDir}`, ...this.extraArgs);
     const env = this.childEnv();
     this.exitCode = null;
     this.stderr = [];

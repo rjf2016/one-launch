@@ -58,7 +58,7 @@ Vitest, `vitest.config.ts`: `test/**/*.test.{ts,tsx}`, `environment: 'node'` by 
 - **Renderer tests** live in `test/renderer/*.test.tsx`:
   - first line `// @vitest-environment jsdom`;
   - first import `./setup` (a `window.matchMedia` stub; the UI store calls it at import time);
-  - fake bridge from `./harness`: `installBridge({ channel: handler })` answers `window.oneLaunch.invoke` with the real `{ ok, data }` / `{ ok: false, error }` envelope so `lib/ipc.ts` runs unmodified. Throw `BridgeError(code, msg)` for an error envelope; an unhandled channel answers `NO_TEST_HANDLER`; `sent(channel)` / `calls` record traffic; `deferred()` holds a call open; `resetUi()` resets the store; fixtures `account`, `game`, `plan`, `preflight`, `jobStep`, `job`.
+  - fake bridge from `./harness`: `installBridge({ channel: handler })` answers `window.oneLaunch.invoke` (and `startup(channel)`, which sends the startup requests through the same fake on its first call) with the real `{ ok, data }` / `{ ok: false, error }` envelope so `lib/ipc.ts` runs unmodified. Throw `BridgeError(code, msg)` for an error envelope; an unhandled channel answers `NO_TEST_HANDLER`; `sent(channel)` / `calls` record traffic; `deferred()` holds a call open; `resetUi()` resets the store and closes the startup window (`prefetchStartup(window.oneLaunch, ms)` opens one in a test); fixtures `account`, `game`, `plan`, `preflight`, `jobStep`, `job`.
   - Uses `@testing-library/react` and `user-event`. jsdom has no layout: clamping, `offsetParent`, the focus trap, scrolling, and `visibility: hidden` focus bugs are only visible in a CDP smoke run.
   - Focus that an effect moves once data arrives (`useFocusWhenReady`) lands a loop turn after the DOM changes: assert it inside `await waitFor(...)`, never synchronously after a `waitFor` that returned the enabled control. Focus after a `user.*` event may be asserted at once.
 - **`test/ipc-validation.test.ts`**: every channel must be in `REFUSED` (malformed payloads that must answer `BAD_REQUEST` without reaching any service) or in `NO_PAYLOAD`; a completeness case fails when a channel is missing. Services are recording `Proxy` objects.
@@ -81,7 +81,7 @@ $env:ONELAUNCH_LIVE = '1'; npx vitest run test/steam-live.test.ts --reporter=ver
 3. Call it from the renderer via `ipc.invoke` (`src/renderer/src/lib/ipc.ts`) or `useIpcQuery`.
 4. Add a row to `REFUSED` (or `NO_PAYLOAD`) in `test/ipc-validation.test.ts`.
 
-The preload exposes only `window.oneLaunch.invoke` and forwards only names in `IPC_CHANNELS`.
+The preload exposes `window.oneLaunch.invoke` and `startup(channel)` (the answers to the `STARTUP_REQUESTS` it sends at document start) and forwards only names in `IPC_CHANNELS`.
 
 ## Platform helpers (`src/main/platform/`)
 

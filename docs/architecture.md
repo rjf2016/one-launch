@@ -5,7 +5,7 @@ Windows-only Electron app. Main owns every privileged operation (files, registry
 ## Process model
 
 - Main `src/main/**`: startup, window, IPC, DB, vault, backups, artwork, adapters, shell-outs.
-- Preload `src/preload/index.ts`: exposes only `window.oneLaunch.invoke(channel, req)`; channels outside `IPC_CHANNELS` get `UNKNOWN_CHANNEL`. CommonJS, because `sandbox: true` requires it.
+- Preload `src/preload/index.ts`: exposes `window.oneLaunch.invoke(channel, req)` and `startup(channel)`, the answer to one of the `STARTUP_REQUESTS` it sends the moment the document starts, before the page's scripts are even fetched (the first render reads them: `renderer.md` › Store and data flow); channels outside `IPC_CHANNELS` get `UNKNOWN_CHANNEL`. CommonJS, because `sandbox: true` requires it.
 - Renderer `src/renderer/**`: React + Tailwind, no Node, no network, never holds a secret.
 - Shared `src/shared/models.ts`, `ipc-contract.ts`: types and constants; imports neither Electron nor Node.
 
@@ -137,7 +137,8 @@ Before `ready`: data paths (exit 2 on a bad flag), single-instance lock (a secon
 
 ## Performance targets
 
-- Cold start to interactive under 1 s, ceiling 2 s, counted from process creation (`process.getCreationTime()`). `app:info` reports `windowShownMs` and `didFinishLoadMs`; `processToNodeMs` is the part before any app code runs (Windows loading the exe, Chromium, an antivirus scan of a new exe), which the app cannot shorten. One `startup` INFO line per start holds every mark; `scripts/scenarios/startup-timing.mjs` prints them for the packaged exe.
+- Cold start to interactive under 1 s, ceiling 2 s, counted from process creation (`process.getCreationTime()`). `app:info` reports `windowShownMs` and `didFinishLoadMs`; `processToNodeMs` is the part before any app code runs (Windows loading the exe, Chromium, an antivirus scan of a new exe), which the app cannot shorten. One `startup` INFO line per start holds every mark (app code, main module evaluated, ready, database, vault, IPC, window created and shown, first paint, page loaded); `scripts/scenarios/startup-timing.mjs` prints them for the packaged exe together with the renderer's own `performance.mark`s (`src/renderer/src/lib/startup.ts`: module, prefetched, render, first commit, library data, library frame) and paint entries, for a first start on an empty folder and two warm starts on the same folder. Run it five times after a build, discard the first, compare medians.
+- The first frame waits for the GPU process, which Chromium launches just before `ready`, right after main's module has been evaluated, and which needs about 200 ms (its own start, EGL and Direct3D initialisation, a first raster) before any frame can be presented; the renderer's first commit is in long before. So every millisecond of main's module evaluation moves the first paint, while renderer-side work before the first commit does not.
 - Library scan of ~100 games under 500 ms; the library renders at once with placeholders.
 - Each registry read or process check is a child process (a read is `cmd` + `chcp` + `reg`); keep them off hot paths like `launchers:status`.
 - Fully functional offline apart from artwork and update checks.
