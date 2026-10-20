@@ -65,6 +65,34 @@ export function parseArgs(argv) {
 }
 
 /**
+ * Splits one `--args` value into Chromium switches the way a shell would: whitespace separates, a "…" or '…' span keeps
+ * its spaces and loses its quotes (a path with spaces: --trace-startup-file="C:\trace files\startup.json"). No escapes,
+ * so a Windows path reads as typed. An unclosed quote throws.
+ */
+export function splitSwitches(text) {
+  const out = [];
+  let current = null;
+  let quote = null;
+  for (const ch of text) {
+    if (quote !== null) {
+      if (ch === quote) quote = null;
+      else current += ch;
+    } else if (ch === '"' || ch === "'") {
+      quote = ch;
+      current ??= '';
+    } else if (/\s/.test(ch)) {
+      if (current !== null) out.push(current);
+      current = null;
+    } else {
+      current = (current ?? '') + ch;
+    }
+  }
+  if (quote !== null) throw new Error(`--args has an unclosed ${quote} quote: ${text}`);
+  if (current !== null) out.push(current);
+  return out;
+}
+
+/**
  * Copies a committed scenario (test/fake-launchers/<name>, or an absolute folder) into `launchersDir`:
  * scenario.json as is, every entry of its `files` map materialized, and `knobs.json` when knobs are given.
  * The app only ever sees the copy, so a run can never modify the committed fixtures.
@@ -117,6 +145,10 @@ export class Driver {
     this.keep = Boolean(opts.keep);
     this.port = opts.port ?? 9400 + Math.floor(Math.random() * 400);
     this.readyText = opts.readyText ?? 'Library';
+    // Extra Chromium switches for one-off measurements (--trace-startup and friends); never the data folder, which this driver owns.
+    this.extraArgs = Array.isArray(opts.args) ? opts.args.filter((a) => typeof a === 'string' && a.length > 0) : [];
+    if (this.extraArgs.some((a) => a.startsWith('--data-dir')))
+      throw new Error('--args must not set --data-dir; the driver always starts the app on its own scratch folder');
     this.shotsDir = resolve(opts.shots ?? join(tmpdir(), 'onelaunch-shots', `${slug(this.name)}-${stamp()}`));
     this.scratch = null;
     this.dataDir = null;
@@ -180,7 +212,7 @@ export class Driver {
 
   spawn() {
     const args = this.packaged ? [] : [repoRoot];
-    args.push(`--remote-debugging-port=${this.port}`, `--data-dir=${this.dataDir}`);
+    args.push(`--remote-debugging-port=${this.port}`, `--data-dir=${this.dataDir}`, ...this.extraArgs);
     const env = this.childEnv();
     this.exitCode = null;
     this.stderr = [];

@@ -74,7 +74,8 @@ export interface IpcContract {
    */
   'accounts:copy': { req: { id: string; field: 'login' | 'password' }; res: { clearAfterMs: number; historyExcluded: boolean } };
 
-  'library:list': { req: undefined; res: { games: Game[] } };
+  /** `revision` is the library revision the list was read at, for the Library's `artwork:status` poll to compare against. */
+  'library:list': { req: undefined; res: { games: Game[]; revision: number } };
   /** Re-reads every implemented launcher's files and updates the games table. A launcher that is missing or fails never stops the others. */
   'library:rescan': { req: undefined; res: { games: Game[]; scanned: LibraryScanResult[] } };
 
@@ -231,6 +232,24 @@ export type IpcEnvelope<T> = { ok: true; data: T } | { ok: false; error: IpcErro
 /** Argument tuple for a channel: no argument when the request type is `undefined`. */
 export type IpcArgs<K extends IpcChannel> = IpcRequest<K> extends undefined ? [] : [req: IpcRequest<K>];
 
+export const RECENT_LIMIT = 8;
+
+/**
+ * Every start needs these answers before its first paint. The preload sends them the moment the page's document
+ * starts, and the renderer's first render reads them (src/renderer/src/lib/startup.ts); any later mount asks main afresh.
+ */
+export const STARTUP_REQUESTS = {
+  'library:list': undefined,
+  'launch:recent': { limit: RECENT_LIMIT },
+  'settings:getAll': undefined,
+  'accounts:list': undefined,
+  'app:info': undefined,
+  'recovery:get': undefined,
+  'updates:status': undefined,
+} as const satisfies { [K in IpcChannel]?: IpcRequest<K> };
+
+export type StartupChannel = keyof typeof STARTUP_REQUESTS;
+
 /**
  * The raw API surface exposed on `window.oneLaunch` by the preload script. It returns the wire
  * envelope untouched: Errors thrown across the context bridge lose everything but their message,
@@ -238,6 +257,8 @@ export type IpcArgs<K extends IpcChannel> = IpcRequest<K> extends undefined ? []
  */
 export interface OneLaunchApi {
   invoke<K extends IpcChannel>(channel: K, ...args: IpcArgs<K>): Promise<IpcEnvelope<IpcResponse<K>>>;
+  /** One STARTUP_REQUESTS answer, from the request sent when the document started; every call returns that same promise. */
+  startup<K extends StartupChannel>(channel: K): Promise<IpcEnvelope<IpcResponse<K>>>;
 }
 
 /** What renderer code actually calls: unwrapped data, or a thrown error carrying a code. */

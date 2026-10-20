@@ -88,15 +88,27 @@ describe('LibraryService.sync', () => {
     expect(db.prepare('SELECT COUNT(*) AS n FROM artwork_attempts').get()).toEqual({ n: 0 });
   });
 
-  it('bumps the revision on sync and on bump()', () => {
+  it('bumps the revision only when a sync changed a row, and on bump()', () => {
     const db = openDatabase(':memory:');
     migrate(db);
     const lib = new LibraryService(db);
     expect(lib.revision).toBe(0);
     lib.sync('steam', []);
+    expect(lib.revision).toBe(0);
+    lib.sync('steam', [game('440', 'Team Fortress 2')]);
     expect(lib.revision).toBe(1);
-    lib.bump();
+    lib.sync('steam', [game('440', 'Team Fortress 2')]);
+    expect(lib.revision).toBe(1);
+    lib.sync('steam', [game('440', 'Team Fortress 2', { needsUpdate: true })]);
     expect(lib.revision).toBe(2);
+    lib.sync('steam', [game('440', 'Team Fortress 2', { needsUpdate: true, lastPlayedAt: '2026-10-18T10:00:00.000Z' })]);
+    expect(lib.revision).toBe(3);
+    lib.sync('steam', []);
+    expect(lib.revision).toBe(4);
+    lib.sync('steam', [game('440', 'Team Fortress 2', { needsUpdate: true, lastPlayedAt: '2026-10-18T10:00:00.000Z' })]);
+    expect(lib.revision).toBe(5);
+    lib.bump();
+    expect(lib.revision).toBe(6);
   });
 
   it('does not touch other launchers', () => {

@@ -61,6 +61,9 @@ import { resolveUpdateTestFeed, type UpdateTestFeed } from './updates/test-feed'
 import { UpdateService } from './updates/update-service';
 import { closeRequestAction, isTrustedRendererUrl, placementFrom } from './window-guard';
 
+// The first statement of the module body runs once every static import above has been evaluated.
+const moduleLoadedAt = Date.now();
+
 // ---------------------------------------------------------------------------
 // Process-level setup. Everything here runs before 'ready'.
 // ---------------------------------------------------------------------------
@@ -91,6 +94,9 @@ if (!app.requestSingleInstanceLock()) {
 // Cached artwork reaches the renderer through this scheme only (spec section 9). Must run before 'ready'.
 protocol.registerSchemesAsPrivileged([{ scheme: ARTWORK_SCHEME, privileges: { standard: true, secure: true, stream: true } }]);
 
+// Before 'ready', so Electron never builds the default application menu it would otherwise throw away.
+Menu.setApplicationMenu(null);
+
 const paths = getAppPaths();
 ensureAppDirs(paths);
 initLogging({ dir: paths.logsDir, level: isDev ? 'debug' : 'info', console: isDev });
@@ -99,13 +105,14 @@ const log = createLogger('main');
 // process.uptime() only starts once Node runs inside the process; the user's wait starts at the process's creation.
 const processCreatedAt = process.getCreationTime();
 const nodeStartedAt = Date.now() - process.uptime() * 1000;
+const moduleLoadedMs = processCreatedAt === null ? null : Math.round(moduleLoadedAt - processCreatedAt);
 const startup: StartupMetrics = {
   processToNodeMs: processCreatedAt === null ? null : Math.round(nodeStartedAt - processCreatedAt),
   windowShownMs: null,
   readyToShowMs: null,
   didFinishLoadMs: null,
 };
-const phases: { ready?: number; db?: number; vault?: number; ipc?: number } = {};
+const phases: { ready?: number; db?: number; vault?: number; ipc?: number; windowCreated?: number } = {};
 const DB_COPIES_TO_KEEP = 5;
 const sinceStart = (): number => Math.round(processCreatedAt === null ? process.uptime() * 1000 : Date.now() - processCreatedAt);
 
@@ -304,6 +311,7 @@ function createMainWindow(settings: SettingsService, title: string): BrowserWind
       devTools: isDev,
     },
   });
+  phases.windowCreated = sinceStart();
 
   // Shown before the page loads: the window is on screen at once, in its background colour, and the renderer's first frame is already at the final size and state.
   if (placement.maximized) win.maximize();
@@ -317,10 +325,12 @@ function createMainWindow(settings: SettingsService, title: string): BrowserWind
     log.info('startup', {
       creationEpochMs: processCreatedAt === null ? null : Math.round(processCreatedAt),
       processToNodeMs: startup.processToNodeMs,
+      moduleLoadedMs,
       readyMs: phases.ready,
       dbMs: phases.db,
       vaultMs: phases.vault,
       ipcMs: phases.ipc,
+      windowCreatedMs: phases.windowCreated,
       windowShownMs: startup.windowShownMs,
       readyToShowMs: startup.readyToShowMs,
       didFinishLoadMs: startup.didFinishLoadMs,
@@ -395,7 +405,7 @@ function createMainWindow(settings: SettingsService, title: string): BrowserWind
 // Startup.
 // ---------------------------------------------------------------------------
 
-function bootstrap(): void {
+async function bootstrap(): Promise<void> {
   phases.ready = sinceStart();
   log.info('starting', {
     version: app.getVersion(),
@@ -419,6 +429,36 @@ function bootstrap(): void {
   if (!isDev && isLogLevel(configuredLevel)) setLogLevel(configuredLevel);
   closeToTray = () => settings.getBool('window.closeToTray', true);
 
+  const platform = await createPlatform({
+    fakeDir: fakeLaunchersDir,
+    dataDir: paths.dataDir,
+    log: log.child('platform'),
+    openExternal: (url) => shell.openExternal(url),
+  });
+
+  // The interface uses no permission-gated web API, and without handlers Electron grants every request, clipboard reads included.
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+  session.defaultSession.setPermissionCheckHandler(() => false);
+
+  // Strictly files under the artwork folder; anything else is a 404. See resolveArtworkPath.
+  protocol.handle(ARTWORK_SCHEME, async (request) => {
+    const file = resolveArtworkPath(request.url, paths.artworkDir);
+    if (!file) return new Response(null, { status: 404 });
+    const res = await net.fetch(pathToFileURL(file).toString());
+    if (!res.ok) return new Response(null, { status: 404 });
+    // URLs carry ?v=<fetchedAt>, so the renderer may cache each version indefinitely.
+    return new Response(res.body, {
+      status: 200,
+      headers: { 'content-type': res.headers.get('content-type') ?? 'application/octet-stream', 'cache-control': 'max-age=31536000, immutable' },
+    });
+  });
+
+  // The window goes up before the services exist: its renderer process starts and loads the page while main builds the
+  // vault, adapters and handlers below. Nothing from here to the end of bootstrap yields, so no IPC message, ready-to-show
+  // or did-finish-load can be dispatched before the handlers are registered.
+  const windowTitle = platform.source === 'fake' ? 'One Launch (fake launchers)' : 'One Launch';
+  mainWindow = createMainWindow(settings, windowTitle);
+
   const vault = new SafeStorageVault();
   const secrets = new SecretStore(db, vault);
   const vaultHealth = new VaultHealth(db, vault, secrets, log.child('vault'));
@@ -429,12 +469,6 @@ function bootstrap(): void {
   if (!vaultStatus.available) log.warn('secure storage unavailable; secrets cannot be stored on this system');
   if (vaultStatus.readable === false) log.error('stored secrets cannot be decrypted; the vault key was lost or belongs to another Windows user');
   const accounts = new AccountsService(db, vault);
-  const platform = createPlatform({
-    fakeDir: fakeLaunchersDir,
-    dataDir: paths.dataDir,
-    log: log.child('platform'),
-    openExternal: (url) => shell.openExternal(url),
-  });
   const clipboardService = new ClipboardService(
     platform.clipboard?.clipboard ?? clipboard,
     DEFAULT_CLIPBOARD_CLEAR_MS,
@@ -559,23 +593,6 @@ function bootstrap(): void {
     if (cleared) log.info('cleared a copied value from the clipboard at quit');
   };
 
-  // The interface uses no permission-gated web API, and without handlers Electron grants every request, clipboard reads included.
-  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  session.defaultSession.setPermissionCheckHandler(() => false);
-
-  // Strictly files under the artwork folder; anything else is a 404. See resolveArtworkPath.
-  protocol.handle(ARTWORK_SCHEME, async (request) => {
-    const file = resolveArtworkPath(request.url, paths.artworkDir);
-    if (!file) return new Response(null, { status: 404 });
-    const res = await net.fetch(pathToFileURL(file).toString());
-    if (!res.ok) return new Response(null, { status: 404 });
-    // URLs carry ?v=<fetchedAt>, so the renderer may cache each version indefinitely.
-    return new Response(res.body, {
-      status: 200,
-      headers: { 'content-type': res.headers.get('content-type') ?? 'application/octet-stream', 'cache-control': 'max-age=31536000, immutable' },
-    });
-  });
-
   const rescan = async (): Promise<LibraryScanResult[]> => {
     const scanned = await scanLibrary({ launchers, library, log: log.child('scan') });
     artwork.prune();
@@ -604,7 +621,6 @@ function bootstrap(): void {
     return result.canceled ? null : (result.filePaths[0] ?? null);
   };
 
-  const windowTitle = platform.source === 'fake' ? 'One Launch (fake launchers)' : 'One Launch';
   registerIpcHandlers({
     log,
     paths,
@@ -633,9 +649,6 @@ function bootstrap(): void {
     },
   });
   phases.ipc = sinceStart();
-
-  Menu.setApplicationMenu(null);
-  mainWindow = createMainWindow(settings, windowTitle);
 
   // Background work starts only once the window is up, so it never delays first paint. A failing
   // adapter is logged and the library keeps showing the last scan.

@@ -29,9 +29,13 @@ beforeEach(() => {
   spawned.length = 0;
 });
 
+// node:child_process is imported on the call, so the PowerShell starts a tick later.
+const started = (): Promise<void> => vi.waitFor(() => expect(spawned).toHaveLength(1));
+
 describe.skipIf(!win)('private clipboard write (B19)', () => {
   it('hands the text to Windows PowerShell over stdin, never on the command line', async () => {
     const done = writeClipboardPrivately(SECRET);
+    await started();
     const { file, args, opts, child } = spawned[0]!;
     expect(file).toMatch(/System32[\\/]WindowsPowerShell[\\/]v1\.0[\\/]powershell\.exe$/i);
     expect(args.slice(0, 6)).toEqual(['-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-Command']);
@@ -42,8 +46,9 @@ describe.skipIf(!win)('private clipboard write (B19)', () => {
     await expect(done).resolves.toBeUndefined();
   });
 
-  it('asks for the three formats that keep the text out of clipboard history and cloud sync, and reads stdin as UTF-8', () => {
+  it('asks for the three formats that keep the text out of clipboard history and cloud sync, and reads stdin as UTF-8', async () => {
     void writeClipboardPrivately('x').catch(() => undefined);
+    await started();
     const script = spawned[0]!.args.at(-1)!;
     for (const format of ['ExcludeClipboardContentFromMonitorProcessing', 'CanIncludeInClipboardHistory', 'CanUploadToCloudClipboard'])
       expect(script).toContain(format);
@@ -54,6 +59,7 @@ describe.skipIf(!win)('private clipboard write (B19)', () => {
 
   it('fails with the exit code and a bounded piece of stderr, which never holds the text', async () => {
     const done = writeClipboardPrivately(SECRET);
+    await started();
     const { child } = spawned[0]!;
     child.stderr.emit('data', Buffer.from(`Add-Type : ${'x'.repeat(500)}`, 'utf8'));
     child.emit('close', 1);
@@ -71,6 +77,7 @@ describe.skipIf(!win)('private clipboard write (B19)', () => {
 
   it('reports a PowerShell that could not be started', async () => {
     const done = writeClipboardPrivately(SECRET);
+    await started();
     spawned[0]!.child.emit('error', new Error('spawn ENOENT'));
     await expect(done).rejects.toThrow('spawn ENOENT');
   });

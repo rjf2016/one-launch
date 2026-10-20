@@ -65,6 +65,16 @@ export interface SyncResult {
   removed: number;
 }
 
+interface KnownRow {
+  id: string;
+  launcher_game_id: string;
+  name: string;
+  install_path: string | null;
+  installed: number;
+  needs_update: number;
+  last_played_at: string | null;
+}
+
 const SELECT = `
   SELECT g.id, g.launcher, g.launcher_game_id, g.name, g.install_path, g.installed, g.last_seen_at,
          g.needs_update, g.last_played_at,
@@ -97,7 +107,9 @@ export class LibraryService {
   constructor(private readonly db: Db) {
     this.listStmt = db.prepare<[], GameRow>(`${SELECT} WHERE g.installed = 1 ORDER BY g.name COLLATE NOCASE`);
     this.getStmt = db.prepare<[string], GameRow>(`${SELECT} WHERE g.id = ?`);
-    this.byLauncherStmt = db.prepare<[string], { id: string; launcher_game_id: string }>('SELECT id, launcher_game_id FROM games WHERE launcher = ?');
+    this.byLauncherStmt = db.prepare<[string], KnownRow>(
+      'SELECT id, launcher_game_id, name, install_path, installed, needs_update, last_played_at FROM games WHERE launcher = ?',
+    );
     this.upsertStmt = db.prepare<[string, string, string, string, string | null, string, number, string | null]>(
       `INSERT INTO games (id, launcher, launcher_game_id, name, install_path, installed, last_seen_at, needs_update, last_played_at)
        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
@@ -106,23 +118,37 @@ export class LibraryService {
              needs_update = excluded.needs_update, last_played_at = excluded.last_played_at`,
     );
     this.markMissingStmt = db.prepare<[string]>('UPDATE games SET installed = 0 WHERE id = ? AND installed = 1');
-    this.syncTx = this.db.transaction((launcher: LauncherId, games: readonly InstalledGame[]): SyncResult => {
+    this.syncTx = this.db.transaction((launcher: LauncherId, games: readonly InstalledGame[]): { result: SyncResult; changed: boolean } => {
       const before = new Map(this.byLauncherStmt.all(launcher).map((r) => [r.launcher_game_id, r]));
       const now = new Date().toISOString();
       let added = 0;
       let updated = 0;
+      let changed = false;
       for (const g of games) {
         const existing = before.get(g.launcherGameId);
         this.upsertStmt.run(existing?.id ?? randomUUID(), launcher, g.launcherGameId, g.name, g.installPath, now, g.needsUpdate ? 1 : 0, g.lastPlayedAt);
-        if (existing) updated++;
-        else added++;
+        if (!existing) {
+          added++;
+          changed = true;
+          continue;
+        }
+        updated++;
+        if (
+          existing.installed !== 1 ||
+          existing.name !== g.name ||
+          existing.install_path !== g.installPath ||
+          existing.needs_update !== (g.needsUpdate ? 1 : 0) ||
+          existing.last_played_at !== g.lastPlayedAt
+        ) {
+          changed = true;
+        }
       }
       const seen = new Set(games.map((g) => g.launcherGameId));
       let removed = 0;
       for (const row of before.values()) {
         if (!seen.has(row.launcher_game_id)) removed += this.markMissingStmt.run(row.id).changes;
       }
-      return { launcher, added, updated, removed };
+      return { result: { launcher, added, updated, removed }, changed: changed || removed > 0 };
     });
   }
 
@@ -165,11 +191,12 @@ export class LibraryService {
   /**
    * Replaces the launcher's installed set with what the adapter just found. Rows keep their ids
    * across scans so launch history and artwork stay attached; games that vanished are marked
-   * uninstalled rather than deleted.
+   * uninstalled rather than deleted. The revision moves only when a row changed, so the rescan
+   * every start runs leaves an unchanged library's renderer alone.
    */
   sync(launcher: LauncherId, games: readonly InstalledGame[]): SyncResult {
-    const result = this.syncTx(launcher, games);
-    this.rev++;
+    const { result, changed } = this.syncTx(launcher, games);
+    if (changed) this.rev++;
     return result;
   }
 }

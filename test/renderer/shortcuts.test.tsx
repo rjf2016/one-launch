@@ -27,7 +27,7 @@ function shell() {
   return installBridge({
     'app:info': () => info,
     'settings:getAll': () => ({ settings: { 'firstRun.dismissed': 'true', 'whatsNew.lastSeen': info.version } }),
-    'library:list': () => ({ games: [game()] }),
+    'library:list': () => ({ games: [game()], revision: 1 }),
     'launch:recent': () => ({ recent: [] }),
     'artwork:status': () => ({ status: { queued: 0, running: 0, completed: 0, failed: 0, hasApiKey: false, revision: 1, scanned: true } }),
     'launchers:status': () => ({ launchers: [] }),

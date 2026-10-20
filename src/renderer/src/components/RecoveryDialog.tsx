@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { LAUNCHER_DISPLAY_NAMES, type SwitchRecovery } from '@shared/models';
 import { ipc, IpcError } from '../lib/ipc';
 import { recoveryCopy } from '../lib/recovery';
+import { peekStartup } from '../lib/startup';
 import { formatRelative } from '../lib/time';
 import { useFocusTrap } from '../lib/useFocusTrap';
 import { Button } from './Button';
@@ -110,9 +111,11 @@ function RecoveryDialog({ recovery, onDone }: { recovery: SwitchRecovery; onDone
 
 /** Asks main once, at startup, whether the last run ended during a switch, and puts the question in front of everything else. */
 export function RecoveryHost() {
-  const [recovery, setRecovery] = useState<SwitchRecovery | null>(null);
+  const [seed] = useState(() => peekStartup('recovery:get'));
+  const [recovery, setRecovery] = useState<SwitchRecovery | null>(seed ? seed.recovery : null);
 
   useEffect(() => {
+    if (seed) return;
     let cancelled = false;
     ipc
       .invoke('recovery:get')
@@ -123,7 +126,7 @@ export function RecoveryHost() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [seed]);
 
   return recovery ? <RecoveryDialog recovery={recovery} onDone={() => setRecovery(null)} /> : null;
 }

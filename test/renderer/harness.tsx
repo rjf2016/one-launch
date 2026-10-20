@@ -1,8 +1,9 @@
 import './setup';
 import { cleanup } from '@testing-library/react';
 import { afterEach, beforeEach } from 'vitest';
-import type { IpcChannel, IpcEnvelope, IpcRequest, IpcResponse } from '../../src/shared/ipc-contract';
+import { STARTUP_REQUESTS, type IpcChannel, type IpcEnvelope, type IpcRequest, type IpcResponse } from '../../src/shared/ipc-contract';
 import type { Account, Game, JobStep, LaunchJob, LaunchPreflight, SwitchPlan } from '../../src/shared/models';
+import { closeStartup } from '../../src/renderer/src/lib/startup';
 
 /** An error the fake main process answers with: it crosses the bridge as `{ ok: false, error }`, like the real one. */
 export class BridgeError extends Error {
@@ -26,22 +27,31 @@ export interface Bridge {
   sent<K extends IpcChannel>(channel: K): IpcRequest<K>[];
 }
 
-/** Stands in for the preload bridge: `window.oneLaunch.invoke` answers from `handlers`, and a channel nobody handles fails the test loudly. */
+/**
+ * Stands in for the preload bridge: `window.oneLaunch.invoke` answers from `handlers`, and a channel nobody handles fails the test
+ * loudly. The first `startup()` call sends every startup request through the same fake, as the preload does at document start.
+ */
 export function installBridge(handlers: Handlers = {}): Bridge {
   const table = new Map<string, (req: unknown) => unknown>(Object.entries(handlers) as [string, (req: unknown) => unknown][]);
   const calls: Bridge['calls'] = [];
+  const invoke = async (channel: IpcChannel, req?: unknown): Promise<IpcEnvelope<unknown>> => {
+    calls.push({ channel, req });
+    const handler = table.get(channel);
+    if (!handler) return { ok: false, error: { code: 'NO_TEST_HANDLER', message: `the test has no handler for ${channel}` } };
+    try {
+      return { ok: true, data: await handler(req) };
+    } catch (err) {
+      if (err instanceof BridgeError) return { ok: false, error: { code: err.code, message: err.message } };
+      throw err;
+    }
+  };
+  let startup: Map<string, Promise<IpcEnvelope<unknown>>> | null = null;
   window.oneLaunch = {
-    invoke: (async (channel: IpcChannel, req?: unknown): Promise<IpcEnvelope<unknown>> => {
-      calls.push({ channel, req });
-      const handler = table.get(channel);
-      if (!handler) return { ok: false, error: { code: 'NO_TEST_HANDLER', message: `the test has no handler for ${channel}` } };
-      try {
-        return { ok: true, data: await handler(req) };
-      } catch (err) {
-        if (err instanceof BridgeError) return { ok: false, error: { code: err.code, message: err.message } };
-        throw err;
-      }
-    }) as typeof window.oneLaunch.invoke,
+    invoke: invoke as typeof window.oneLaunch.invoke,
+    startup: ((channel: string) => {
+      startup ??= new Map(Object.entries(STARTUP_REQUESTS).map(([c, req]) => [c, invoke(c as IpcChannel, req)]));
+      return startup.get(channel) ?? Promise.resolve({ ok: false, error: { code: 'UNKNOWN_CHANNEL', message: `Not a startup channel: ${channel}` } });
+    }) as typeof window.oneLaunch.startup,
   };
   return {
     calls,
@@ -63,6 +73,7 @@ export function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => voi
 
 export function resetUi(): void {
   beforeEach(async () => {
+    closeStartup();
     const { useUiStore } = await import('../../src/renderer/src/store/ui');
     useUiStore.setState({
       view: 'library',

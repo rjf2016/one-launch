@@ -27,7 +27,7 @@ const NONE = [launcher('steam', 'Steam', false), launcher('epic', 'Epic Games', 
 
 function library(opts: { games?: ReturnType<typeof game>[]; launchers?: LauncherStatus[]; over?: Handlers } = {}) {
   return installBridge({
-    'library:list': () => ({ games: opts.games ?? [game()] }),
+    'library:list': () => ({ games: opts.games ?? [game()], revision: 1 }),
     'launch:recent': () => ({ recent: [] }),
     'artwork:status': () => ({ status: idle }),
     'launchers:status': () => ({ launchers: opts.launchers ?? NONE }),
@@ -55,7 +55,7 @@ describe('the Library around the first scan', () => {
     let statusCalls = 0;
     library({
       over: {
-        'library:list': () => ({ games: scanned ? [game()] : [] }),
+        'library:list': () => ({ games: scanned ? [game()] : [], revision: scanned ? 2 : 1 }),
         'artwork:status': () => {
           if (++statusCalls >= 2) scanned = true;
           return { status: { ...idle, revision: scanned ? 2 : 1 } };

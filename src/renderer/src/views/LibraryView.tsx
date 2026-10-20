@@ -1,5 +1,6 @@
 import { ArrowDownUp, Clock, Filter, Gamepad2, ImagePlus, Images, RefreshCw, Search, SearchX, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { RECENT_LIMIT } from '@shared/ipc-contract';
 import { LAUNCHER_DISPLAY_NAMES, LAUNCHER_IDS, type ArtworkSource, type ArtworkStatus, type Game, type LauncherId, type RecentLaunch } from '@shared/models';
 import { Button } from '../components/Button';
 import { CardMenu } from '../components/CardMenu';
@@ -12,6 +13,7 @@ import { Page } from '../components/Page';
 import { PageHeader } from '../components/PageHeader';
 import { ipc, useIpcQuery } from '../lib/ipc';
 import { isShortcut } from '../lib/shortcuts';
+import { markOnce, peekStartup } from '../lib/startup';
 import { formatRelative } from '../lib/time';
 import { flashClassOf, useFlash } from '../lib/useFlash';
 import { useUiStore } from '../store/ui';
@@ -26,6 +28,13 @@ const ARTWORK_SOURCE_NAMES: Readonly<Record<ArtworkSource, string>> = {
   manual: 'your image',
   launcher: "the game's own icon",
 };
+
+const STATUS_FIELDS = ['queued', 'running', 'completed', 'failed', 'hasApiKey', 'revision', 'scanned'] as const;
+
+/** The poll answers every few seconds; an unchanged answer must not re-render the grid. */
+function sameArtworkStatus(a: ArtworkStatus, b: ArtworkStatus): boolean {
+  return STATUS_FIELDS.every((k) => a[k] === b[k]);
+}
 
 function readSort(): Sort {
   try {
@@ -42,8 +51,16 @@ interface Menu {
 }
 
 export function LibraryView() {
-  const games = useIpcQuery(() => ipc.invoke('library:list'));
-  const recent = useIpcQuery(() => ipc.invoke('launch:recent', { limit: 8 }));
+  const games = useIpcQuery(
+    () => ipc.invoke('library:list'),
+    [],
+    () => peekStartup('library:list'),
+  );
+  const recent = useIpcQuery(
+    () => ipc.invoke('launch:recent', { limit: RECENT_LIMIT }),
+    [],
+    () => peekStartup('launch:recent', { limit: RECENT_LIMIT }),
+  );
   const openSettings = useUiStore((s) => s.openSettings);
   const openLaunch = useUiStore((s) => s.openLaunch);
   const activeState = useUiStore((s) => s.activeLaunch?.job.state ?? null);
@@ -57,10 +74,30 @@ export function LibraryView() {
   const [sort, setSort] = useState<Sort>(readSort);
   const [menu, setMenu] = useState<Menu | null>(null);
   const [status, setStatus] = useState<ArtworkStatus | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const openCard = useCallback((g: Game) => openLaunch({ game: g, initialAccountId: null }), [openLaunch]);
+  const openCardMenu = useCallback((g: Game, x: number, y: number) => setMenu({ game: g, x, y }), []);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const revision = useRef<number | null>(null);
+  // The list on screen carries the revision it was read at. The startup answer predates the first poll, and on a slow
+  // start the startup scan too, so the poll compares against the list's own revision, never one it merely saw earlier.
+  useEffect(() => {
+    if (games.data) revision.current = games.data.revision;
+  }, [games.data]);
   const lastActiveState = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const list = useMemo(() => games.data?.games ?? [], [games.data]);
+  const hasData = games.data !== null;
+  useLayoutEffect(() => {
+    if (!hasData) return;
+    markOnce('startup:library-data');
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(() => markOnce('startup:library-frame')));
+    }
+  }, [hasData]);
   const libraryEmpty = !games.loading && games.error === null && list.length === 0;
   // Main's startup scan runs after the first paint; until it has finished an empty list says nothing.
   const scanned = status?.scanned ?? false;
@@ -141,7 +178,7 @@ export function LibraryView() {
       try {
         const { status } = await ipc.invoke('artwork:status');
         if (stopped) return;
-        setStatus(status);
+        setStatus((prev) => (prev && sameArtworkStatus(prev, status) ? prev : status));
         if (revision.current !== null && revision.current !== status.revision) {
           games.reload();
           recent.reload();
@@ -371,7 +408,11 @@ export function LibraryView() {
                       className="flex w-60 shrink-0 items-center gap-3 rounded-lg border border-border bg-surface py-1.5 pr-3 pl-1.5 text-left transition-colors duration-150 hover:border-border-strong focus-visible:border-accent focus-visible:outline-none"
                     >
                       <span className="flex h-12 w-8 shrink-0 items-center justify-center overflow-hidden rounded bg-surface-3">
-                        {grid ? <img src={grid} alt="" draggable={false} className="size-full object-cover" /> : <LauncherDot launcher={r.launcher} />}
+                        {grid ? (
+                          <img src={grid} alt="" loading="lazy" decoding="async" draggable={false} className="size-full object-cover" />
+                        ) : (
+                          <LauncherDot launcher={r.launcher} />
+                        )}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium text-text-strong">{r.gameName}</span>
@@ -411,7 +452,7 @@ export function LibraryView() {
             // auto-rows-max: with overflow-hidden cards, auto rows would be squeezed to fit the scroll container instead of growing.
             <div className="grid auto-rows-max grid-cols-[repeat(auto-fill,minmax(160px,1fr))] content-start gap-4 2xl:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] 2xl:gap-5">
               {visible.map((g) => (
-                <GameCard key={g.id} game={g} onOpen={() => openLaunch({ game: g, initialAccountId: null })} onMenu={(x, y) => setMenu({ game: g, x, y })} />
+                <GameCard key={g.id} game={g} now={now} onOpen={openCard} onMenu={openCardMenu} />
               ))}
             </div>
           )}

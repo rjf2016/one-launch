@@ -39,20 +39,20 @@ describe('createPlatform', () => {
   const log = createLogger('test:wiring');
   const openExternal = async (): Promise<void> => undefined;
 
-  it('without a fake folder is the real platform with no path overrides', () => {
-    const platform = createPlatform({ fakeDir: null, dataDir: root, log, openExternal });
+  it('without a fake folder is the real platform with no path overrides', async () => {
+    const platform = await createPlatform({ fakeDir: null, dataDir: root, log, openExternal });
     expect(platform.source).toBe('real');
     expect(platform.roots).toEqual({ steam: {}, epic: {}, battlenet: {}, riot: {} });
     expect(platform.quitDuringSwitch).toBeUndefined();
   });
 
-  it('with a fake folder roots every path inside it and lets knobs.json answer the quit prompt', () => {
+  it('with a fake folder roots every path inside it and lets knobs.json answer the quit prompt', async () => {
     const fakeDir = join(root, 'launchers');
     const dataDir = join(root, 'data');
     mkdirSync(fakeDir);
     mkdirSync(dataDir);
     writeFileSync(join(fakeDir, 'scenario.json'), JSON.stringify({ version: 1, installed: [], quitDuringSwitch: 'keep' }));
-    const plain = createPlatform({ fakeDir, dataDir, log, openExternal });
+    const plain = await createPlatform({ fakeDir, dataDir, log, openExternal });
     expect(plain.source).toBe('fake');
     expect(plain.quitDuringSwitch).toBe('keep');
     for (const roots of Object.values(plain.roots)) {
@@ -60,6 +60,6 @@ describe('createPlatform', () => {
     }
 
     writeFileSync(join(fakeDir, 'knobs.json'), JSON.stringify({ quitDuringSwitch: 'quit' }));
-    expect(createPlatform({ fakeDir, dataDir, log, openExternal }).quitDuringSwitch).toBe('quit');
+    expect((await createPlatform({ fakeDir, dataDir, log, openExternal })).quitDuringSwitch).toBe('quit');
   });
 });

@@ -1,8 +1,12 @@
-import { execFile, spawn } from 'node:child_process';
+import type { ExecFileOptionsWithStringEncoding } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
-const execFileAsync = promisify(execFile);
+/** node:child_process loads on the first process check, not at startup. */
+async function execFileAsync(file: string, args: string[], options: ExecFileOptionsWithStringEncoding): Promise<{ stdout: string; stderr: string }> {
+  const { execFile } = await import('node:child_process');
+  return promisify(execFile)(file, args, options);
+}
 
 export interface ProcessInfo {
   name: string;
@@ -467,8 +471,9 @@ const defaultExec: ProcessExec = async (file, args) => {
   return { stdout };
 };
 
-const defaultSpawn: ProcessSpawn = (exe, args, opts) =>
-  new Promise((resolve, reject) => {
+const defaultSpawn: ProcessSpawn = async (exe, args, opts) => {
+  const { spawn } = await import('node:child_process');
+  return new Promise((resolve, reject) => {
     const child = spawn(exe, args, { cwd: opts.cwd, detached: true, stdio: 'ignore', windowsHide: false });
     child.once('spawn', () => {
       child.unref();
@@ -476,6 +481,7 @@ const defaultSpawn: ProcessSpawn = (exe, args, opts) =>
     });
     child.once('error', (err) => reject(new Error(`Could not start ${exe}: ${err.message}`)));
   });
+};
 
 /**
  * Asks Windows for its process list rather than Steam's own HKCU\...\ActiveProcess\pid, which was observed stale

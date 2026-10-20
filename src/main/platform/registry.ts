@@ -1,8 +1,12 @@
-import { execFile } from 'node:child_process';
+import type { ExecFileOptionsWithStringEncoding } from 'node:child_process';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
-const execFileAsync = promisify(execFile);
+/** node:child_process loads on the first registry read, not at startup. */
+async function execFileAsync(file: string, args: string[], options: ExecFileOptionsWithStringEncoding): Promise<{ stdout: string; stderr: string }> {
+  const { execFile } = await import('node:child_process');
+  return promisify(execFile)(file, args, options);
+}
 
 export type RegistryHive = 'HKCU' | 'HKLM';
 

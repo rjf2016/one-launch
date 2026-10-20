@@ -1,4 +1,3 @@
-import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 
 /**
@@ -24,8 +23,10 @@ function powershellPath(): string {
   return root ? join(root, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe') : 'powershell.exe';
 }
 
-export function writeClipboardPrivately(text: string, timeoutMs = 8_000): Promise<void> {
-  if (process.platform !== 'win32') return Promise.reject(new Error('private clipboard writes are Windows-only'));
+export async function writeClipboardPrivately(text: string, timeoutMs = 8_000): Promise<void> {
+  if (process.platform !== 'win32') throw new Error('private clipboard writes are Windows-only');
+  // node:child_process loads on the first copy, not at startup.
+  const { spawn } = await import('node:child_process');
   return new Promise((resolve, reject) => {
     const child = spawn(powershellPath(), ['-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass', '-Command', SCRIPT], {
       windowsHide: true,

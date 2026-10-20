@@ -50,7 +50,7 @@ describe('Riot Games in the renderer', () => {
     const idle: ArtworkStatus = { queued: 0, running: 0, completed: 0, failed: 0, hasApiKey: false, revision: 1, scanned: true };
     installBridge({
       'launchers:status': () => ({ launchers: NONE }),
-      'library:list': () => ({ games: [] }),
+      'library:list': () => ({ games: [], revision: 1 }),
       'accounts:list': () => ({ accounts: [] }),
       'settings:getAll': () => ({ settings: { 'firstRun.dismissed': 'true' } }),
       'artwork:status': () => ({ status: idle }),

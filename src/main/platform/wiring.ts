@@ -5,7 +5,6 @@ import type { BattlenetAdapterDeps } from '../launchers/battlenet/adapter';
 import type { EpicAdapterDeps } from '../launchers/epic/adapter';
 import type { RiotAdapterDeps } from '../launchers/riot/adapter';
 import { WindowsRiotLocalLaunch, type RiotLocalLaunch } from '../launchers/riot/local-launch';
-import { materializeScenario } from '../launchers/sim/scenario';
 import type { SeedTargets } from '../launchers/sim/seed';
 import type { SteamAdapterDeps } from '../launchers/steam/adapter';
 import type { FetchLike } from '../services/artwork';
@@ -75,8 +74,12 @@ export interface PlatformOptions {
   openExternal: (url: string) => Promise<void>;
 }
 
-export function createPlatform(opts: PlatformOptions): LauncherPlatform {
-  if (opts.fakeDir) return materializeScenario({ dir: opts.fakeDir, dataDir: opts.dataDir, log: opts.log });
+/** The simulators are a separate chunk, loaded only for a fake-launcher run, so a real start never parses them. */
+export async function createPlatform(opts: PlatformOptions): Promise<LauncherPlatform> {
+  if (opts.fakeDir) {
+    const { materializeScenario } = await import('../launchers/sim/scenario');
+    return materializeScenario({ dir: opts.fakeDir, dataDir: opts.dataDir, log: opts.log });
+  }
   return {
     source: 'real',
     registry: new WindowsRegistry(),

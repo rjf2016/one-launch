@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect } from 'react';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { LaunchHost } from './components/LaunchHost';
 import { RecoveryHost } from './components/RecoveryDialog';
@@ -7,6 +7,7 @@ import { NAV_ITEMS, Sidebar } from './components/Sidebar';
 import { TitleBar } from './components/TitleBar';
 import { WhatsNewHost } from './components/WhatsNewDialog';
 import { isBack, isShortcut } from './lib/shortcuts';
+import { closeStartup, markOnce } from './lib/startup';
 import { SIDEBAR_NARROW_QUERY, useUiStore } from './store/ui';
 import { AccountDetailView } from './views/AccountDetailView';
 import { AccountsView } from './views/AccountsView';
@@ -26,6 +27,12 @@ export function App() {
   const backToAccounts = useUiStore((s) => s.backToAccounts);
   const toggleSidebar = useUiStore((s) => s.toggleSidebar);
   const setSidebarNarrow = useUiStore((s) => s.setSidebarNarrow);
+
+  useLayoutEffect(() => markOnce('startup:first-commit'), []);
+  // The root's passive effect runs after every child's mount effect in the first flush, so the startup answers serve that whole render and nothing after it.
+  useEffect(() => {
+    closeStartup();
+  }, []);
 
   useEffect(() => {
     // Back leaves an account's page for the Accounts list; nowhere else has anywhere to go back to.

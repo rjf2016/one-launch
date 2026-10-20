@@ -21,7 +21,7 @@ const NO_COVER = game({
 
 function library(status: Partial<ArtworkStatus>, games = [NO_COVER]) {
   return installBridge({
-    'library:list': () => ({ games }),
+    'library:list': () => ({ games, revision: 1 }),
     'launch:recent': () => ({ recent: [] }),
     'artwork:status': () => ({ status: { ...idle, ...status } }),
     'launchers:status': () => ({ launchers: [] }),
