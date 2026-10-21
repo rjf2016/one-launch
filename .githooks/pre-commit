@@ -1,0 +1,3 @@
+#!/bin/sh
+# Installed by `npm install` (scripts/hooks/install-git-hooks.mjs sets core.hooksPath=.githooks).
+exec node scripts/hooks/no-secrets.mjs --staged

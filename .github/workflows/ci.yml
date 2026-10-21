@@ -26,6 +26,8 @@ jobs:
       # Electron has no install script: its binary is fetched on the first import of the package. Fetch it here, not inside a vitest worker mid-suite.
       - run: node node_modules/electron/install.js
       - run: npm run typecheck
+      - name: No secrets in tracked files
+        run: node scripts/hooks/no-secrets.mjs --all
       - run: npm run lint
       - run: npx vitest run
       - run: npx electron-vite build
