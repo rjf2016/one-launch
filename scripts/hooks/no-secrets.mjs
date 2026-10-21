@@ -49,8 +49,13 @@ const RULES = [
   {
     id: 'token-key',
     pattern:
-      /(?<![\w-])(refresh_token|access_token|id_token|ssid|clid|web_token|authorization|password)["']?\s*[:=]\s*["']?(?:(?:Bearer|Basic)\s+)?([\w.~+/=-]{20,})/gi,
-    value: (m, line) => (line[m.index + m[0].length] === '(' || isSynthetic(m[2], line) ? null : m[2]),
+      /(?<![\w-])(refresh_token|access_token|id_token|ssid|clid|web_token|authorization|password)["']?\s*[:=]\s*(?:(["'`])((?:\\.|(?!\2)[^\\\r\n])*)\2|["']?(?:(?:Bearer|Basic)\s+)?([\w.~+/=-]{20,}))/gi,
+    value: (m, line) => {
+      if (m[3] === undefined) return line[m.index + m[0].length] === '(' || isSynthetic(m[4], line) ? null : m[4];
+      // A quoted value is taken whole, punctuation and all; one with whitespace in it is prose, not a credential.
+      const quoted = m[3].replace(/^(?:Bearer|Basic)\s+/i, '');
+      return quoted.length < 20 || /\s/.test(quoted) || isSynthetic(quoted, line) ? null : quoted;
+    },
   },
   {
     id: 'email',

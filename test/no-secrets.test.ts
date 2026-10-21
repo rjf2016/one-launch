@@ -33,6 +33,7 @@ const b64 = (bytes: number) => digest().subarray(0, bytes).toString('base64url')
 const uuid = () => hex(16).replace(/^(.{8})(.{4})(.{4})(.{4})/, '$1-$2-$3-$4-');
 const at = (local: string, domain: string) => [local, domain].join('@');
 const users = (drive: string, sep: string, name: string) => [drive, 'Users', name, 'AppData'].join(sep);
+const quote = (prefix: string, mark: string, value: string) => [prefix, mark, value, mark].join('');
 const steamId = () => ['7656119', '8047193526'].join('');
 const jwt = () =>
   [
@@ -52,6 +53,9 @@ describe('no-secrets: the rules', () => {
       `refresh_token=${b64(30)}`,
       `"password": "${b64(18)}"`,
       `Authorization: Bearer ${b64(30)}`,
+      quote('"password": ', '"', [b64(6), b64(6), b64(6)].join('!$') + '#'),
+      quote('password = ', "'", ["pa\\'ss", b64(9), b64(6)].join('!')),
+      quote('"Authorization": ', '"', ['Bearer ', b64(15), '!#'].join('')),
       ['-----BEGIN', 'RSA PRIVATE KEY-----'].join(' '),
       `mail ${at('jordan.lee', 'gmail.com')}`,
       `dir ${users('C:', '\\', 'Jordan')}`,
@@ -65,6 +69,9 @@ describe('no-secrets: the rules', () => {
       ['uuid'],
       ['steamid64'],
       ['jwt'],
+      ['token-key'],
+      ['token-key'],
+      ['token-key'],
       ['token-key'],
       ['token-key'],
       ['token-key'],
@@ -90,6 +97,8 @@ describe('no-secrets: the rules', () => {
       `refresh_token=placeholder${b64(20)}`,
       `refresh_token=${b64(10)}`,
       `const password = expectNullableString(body['password'], 'password', 64);`,
+      `password: 'Saved encrypted with Windows DPAPI, never shown again!',`,
+      `"password": "${b64(6)}!#$"`,
       `mail ${at('some.one+tag', 'example.co.uk')} ${at('a', 'example.com')} ${at('dev', 'host.invalid')}`,
       `author ${at('12345+someone', 'users.noreply.github.com')} remote ${at('git', 'github.com')}:o/r.git`,
       `dir ${users('C:', '\\', 'someone')} ${users('C:', '\\', 'Public')} ${users('C:', '/', '<you>')} ${users('C:', '\\', '%USERNAME%')}`,
