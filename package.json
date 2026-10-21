@@ -17,6 +17,7 @@
     "build": "npm run typecheck && electron-vite build && npm run notices && electron-builder --win --dir --publish never",
     "build:installer": "npm run typecheck && electron-vite build && npm run notices && electron-builder --win nsis --publish never",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "check": "npm run typecheck && npm run lint && vitest run",
     "icon": "electron scripts/render-icon.cjs",
     "notices": "node scripts/third-party-notices.mjs",
     "smoke:packaged": "node scripts/smoke-packaged.mjs",
