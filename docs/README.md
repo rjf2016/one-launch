@@ -27,6 +27,7 @@ Read only what the task needs.
 | `renderer.md` | UI work: views, store, conventions, copy |
 | `artwork.md` | Artwork fetching and caching (with the updater in `architecture.md` › Updates, the only network code) |
 | `development.md` | Commands, tests, smoke runs against the built app, packaging, CI, releases |
+| `.claude/skills/run-one-launch/SKILL.md` | Driving the built app: the scenarios, the driver API, an interactive look |
 | `roadmap.md` | Standing product decisions and the open work items |
 
 The shared types in `src/shared/models.ts` and `src/shared/ipc-contract.ts` are the source of truth for the renderer/main API; the docs don't repeat them.

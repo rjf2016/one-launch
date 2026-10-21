@@ -19,5 +19,7 @@ Docs live in `docs/`; start at `docs/README.md` and read only the file the task 
 
 ## Everyday
 
-- `npm run dev`, `npm run build`, `npm test` (must stay green), `npm run typecheck`, `npm run lint`.
+- `npm run check` (typecheck, lint, the whole test suite; must stay green), `npm run dev`, `npm run build`.
+- Read, Grep and Glob read files; Bash and PowerShell run commands.
+- One ticket per session: once its PR is open and handed over, the next ticket starts in a new session.
 - Docs: update only when a change makes a doc wrong or adds an invariant or decision a future agent needs. No dates, hashes, or line numbers in docs.

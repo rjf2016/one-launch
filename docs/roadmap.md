@@ -60,6 +60,8 @@ Rules, observed internals, and open questions: `adapters/riot.md`.
 - **C6**: record which launcher build each adapter was validated against. Health checks should assert positive facts and warn when a format changes.
 - **C7**: a CSP response header (the CSP is only a `<meta>` tag today).
 - **C9**: Epic writes the session into both the `Windows` and `WindowsEditor` settings files, but the launcher reads only the newest. Write only that one, or clear the other.
+- **C10**: launch latency follow-ups, each needing one real switch or launch: end Epic's 2 s grace at `AllCheckComplete`; let Steam's preflight trust `RunningAppID` 0; a long-lived process-watch helper instead of one PowerShell per poll (an architecture change); the Riot client's local quit endpoint as a clean close (a second local endpoint under rule 4 of `adapters/riot.md`).
+- **C11**: install size. A fresh install is 372 MiB, 98.8% of it the Electron runtime. Shipping only the en-US locale (-48 MiB) and dropping `dxcompiler.dll` and `dxil.dll` (-26 MiB) both ran on a stripped scratch copy; nothing is changed yet. `electronLanguages: [en-US]` in `electron-builder.yml` is the supported one-liner; the DLLs need an `afterPack` hook that deletes them from `appOutDir`, and `npm run smoke:packaged` must stay green.
 
 ### Minor (D)
 
@@ -67,6 +69,7 @@ Rules, observed internals, and open questions: `adapters/riot.md`.
 - There is no `did-fail-load` handler.
 - Dead surface: `Dropdown` `dense`, `LauncherDot` `className`, `AppInfo.logDir` and `AppInfo.chrome` (never rendered), and the `app:ping` and `launchers:games` channels (never called).
 - Battle.net `plan.executable` is always `true`, so `blocked` is dead code for Battle.net.
+- The account page's signed-in-as row still grows on load while the launcher runs: its hint arrives with the session query (the Saved sign-in row above it reserves its line).
 
 ## Out of scope / future ideas
 

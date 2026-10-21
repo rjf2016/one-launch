@@ -17,7 +17,7 @@ function run(script: string, ...args: string[]): { status: number | null; stderr
   return { status: out.status, stderr: out.stderr };
 }
 
-describe('the driver commands .claude/settings.json pre-approves (H11)', () => {
+describe('the driver commands the local Claude settings pre-approve (H11)', () => {
   it('drive.mjs refuses a module outside scripts/scenarios without importing it', () => {
     const out = run('drive.mjs', planted);
     expect(out.status).toBe(2);
