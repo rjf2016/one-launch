@@ -23,7 +23,7 @@
     "smoke:packaged": "node scripts/smoke-packaged.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "electron-builder install-app-deps",
+    "postinstall": "node scripts/hooks/install-git-hooks.mjs && electron-builder install-app-deps",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "drive": "node scripts/drive.mjs",
