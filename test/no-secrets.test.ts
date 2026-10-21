@@ -192,3 +192,35 @@ describe('no-secrets: the tree and the hooks', () => {
     expect(pretool('git commit -m "x"').status).toBe(0);
   });
 });
+
+describe('install-git-hooks (postinstall)', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'onelaunch-hooks-path-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+  function checkout(name: string, globalConfig: string) {
+    const repo = join(dir, name);
+    mkdirSync(join(repo, 'scripts', 'hooks'), { recursive: true });
+    copyFileSync(join(ROOT, 'scripts', 'hooks', 'install-git-hooks.mjs'), join(repo, 'scripts', 'hooks', 'install-git-hooks.mjs'));
+    const global = join(dir, `${name}.gitconfig`);
+    writeFileSync(global, globalConfig);
+    const env = { ...process.env, GIT_CONFIG_GLOBAL: global, GIT_CONFIG_NOSYSTEM: '1' };
+    execFileSync('git', ['init', '-q'], { cwd: repo, env });
+    const install = () => spawnSync(process.execPath, [join(repo, 'scripts', 'hooks', 'install-git-hooks.mjs')], { cwd: repo, env, encoding: 'utf8' });
+    const local = () => spawnSync('git', ['config', '--local', '--get', 'core.hooksPath'], { cwd: repo, env, encoding: 'utf8' }).stdout.trim();
+    return { install, local };
+  }
+
+  it('sets core.hooksPath=.githooks locally when no scope sets a hooks path', () => {
+    const { install, local } = checkout('plain', '');
+    expect(install().status).toBe(0);
+    expect(local()).toBe('.githooks');
+  });
+
+  it('leaves a hooks path set in the global config alone and says so', () => {
+    const { install, local } = checkout('global', '[core]\n\thooksPath = elsewhere\n');
+    const out = install();
+    expect(out.status).toBe(0);
+    expect(out.stderr).toContain('core.hooksPath is elsewhere');
+    expect(local()).toBe('');
+  });
+});

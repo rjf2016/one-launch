@@ -20,7 +20,7 @@ if (top.toLowerCase() !== root.toLowerCase()) process.exit(0);
 
 let current = '';
 try {
-  current = git('config', '--local', '--get', 'core.hooksPath');
+  current = git('config', '--get', 'core.hooksPath');
 } catch {
   current = '';
 }
