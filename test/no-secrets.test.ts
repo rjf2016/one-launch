@@ -163,18 +163,32 @@ describe('no-secrets: the tree and the hooks', () => {
     rmSync(join(repo, 'plus.txt'));
   });
 
-  it('--pretool blocks a git commit with exit 2, reads the working tree for -a, and lets other commands through', () => {
-    const secret = uuid();
-    writeFileSync(join(repo, 'notes.txt'), `nothing here\n${secret}\n`);
-    expect(pretool('git status').status).toBe(0);
+  it('--pretool lets a clean commit and other commands through, and bad JSON', () => {
     expect(pretool('git commit -m "x"').status).toBe(0);
-    const blocked = pretool('git add notes.txt; git commit -am "x"');
-    expect(blocked.status).toBe(2);
-    expect(blocked.stderr).toContain('notes.txt:2  uuid');
-    expect(blocked.stderr).not.toContain(secret);
+    writeFileSync(join(repo, 'notes.txt'), `nothing here\n${uuid()}\n`);
+    expect(pretool('git status').status).toBe(0);
+    expect(run(['--pretool'], 'not json').status).toBe(0);
+    git('checkout', '-q', '--', 'notes.txt');
+  });
+
+  it('--pretool blocks with exit 2 whatever the commit could pick up: staged, changed, or untracked and added in the same command', () => {
+    const changed = uuid();
+    writeFileSync(join(repo, 'notes.txt'), `nothing here\n${changed}\n`);
+    const pathspec = pretool('git commit --no-verify -m "x" -- notes.txt');
+    expect(pathspec.status).toBe(2);
+    expect(pathspec.stderr).toContain('notes.txt:2  uuid');
+    expect(pathspec.stderr).not.toContain(changed);
     git('add', 'notes.txt');
     expect(pretool('git commit -m "x"').status).toBe(2);
-    expect(run(['--pretool'], 'not json').status).toBe(0);
     git('reset', '-q', '--hard');
+
+    const fresh = hex(16);
+    writeFileSync(join(repo, 'fresh.txt'), `id ${fresh}\n`);
+    const added = pretool('git add fresh.txt && git commit --no-verify -m "x"');
+    expect(added.status).toBe(2);
+    expect(added.stderr).toContain('fresh.txt:1  hex32');
+    expect(added.stderr).not.toContain(fresh);
+    rmSync(join(repo, 'fresh.txt'));
+    expect(pretool('git commit -m "x"').status).toBe(0);
   });
 });

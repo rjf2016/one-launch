@@ -1,6 +1,7 @@
 // Refuses commits that would put a secret, a real account id, an email, or a user folder name into git history.
 // --staged scans the lines a commit adds (the git pre-commit hook), --all every tracked text file (CI), and --pretool
-// reads a Claude PreToolUse hook's JSON from stdin and runs the staged scan before a `git commit`, exiting 2 to block it.
+// reads a Claude PreToolUse hook's JSON from stdin and, before a `git commit`, scans every staged, changed and untracked
+// file it could commit, exiting 2 to block it.
 // Findings name the rule, file and line with the value masked; this script never prints a whole match.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -201,16 +202,26 @@ export function scanEntries(entries, scanLine = createScanner()) {
 
 const DIFF = ['--no-color', '--no-ext-diff', '-U0', '--diff-filter=ACMR'];
 
-export function scanStaged({ includeWorkingTree = false } = {}) {
-  let entries = addedLines(git(['diff', '--cached', ...DIFF]));
-  if (includeWorkingTree) entries = entries.concat(addedLines(git(['diff', ...DIFF])));
-  return scanEntries(entries);
+export function scanStaged() {
+  return scanEntries(addedLines(git(['diff', '--cached', ...DIFF])));
 }
 
 export function scanTracked() {
+  return scanFiles(git(['ls-files', '-z']).split('\0').filter(Boolean));
+}
+
+// A PreToolUse hook runs before the command, so `git add x && git commit --no-verify` or a pathspec commit would
+// commit content the index does not hold yet: scan every change the command could pick up.
+export function scanCommittable() {
   const scanLine = createScanner();
+  const entries = addedLines(git(['diff', '--cached', ...DIFF])).concat(addedLines(git(['diff', ...DIFF])));
+  const untracked = git(['ls-files', '--others', '--exclude-standard', '-z']).split('\0').filter(Boolean);
+  return [...scanEntries(entries, scanLine), ...scanFiles(untracked, scanLine)];
+}
+
+function scanFiles(files, scanLine = createScanner()) {
   const findings = [];
-  for (const file of git(['ls-files', '-z']).split('\0').filter(Boolean)) {
+  for (const file of files) {
     if (isExcluded(file)) continue;
     let buf;
     try {
@@ -238,11 +249,6 @@ export function report(findings) {
   ].join('\n');
 }
 
-function wantsWorkingTree(command) {
-  const after = command.slice(command.search(/\bcommit\b/));
-  return /(?:^|\s)(?:-[A-Za-z]*a[A-Za-z]*|--all)(?=\s|$)/.test(after);
-}
-
 function main(argv) {
   const mode = argv[0];
   if (mode === '--pretool') {
@@ -255,13 +261,13 @@ function main(argv) {
     if (typeof command !== 'string' || !/\bgit\b[\s\S]*\bcommit\b/.test(command)) return 0;
     let findings;
     try {
-      findings = scanStaged({ includeWorkingTree: wantsWorkingTree(command) });
+      findings = scanCommittable();
     } catch (error) {
-      console.error(`no-secrets could not read the staged changes: ${String(error?.message ?? error).split(/\r?\n/)[0]}`);
+      console.error(`no-secrets could not read the changes: ${String(error?.message ?? error).split(/\r?\n/)[0]}`);
       return 2;
     }
     if (findings.length === 0) return 0;
-    console.error(`Commit blocked.\n${report(findings)}`);
+    console.error(`Commit blocked: staged, changed or untracked files this command could commit hold these.\n${report(findings)}`);
     return 2;
   }
   if (mode !== '--staged' && mode !== '--all') {
