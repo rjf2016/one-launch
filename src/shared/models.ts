@@ -341,6 +341,16 @@ export interface AppInfo {
   platformSource: PlatformSource;
 }
 
+/**
+ * Whether this copy may register itself to start when the user signs in to Windows, and whether it is registered.
+ * Unavailable in development (the exe is Electron's) and on a custom data folder (a scratch run must never become
+ * the copy that starts at sign-in). `openAtLogin` is what Windows will do: false once the user disables the entry in Task Manager.
+ */
+export interface AutostartStatus {
+  available: boolean;
+  openAtLogin: boolean;
+}
+
 export type UpdateUnavailableReason = 'development' | 'custom-data-folder' | 'not-installed' | 'all-users-install';
 
 export type UpdateFailedStep = 'check' | 'download' | 'verify';
