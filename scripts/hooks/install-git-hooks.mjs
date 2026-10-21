@@ -10,13 +10,14 @@ function git(...args) {
   return execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
 }
 
-let top;
+// An empty prefix means this folder is the checkout's top; comparing paths breaks on 8.3 names, junctions and subst drives.
+let prefix;
 try {
-  top = path.resolve(git('rev-parse', '--show-toplevel'));
+  prefix = git('rev-parse', '--show-prefix');
 } catch {
   process.exit(0);
 }
-if (top.toLowerCase() !== root.toLowerCase()) process.exit(0);
+if (prefix !== '') process.exit(0);
 
 let current = '';
 try {

@@ -216,15 +216,28 @@ describe('install-git-hooks (postinstall)', () => {
     writeFileSync(global, globalConfig);
     const env = { ...process.env, GIT_CONFIG_GLOBAL: global, GIT_CONFIG_NOSYSTEM: '1' };
     execFileSync('git', ['init', '-q'], { cwd: repo, env });
-    const install = () => spawnSync(process.execPath, [join(repo, 'scripts', 'hooks', 'install-git-hooks.mjs')], { cwd: repo, env, encoding: 'utf8' });
+    const install = (from = repo) =>
+      spawnSync(process.execPath, [join(from, 'scripts', 'hooks', 'install-git-hooks.mjs')], { cwd: from, env, encoding: 'utf8' });
     const local = () => spawnSync('git', ['config', '--local', '--get', 'core.hooksPath'], { cwd: repo, env, encoding: 'utf8' }).stdout.trim();
-    return { install, local };
+    return { repo, install, local };
   }
 
   it('sets core.hooksPath=.githooks locally when no scope sets a hooks path', () => {
     const { install, local } = checkout('plain', '');
     expect(install().status).toBe(0);
     expect(local()).toBe('.githooks');
+  });
+
+  // The CI runner's temp folder sits under an 8.3 short name (RUNNER~1) that git reports in its long form.
+  const shortCheckout = checkout('a-checkout-with-a-long-folder-name', '');
+  const shortPath = spawnSync('cmd.exe', ['/d', '/s', '/c', `"for %I in ("${shortCheckout.repo}") do @echo %~sI"`], {
+    encoding: 'utf8',
+    windowsVerbatimArguments: true,
+  }).stdout.trim();
+
+  it.skipIf(shortPath.toLowerCase() === shortCheckout.repo.toLowerCase())('sets it when the checkout is reached through an 8.3 short path', () => {
+    expect(shortCheckout.install(shortPath).status).toBe(0);
+    expect(shortCheckout.local()).toBe('.githooks');
   });
 
   it('leaves a hooks path set in the global config alone and says so', () => {
