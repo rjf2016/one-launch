@@ -146,7 +146,21 @@ describe('no-secrets: the tree and the hooks', () => {
     expect(out.stderr).toContain(`staged.txt:2  hex32  ${secret.slice(0, 4)}…${secret.slice(-2)}`);
     expect(out.stderr + out.stdout).not.toContain(secret);
     git('reset', '-q', 'staged.txt');
+    rmSync(join(repo, 'staged.txt'));
     expect(run(['--staged']).status).toBe(0);
+  });
+
+  it('--staged reads an added line that starts with "++ " as content, not as a file header', () => {
+    const first = hex(16);
+    const second = hex(16);
+    writeFileSync(join(repo, 'plus.txt'), `++ ${first}\naccount ${second}\n`);
+    git('add', 'plus.txt');
+    const out = run(['--staged']);
+    expect(out.stderr).toContain('plus.txt:1  hex32');
+    expect(out.stderr).toContain('plus.txt:2  hex32');
+    expect(out.stderr + out.stdout).not.toContain(first);
+    git('reset', '-q', 'plus.txt');
+    rmSync(join(repo, 'plus.txt'));
   });
 
   it('--pretool blocks a git commit with exit 2, reads the working tree for -a, and lets other commands through', () => {

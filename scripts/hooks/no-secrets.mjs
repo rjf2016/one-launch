@@ -161,15 +161,25 @@ export function addedLines(diff) {
   const out = [];
   let file = null;
   let line = 0;
+  let inHeader = false;
   for (const raw of diff.split('\n')) {
-    if (raw.startsWith('+++ ')) {
-      const target = raw.slice(4).trim();
-      file = target === '/dev/null' ? null : target.replace(/^b\//, '');
+    if (raw.startsWith('diff --git ')) {
+      file = null;
+      inHeader = true;
       continue;
+    }
+    if (inHeader) {
+      if (raw.startsWith('+++ ')) {
+        const target = raw.slice(4).trim();
+        file = target === '/dev/null' ? null : target.replace(/^b\//, '');
+        continue;
+      }
+      if (!raw.startsWith('@@ ')) continue;
     }
     const hunk = /^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/.exec(raw);
     if (hunk) {
       line = Number(hunk[1]);
+      inHeader = false;
       continue;
     }
     if (file && raw.startsWith('+')) {
