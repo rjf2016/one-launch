@@ -5,7 +5,7 @@
 // --args passes extra Chromium switches to the app (a startup trace: --args="--trace-startup=devtools.timeline,v8 --trace-startup-file=<file>"); never --data-dir.
 // Inside --args, quote a value with spaces: --args='--trace-startup-file="C:\trace files\startup.json"'.
 // --hold keeps the app up at the scenario's end state for an interactive look over CDP (see the run-one-launch skill).
-// .claude/settings.json lets an agent run this on scripts/scenarios/ without asking, so it imports from nowhere else and starts only the repo's own builds.
+// An agent's local Claude settings (.claude/settings.local.json) let it run this on scripts/scenarios/ without asking, so it imports from nowhere else and starts only the repo's own builds.
 import { realpathSync } from 'node:fs';
 import { dirname, extname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';

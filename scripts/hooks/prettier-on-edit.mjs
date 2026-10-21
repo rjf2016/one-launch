@@ -1,4 +1,4 @@
-// PostToolUse hook (.claude/settings.json): formats the file an Edit or Write just touched, so `npm run lint` never
+// PostToolUse hook (.claude/settings.local.json): formats the file an Edit or Write just touched, so `npm run lint` never
 // fails on formatting alone. Reads the hook's JSON from stdin, formats only a file inside this repo, and always exits 0.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';

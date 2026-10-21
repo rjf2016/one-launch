@@ -18,7 +18,7 @@ node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=<your scrat
 
 - `npm run build` is only for `npm run smoke:packaged` (packaged exe); it fails with `EBUSY` while `dist\win-unpacked\One Launch.exe` is running.
 - Flags: `--fake[=<name|folder>]` (default `all-four`), `--knobs=<json>` (per-launcher simulator knobs, deep-merged over the scenario's), `--keep` (keep the scratch folder), `--shots=<dir>`, `--port=<n>`, `--packaged` (never with `--fake`), `--hold[=<minutes>]` (keep the app up at the scenario's end state for an interactive look, below).
-- `drive.mjs` runs only a `.mjs` file directly in `scripts/scenarios/` and starts only the repo's own builds; that is what makes its pre-approval in `.claude/settings.json` safe. Type the scenario path with forward slashes so the command matches the approved form.
+- `drive.mjs` runs only a `.mjs` file directly in `scripts/scenarios/` and starts only the repo's own builds; that is what makes its pre-approval in `.claude/settings.local.json` safe. Type the scenario path with forward slashes so the command matches the approved form.
 - Output: one `PASS`/`FAIL` line per check, the screenshot paths, and `Scenario <name> passed.` or `FAILED (n)`. On a failure the scratch folder is kept and its log and `fake-platform.json` are copied next to the screenshots; a screenshot `at-failure.png` is taken if the app is still up.
 - Look at the screenshots (Read them) before claiming a view looks right.
 
@@ -97,7 +97,7 @@ agent-browser eval "setTimeout(() => window.close(), 50)"      # quits the app, 
 
 - Never `--auto-connect`, and never `connect` to a port one of the two commands above did not print: every launcher client is a Chromium app too, and the Riot rules apply to looking.
 - Without `--fake` the run reads the real launchers, so stay read-only: `snapshot` and `screenshot`, no `click` on Play, Restore, Switch, or a Settings toggle. The Accounts views of a real run put account names into the transcript; look at them with `--fake` (placeholder names) or not at all.
-- `.claude/settings.json` pre-approves the read-only subcommands; `click`, `fill`, `press` and `eval` ask every time, on purpose.
+- `.claude/settings.local.json` (your own, gitignored) pre-approves the read-only subcommands; `click`, `fill`, `press` and `eval` ask every time, on purpose.
 - The first command of a session starts a daemon that inherits the shell's pipes, so never pipe it (`connect ... | tail -1` hangs until the daemon exits); run `connect` bare or redirect it to a file. Later commands pipe fine. `close --all` ends every daemon.
 - Recording (`record start`) needs ffmpeg, which is not installed; it is a dependency, so ask first.
 
