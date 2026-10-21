@@ -135,10 +135,7 @@ export function createScanner({ allow = loadAllowlist(), username = currentUsern
         const end = start + m[0].length;
         if (taken.some(([a, b]) => start < b && end > a)) continue;
         const value = rule.value(m, text);
-        if (value === null) {
-          if (rule.id !== 'email' && rule.id !== 'user-folder') taken.push([start, end]);
-          continue;
-        }
+        if (value === null) continue;
         taken.push([start, end]);
         if (!allow.has(value)) found.push({ rule: rule.id, value });
       }
