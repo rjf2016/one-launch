@@ -263,7 +263,7 @@ function main(argv) {
     } catch {
       return 0;
     }
-    if (typeof command !== 'string' || !/\bgit\b[\s\S]*\bcommit\b/.test(command)) return 0;
+    if (typeof command !== 'string' || !/\bgit\b[\s\S]*\bcommit\b/i.test(command)) return 0;
     let findings;
     try {
       findings = scanCommittable();

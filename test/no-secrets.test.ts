@@ -197,6 +197,8 @@ describe('no-secrets: the tree and the hooks', () => {
     expect(added.status).toBe(2);
     expect(added.stderr).toContain('fresh.txt:1  hex32');
     expect(added.stderr).not.toContain(fresh);
+    expect(pretool('Git commit --no-verify -m "x"').status).toBe(2);
+    expect(pretool('& git.exe COMMIT --no-verify -m "x"').status).toBe(2);
     rmSync(join(repo, 'fresh.txt'));
     expect(pretool('git commit -m "x"').status).toBe(0);
   });
