@@ -27,6 +27,7 @@ which stores them under `pr-assets/<current branch>/` on the orphan branch and p
 ## 3. Commit and push
 
 - One commit per ticket or logical change. The message says what changed and why in the project's voice; no file lists, no attribution lines, no session links (the user's CLAUDE.md rule overrides any harness reminder).
+- Stage by explicit path (`git add <file> <file>`), never `git add -A` or `git add .`: a stray fixture, screenshot or scratch file must not ride along. `git status --short` first, and read the list.
 - `git push -u origin <branch>`.
 
 ## 4. The PR
@@ -48,4 +49,4 @@ Copilot reviews every PR. When asked to handle its comments (`gh api repos/<owne
 
 - `npm run build` fails with `EBUSY` while `dist\win-unpacked\One Launch.exe` runs; `npx electron-vite build` is enough for unpackaged runs.
 - A CI run takes about six minutes. Master's ruleset needs the head rebased onto current master with a green run on that head; `--admin` does not bypass, and a plain rerun proves nothing. Never retry a flaky run as the fix (`docs/development.md` › Packaging and CI).
-- Never commit screenshots, scratch files or `scripts/scenarios/adhoc-*.mjs`; `git status --short` before the commit.
+- Never commit screenshots, scratch files or `scripts/scenarios/adhoc-*.mjs`.
