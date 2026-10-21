@@ -27,6 +27,7 @@ const OPEN_URLS: Readonly<Record<OpenUrlTarget, string>> = {
   'steamgriddb-api-key': 'https://www.steamgriddb.com/profile/preferences/api',
 };
 import { isVersionString } from '@shared/whats-new';
+import type { LoginItem } from '../platform/login-item';
 import type { AppPaths } from '../platform/paths';
 import type { AccountsService } from '../services/accounts';
 import type { ArtworkService } from '../services/artwork';
@@ -70,6 +71,7 @@ export interface IpcDeps {
   recovery: SwitchRecoveryService;
   artwork: ArtworkService;
   updates: UpdateService;
+  loginItem: LoginItem;
   /** Re-reads every implemented launcher and syncs the games table; shared with the startup scan. */
   rescan: () => Promise<LibraryScanResult[]>;
   /** Native open-file dialog for images, owned by main. Null when the user cancels. */
@@ -538,5 +540,19 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     requireIdle();
     deps.updates.requestInstall();
     return { ok: true as const };
+  });
+
+  // --- autostart -----------------------------------------------------------
+
+  handle('autostart:status', () => deps.loginItem.status());
+
+  handle('autostart:set', (req) => {
+    const body = expectObject(req, 'autostart:set');
+    const openAtLogin = body['openAtLogin'];
+    if (typeof openAtLogin !== 'boolean') throw new IpcRequestError('BAD_REQUEST', 'openAtLogin must be a boolean');
+    if (!deps.loginItem.status().available) throw new IpcRequestError('UNAVAILABLE', 'Start with Windows is not available for this copy of One Launch');
+    const status = deps.loginItem.set(openAtLogin);
+    log.info('autostart updated', { openAtLogin });
+    return status;
   });
 }

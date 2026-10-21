@@ -508,6 +508,7 @@ describe('Settings › General › Setup guide', () => {
       over: {
         'app:info': () => info,
         'vault:status': () => ({ available: true, backend: 'dpapi', readable: true }),
+        'autostart:status': () => ({ available: true, openAtLogin: false }),
         'backups:list': () => ({ snapshots: [] }),
       },
     });

@@ -59,7 +59,7 @@ interface UpdatesPanelProps {
   whatsNewOn: boolean;
   settingsLoading: boolean;
   /** The last setting change on the page that was not saved, shown under its row when it is one of this panel's. */
-  settingError?: { key: SettingKey; message: string } | null;
+  settingError?: { key: string; message: string } | null;
   onAuto: (next: boolean) => void;
   onWhatsNewOn: (next: boolean) => void;
 }

@@ -34,6 +34,7 @@ import { BattlenetAdapter } from './launchers/battlenet/adapter';
 import { EpicAdapter } from './launchers/epic/adapter';
 import { RiotAdapter } from './launchers/riot/adapter';
 import { SteamAdapter } from './launchers/steam/adapter';
+import { loginItemAvailable, START_HIDDEN_FLAG } from './platform/login-item';
 import { configureAppPaths, ensureAppDirs, getAppPaths, type DataDirSource } from './platform/paths';
 import { createPlatform, resolveFakeLaunchersDir } from './platform/wiring';
 import { AccountsService } from './services/accounts';
@@ -59,7 +60,7 @@ import { INSTALL_REGISTRY_KEY, updateAvailability } from './updates/availability
 import { RELEASE_KEYS } from './updates/release-keys';
 import { resolveUpdateTestFeed, type UpdateTestFeed } from './updates/test-feed';
 import { UpdateService } from './updates/update-service';
-import { closeRequestAction, isTrustedRendererUrl, placementFrom } from './window-guard';
+import { closeRequestAction, isTrustedRendererUrl, placementFrom, startHidden } from './window-guard';
 
 // The first statement of the module body runs once every static import above has been evaluated.
 const moduleLoadedAt = Date.now();
@@ -124,6 +125,8 @@ let updates: UpdateService | null = null;
 let tray: Tray | null = null;
 /** The window.closeToTray setting, read at close time. Set by bootstrap. */
 let closeToTray: () => boolean = () => false;
+// maximize() would show a window started in the tray, so the saved maximized state waits for its first show.
+let pendingMaximize = false;
 /** True from app.quit() on: closes are real closes, not a hide to the tray. Reset if the quit prompt keeps the app running. */
 let quitting = false;
 /** Set once the user has chosen to quit during a running switch, so the next close goes through. */
@@ -153,7 +156,12 @@ function showMainWindow(): void {
   const win = mainWindow;
   if (!win || win.isDestroyed()) return;
   if (win.isMinimized()) win.restore();
+  if (pendingMaximize) {
+    pendingMaximize = false;
+    win.maximize();
+  }
   if (!win.isVisible()) win.show();
+  startup.windowShownMs ??= sinceStart();
   win.focus();
 }
 
@@ -266,7 +274,7 @@ function rememberBounds(win: BrowserWindow, settings: SettingsService): void {
   const save = (): void => {
     if (win.isDestroyed() || win.isMinimized()) return;
     const b = win.isMaximized() ? (win.getNormalBounds?.() ?? win.getBounds()) : win.getBounds();
-    settings.set('window.bounds', JSON.stringify({ ...b, maximized: win.isMaximized() }));
+    settings.set('window.bounds', JSON.stringify({ ...b, maximized: win.isMaximized() || pendingMaximize }));
   };
   const later = (): void => {
     if (timer) clearTimeout(timer);
@@ -283,7 +291,7 @@ function rememberBounds(win: BrowserWindow, settings: SettingsService): void {
   });
 }
 
-function createMainWindow(settings: SettingsService, title: string): BrowserWindow {
+function createMainWindow(settings: SettingsService, title: string, hidden: boolean): BrowserWindow {
   const placement = savedBounds(settings);
   const win = new BrowserWindow({
     width: placement.bounds?.width ?? 1280,
@@ -314,9 +322,13 @@ function createMainWindow(settings: SettingsService, title: string): BrowserWind
   phases.windowCreated = sinceStart();
 
   // Shown before the page loads: the window is on screen at once, in its background colour, and the renderer's first frame is already at the final size and state.
-  if (placement.maximized) win.maximize();
-  win.show();
-  startup.windowShownMs = sinceStart();
+  if (hidden) {
+    pendingMaximize = placement.maximized;
+  } else {
+    if (placement.maximized) win.maximize();
+    win.show();
+    startup.windowShownMs = sinceStart();
+  }
   rememberBounds(win, settings);
 
   // One line with every mark, once both the first paint and the bundle load have been timed, in whichever order they come.
@@ -434,6 +446,7 @@ async function bootstrap(): Promise<void> {
     dataDir: paths.dataDir,
     log: log.child('platform'),
     openExternal: (url) => shell.openExternal(url),
+    loginItem: { available: loginItemAvailable({ isPackaged: app.isPackaged, dataDirSource }), execPath: process.execPath, app },
   });
 
   // The interface uses no permission-gated web API, and without handlers Electron grants every request, clipboard reads included.
@@ -457,7 +470,8 @@ async function bootstrap(): Promise<void> {
   // vault, adapters and handlers below. Nothing from here to the end of bootstrap yields, so no IPC message, ready-to-show
   // or did-finish-load can be dispatched before the handlers are registered.
   const windowTitle = platform.source === 'fake' ? 'One Launch (fake launchers)' : 'One Launch';
-  mainWindow = createMainWindow(settings, windowTitle);
+  const hidden = startHidden({ argv: process.argv, closeToTray: closeToTray() });
+  mainWindow = createMainWindow(settings, windowTitle, hidden);
 
   const vault = new SafeStorageVault();
   const secrets = new SecretStore(db, vault);
@@ -637,6 +651,7 @@ async function bootstrap(): Promise<void> {
     recovery,
     artwork,
     updates: updateService,
+    loginItem: platform.loginItem,
     rescan,
     pickImage,
     pickLauncherExe,
@@ -657,6 +672,10 @@ async function bootstrap(): Promise<void> {
       // A quit inside this delay has already closed the database (a scenario's restart on a fast runner does this).
       if (quitting || !db?.open) return;
       setTrayEnabled(closeToTray(), windowTitle);
+      if (hidden) {
+        if (tray) log.info('started in the tray');
+        else showMainWindow();
+      }
       rescan().catch((err: unknown) => log.warn('startup library scan failed', { error: err }));
       // The database holds every account; a copy per start (newest 5 kept) is the way back from a damaged file.
       if (db) {
@@ -753,7 +772,7 @@ process.on('uncaughtException', (err) => {
     .then(({ response }) => {
       if (response !== 0) return;
       quitConfirmed = true;
-      app.relaunch();
+      app.relaunch({ args: process.argv.slice(1).filter((arg) => arg !== START_HIDDEN_FLAG) });
       // quit(), not exit(): the running switch is stopped, the clipboard cleared, and the database closed. exit() is the fallback if main is too far gone for that.
       app.quit();
       setTimeout(() => app.exit(0), QUIT_WAIT_MS + 5_000).unref();

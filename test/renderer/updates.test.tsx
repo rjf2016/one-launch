@@ -31,6 +31,7 @@ function updatesBridge(initial: UpdateStatus, settings: Partial<Record<SettingKe
   const bridge = installBridge({
     'app:info': () => info,
     'vault:status': () => ({ available: true, backend: 'dpapi', readable: true }),
+    'autostart:status': () => ({ available: true, openAtLogin: false }),
     'settings:getAll': () => ({ settings: { ...stored } }),
     'settings:set': (req) => {
       stored[req.key] = req.value;

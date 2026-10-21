@@ -10,6 +10,7 @@ import type { SteamAdapterDeps } from '../launchers/steam/adapter';
 import type { FetchLike } from '../services/artwork';
 import type { ClipboardLike } from '../services/clipboard';
 import type { Logger } from '../services/logger';
+import { WindowsLoginItem, type LoginItem, type WindowsLoginItemOptions } from './login-item';
 import { WindowsProcessController, type ProcessController } from './processes';
 import { WindowsRegistry, type Registry } from './registry';
 
@@ -47,6 +48,7 @@ export interface LauncherPlatform {
   fetch: FetchLike;
   /** The launch request the Riot Client's Play button sends to the client's local server (adapters/riot.md, rule 4). Fake: the simulator's Play. */
   riotLocalLaunch: RiotLocalLaunch;
+  loginItem: LoginItem;
   roots: {
     steam: Pick<SteamAdapterDeps, 'defaultInstallDir'>;
     epic: Pick<EpicAdapterDeps, 'localAppData' | 'programData' | 'defaultInstallDir'>;
@@ -72,6 +74,7 @@ export interface PlatformOptions {
   dataDir: string;
   log: Logger;
   openExternal: (url: string) => Promise<void>;
+  loginItem: WindowsLoginItemOptions;
 }
 
 /** The simulators are a separate chunk, loaded only for a fake-launcher run, so a real start never parses them. */
@@ -87,6 +90,7 @@ export async function createPlatform(opts: PlatformOptions): Promise<LauncherPla
     openExternal: opts.openExternal,
     fetch: (url, init) => fetch(url, init),
     riotLocalLaunch: new WindowsRiotLocalLaunch(),
+    loginItem: new WindowsLoginItem(opts.loginItem),
     roots: { steam: {}, epic: {}, battlenet: {}, riot: {} },
     timing: { steam: {}, epic: {}, battlenet: {}, riot: {} },
   };

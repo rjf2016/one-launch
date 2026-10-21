@@ -63,6 +63,7 @@ beforeEach(() => {
     recovery: service('recovery'),
     artwork: service('artwork'),
     updates: service('updates'),
+    loginItem: service('loginItem'),
     rescan: async () => {
       reached.push({ call: 'rescan', args: [] });
       return [];
@@ -163,6 +164,7 @@ const REFUSED: Partial<Record<IpcChannel, unknown[]>> = {
   'launch:status': [...NOT_AN_OBJECT, {}, { jobId: 5 }, { jobId: LONG_ID }],
   'launch:cancel': [...NOT_AN_OBJECT, {}, { jobId: 5 }],
   'launch:recent': NOT_AN_OBJECT,
+  'autostart:set': [...NOT_AN_OBJECT, {}, { openAtLogin: 'true' }, { openAtLogin: 1 }, { openAtLogin: null }],
 };
 
 /** Channels whose request type is `undefined`: there is nothing to validate. */
@@ -182,6 +184,7 @@ const NO_PAYLOAD: IpcChannel[] = [
   'updates:status',
   'updates:check',
   'updates:install',
+  'autostart:status',
 ];
 
 describe('IPC request validation (B19)', () => {

@@ -41,7 +41,7 @@ type EditableSetting =
   | 'whatsNew.enabled';
 
 interface SettingError {
-  key: EditableSetting;
+  key: EditableSetting | 'autostart';
   message: string;
 }
 
@@ -57,6 +57,7 @@ export function SettingsView() {
   const openSetupGuide = useUiStore((s) => s.openSetupGuide);
   const info = useIpcQuery(() => ipc.invoke('app:info'));
   const vault = useIpcQuery(() => ipc.invoke('vault:status'));
+  const autostart = useIpcQuery(() => ipc.invoke('autostart:status'));
   const settings = useIpcQuery(() => ipc.invoke('settings:getAll'), [settingsRevision]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selfTest, setSelfTest] = useState<SelfTest>({ state: 'idle' });
@@ -108,7 +109,17 @@ export function SettingsView() {
     }
   }
 
-  const errorFor = (key: EditableSetting): string | null => (settingError?.key === key ? settingError.message : null);
+  async function setAutostart(next: boolean): Promise<void> {
+    setSettingError(null);
+    try {
+      await ipc.invoke('autostart:set', { openAtLogin: next });
+    } catch (err) {
+      setSettingError({ key: 'autostart', message: err instanceof Error ? err.message : String(err) });
+    }
+    autostart.reload();
+  }
+
+  const errorFor = (key: SettingError['key']): string | null => (settingError?.key === key ? settingError.message : null);
 
   async function openPath(target: 'logs' | 'data'): Promise<void> {
     setPathError(null);
@@ -174,6 +185,18 @@ export function SettingsView() {
             {tab === 'general' ? (
               <>
                 <Panel title="General">
+                  <Row
+                    label="Start with Windows"
+                    hint="Starts One Launch when you sign in to Windows, in the tray when it keeps running there."
+                    error={errorFor('autostart')}
+                  >
+                    <Toggle
+                      label="Start with Windows"
+                      checked={autostart.data?.openAtLogin ?? false}
+                      disabled={autostart.loading || autostart.data?.available !== true}
+                      onChange={(next) => void setAutostart(next)}
+                    />
+                  </Row>
                   <Row
                     label="Keep running in the system tray"
                     hint="Closing the window keeps One Launch running in the tray, where you can reopen or quit it."

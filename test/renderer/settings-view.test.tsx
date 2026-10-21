@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { Sidebar } from '../../src/renderer/src/components/Sidebar';
 import { useUiStore } from '../../src/renderer/src/store/ui';
 import { SettingsView } from '../../src/renderer/src/views/SettingsView';
-import type { AppInfo, SettingKey } from '../../src/shared/models';
+import type { AppInfo, AutostartStatus, SettingKey } from '../../src/shared/models';
 import { WHATS_NEW } from '../../src/shared/whats-new-releases';
 import { BridgeError, installBridge, resetUi } from './harness';
 
@@ -28,6 +28,7 @@ const info: AppInfo = {
 /** A main process that remembers settings, like the real settings table. */
 function settingsPage(initial: Partial<Record<SettingKey, string>> = {}, appInfo: AppInfo = info) {
   const stored: Partial<Record<SettingKey, string>> = { ...initial };
+  let autostart: AutostartStatus = { available: true, openAtLogin: false };
   return installBridge({
     'app:info': () => appInfo,
     'vault:status': () => ({ available: true, backend: 'dpapi', readable: true }),
@@ -41,6 +42,11 @@ function settingsPage(initial: Partial<Record<SettingKey, string>> = {}, appInfo
     'backups:list': () => ({ snapshots: [] }),
     'artwork:status': () => ({ status: { queued: 0, running: 0, completed: 0, failed: 0, hasApiKey: false, revision: 1, scanned: true } }),
     'updates:status': () => ({ state: 'idle' }),
+    'autostart:status': () => autostart,
+    'autostart:set': (req) => {
+      autostart = { ...autostart, openAtLogin: req.openAtLogin };
+      return autostart;
+    },
   });
 }
 
@@ -69,6 +75,64 @@ describe('Settings › General: keep running in the system tray', () => {
     await user.click(toggle);
     await waitFor(() => expect(bridge.sent('settings:set')).toEqual([{ key: 'window.closeToTray', value: 'true' }]));
     await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+  });
+});
+
+describe('Settings › General: start with Windows', () => {
+  const autostartSwitch = () => screen.findByRole('switch', { name: 'Start with Windows' });
+
+  it('is off until the user turns it on, and asks Windows to start One Launch', async () => {
+    const bridge = settingsPage();
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    const toggle = await autostartSwitch();
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    await user.click(toggle);
+    await waitFor(() => expect(bridge.sent('autostart:set')).toEqual([{ openAtLogin: true }]));
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+  });
+
+  it('turns off again', async () => {
+    const bridge = settingsPage();
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    const toggle = await autostartSwitch();
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    await user.click(toggle);
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    await user.click(toggle);
+    await waitFor(() => expect(bridge.sent('autostart:set')).toEqual([{ openAtLogin: true }, { openAtLogin: false }]));
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('false'));
+  });
+
+  it('cannot be changed on a copy that may not start with Windows', async () => {
+    const bridge = settingsPage();
+    bridge.on('autostart:status', () => ({ available: false, openAtLogin: false }));
+    render(<SettingsView />);
+    const toggle = await autostartSwitch();
+    await waitFor(() => expect(bridge.sent('autostart:status').length).toBeGreaterThan(0));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+    expect(toggle.hasAttribute('disabled')).toBe(true);
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+  });
+
+  it('says so under its row when Windows refuses, and stays off', async () => {
+    const bridge = settingsPage();
+    bridge.on('autostart:set', () => {
+      throw new BridgeError('UNAVAILABLE', 'not in this copy');
+    });
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    const toggle = await autostartSwitch();
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    await user.click(toggle);
+    const alert = await screen.findByRole('alert');
+    expect(alert.textContent).toBe('Could not save the setting: not in this copy');
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(false));
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    expect(bridge.sent('autostart:status').length).toBeGreaterThan(1);
   });
 });
 

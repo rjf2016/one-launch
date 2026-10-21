@@ -1,4 +1,5 @@
 import type { Rectangle } from 'electron';
+import { START_HIDDEN_FLAG } from './platform/login-item';
 
 /**
  * Whether `url` is our own renderer page: the packaged index.html (plus its hash or query) and never
@@ -26,6 +27,11 @@ export function closeRequestAction(state: { quitting: boolean; closeToTray: bool
   if (state.quitting) return 'close';
   if (state.closeToTray) return 'hide';
   return state.switchBusy ? 'ask' : 'close';
+}
+
+// Without the tray there would be no way back to a window that never showed.
+export function startHidden(input: { argv: readonly string[]; closeToTray: boolean }): boolean {
+  return input.closeToTray && input.argv.includes(START_HIDDEN_FLAG);
 }
 
 /** The stored window placement (the `window.bounds` setting), when it still lands on one of the connected displays' work areas. */
