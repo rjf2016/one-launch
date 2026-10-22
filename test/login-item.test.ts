@@ -29,10 +29,10 @@ describe('WindowsLoginItem', () => {
     expect(calls).toEqual([]);
   });
 
-  it('reports what Windows will launch, asked for this exe with the start-hidden flag', () => {
+  it('reports what Windows will launch, asked for this exe with its path quoted (Electron parses it as a command line)', () => {
     const on = stubApp(true);
     expect(new WindowsLoginItem({ available: true, execPath: EXE, app: on.app }).status()).toEqual({ available: true, openAtLogin: true });
-    expect(on.calls).toEqual([{ method: 'get', arg: { path: EXE, args: [START_HIDDEN_FLAG] } }]);
+    expect(on.calls).toEqual([{ method: 'get', arg: { path: `"${EXE}"` } }]);
     const off = stubApp(false);
     expect(new WindowsLoginItem({ available: true, execPath: EXE, app: off.app }).status()).toEqual({ available: true, openAtLogin: false });
   });

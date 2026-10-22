@@ -27,7 +27,8 @@ export class WindowsLoginItem implements LoginItem {
 
   status(): AutostartStatus {
     if (!this.opts.available) return { available: false, openAtLogin: false };
-    const settings = this.opts.app.getLoginItemSettings({ path: this.opts.execPath, args: [START_HIDDEN_FLAG] });
+    // Electron parses this path as a command line, so unquoted it ends at the first space and matches nothing.
+    const settings = this.opts.app.getLoginItemSettings({ path: `"${this.opts.execPath}"` });
     return { available: true, openAtLogin: settings.executableWillLaunchAtLogin };
   }
 
