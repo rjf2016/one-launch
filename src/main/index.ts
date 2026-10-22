@@ -36,6 +36,7 @@ import { RiotAdapter } from './launchers/riot/adapter';
 import { SteamAdapter } from './launchers/steam/adapter';
 import { loginItemAvailable, START_HIDDEN_FLAG } from './platform/login-item';
 import { configureAppPaths, ensureAppDirs, getAppPaths, type DataDirSource } from './platform/paths';
+import type { Registry } from './platform/registry';
 import { createPlatform, resolveFakeLaunchersDir } from './platform/wiring';
 import { AccountsService } from './services/accounts';
 import { ArtworkService } from './services/artwork';
@@ -56,7 +57,7 @@ import { seedWhatsNewSeen } from './services/whats-new';
 import { SafeStorageVault } from './services/vault';
 import { VaultHealth } from './services/vault-health';
 import { createTray } from './tray';
-import { INSTALL_REGISTRY_KEY, updateAvailability } from './updates/availability';
+import { INSTALL_REGISTRY_KEY, updateAvailability, type InstallInput } from './updates/availability';
 import { RELEASE_KEYS } from './updates/release-keys';
 import { resolveUpdateTestFeed, type UpdateTestFeed } from './updates/test-feed';
 import { UpdateService } from './updates/update-service';
@@ -441,12 +442,19 @@ async function bootstrap(): Promise<void> {
   if (!isDev && isLogLevel(configuredLevel)) setLogLevel(configuredLevel);
   closeToTray = () => settings.getBool('window.closeToTray', true);
 
+  const install = (registry: Registry): InstallInput => ({
+    isPackaged: app.isPackaged,
+    dataDirSource,
+    execPath: process.execPath,
+    fileExists: existsSync,
+    perUserInstallLocation: () => registry.getString('HKCU', INSTALL_REGISTRY_KEY, 'InstallLocation'),
+  });
   const platform = await createPlatform({
     fakeDir: fakeLaunchersDir,
     dataDir: paths.dataDir,
     log: log.child('platform'),
     openExternal: (url) => shell.openExternal(url),
-    loginItem: { available: loginItemAvailable({ isPackaged: app.isPackaged, dataDirSource }), execPath: process.execPath, app },
+    loginItem: { available: (registry) => loginItemAvailable(install(registry)), execPath: process.execPath, app },
   });
 
   // The interface uses no permission-gated web API, and without handlers Electron grants every request, clipboard reads included.
@@ -581,15 +589,7 @@ async function bootstrap(): Promise<void> {
     log: log.child('artwork'),
   });
   const updateService = new UpdateService({
-    availability: () =>
-      updateAvailability({
-        testFeed: updateTestFeed !== null,
-        isPackaged: app.isPackaged,
-        dataDirSource,
-        execPath: process.execPath,
-        fileExists: existsSync,
-        perUserInstallLocation: () => platform.registry.getString('HKCU', INSTALL_REGISTRY_KEY, 'InstallLocation'),
-      }),
+    availability: () => updateAvailability({ testFeed: updateTestFeed !== null, ...install(platform.registry) }),
     engine: async () => (await import('./updates/engine')).createUpdateEngine({ log: log.child('updater'), dataDir: paths.dataDir, testFeed: updateTestFeed }),
     keys: updateTestFeed?.keys ?? RELEASE_KEYS,
     auto: settings.getBool('updates.auto', true),

@@ -74,7 +74,7 @@ export interface PlatformOptions {
   dataDir: string;
   log: Logger;
   openExternal: (url: string) => Promise<void>;
-  loginItem: WindowsLoginItemOptions;
+  loginItem: Omit<WindowsLoginItemOptions, 'available'> & { available: (registry: Registry) => Promise<boolean> };
 }
 
 /** The simulators are a separate chunk, loaded only for a fake-launcher run, so a real start never parses them. */
@@ -83,14 +83,15 @@ export async function createPlatform(opts: PlatformOptions): Promise<LauncherPla
     const { materializeScenario } = await import('../launchers/sim/scenario');
     return materializeScenario({ dir: opts.fakeDir, dataDir: opts.dataDir, log: opts.log });
   }
+  const registry = new WindowsRegistry();
   return {
     source: 'real',
-    registry: new WindowsRegistry(),
+    registry,
     processes: new WindowsProcessController(),
     openExternal: opts.openExternal,
     fetch: (url, init) => fetch(url, init),
     riotLocalLaunch: new WindowsRiotLocalLaunch(),
-    loginItem: new WindowsLoginItem(opts.loginItem),
+    loginItem: new WindowsLoginItem({ ...opts.loginItem, available: () => opts.loginItem.available(registry) }),
     roots: { steam: {}, epic: {}, battlenet: {}, riot: {} },
     timing: { steam: {}, epic: {}, battlenet: {}, riot: {} },
   };

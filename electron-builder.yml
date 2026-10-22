@@ -41,7 +41,7 @@ nsis:
   # Keep it false. Uninstalling must not delete accounts and backups, and if it were ever turned on it would
   # target %APPDATA%\One Launch (the product name), not %APPDATA%\OneLaunch where the data really is.
   deleteAppDataOnUninstall: false
-  # customUnInstall removes the Start with Windows entry (the HKCU Run value OneLaunch), except when an update runs the old uninstaller.
+  # The Start with Windows entry (the HKCU Run value OneLaunch): customInstall removes one left for another exe; customUnInstall removes it, except when an install runs the old uninstaller.
   include: build/installer.nsh
 # Writes latest.yml and resources/app-update.yml. Every build passes --publish never; the release workflow makes the draft and the owner signs and publishes it (docs/development.md, "Releases").
 publish:

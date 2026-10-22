@@ -207,8 +207,8 @@ describe('IPC handlers', () => {
   it('refuses Start with Windows on a copy that may not register, and a body that is not a boolean', async () => {
     let writes = 0;
     loginItem = {
-      status: () => ({ available: false, openAtLogin: false }),
-      set: () => {
+      status: async () => ({ available: false, openAtLogin: false }),
+      set: async () => {
         writes++;
         return { available: false, openAtLogin: false };
       },

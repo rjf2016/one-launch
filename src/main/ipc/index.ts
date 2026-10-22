@@ -546,12 +546,12 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   handle('autostart:status', () => deps.loginItem.status());
 
-  handle('autostart:set', (req) => {
+  handle('autostart:set', async (req) => {
     const body = expectObject(req, 'autostart:set');
     const openAtLogin = body['openAtLogin'];
     if (typeof openAtLogin !== 'boolean') throw new IpcRequestError('BAD_REQUEST', 'openAtLogin must be a boolean');
-    if (!deps.loginItem.status().available) throw new IpcRequestError('UNAVAILABLE', 'Start with Windows is not available for this copy of One Launch');
-    const status = deps.loginItem.set(openAtLogin);
+    if (!(await deps.loginItem.status()).available) throw new IpcRequestError('UNAVAILABLE', 'Start with Windows is not available for this copy of One Launch');
+    const status = await deps.loginItem.set(openAtLogin);
     log.info('autostart updated', { openAtLogin });
     return status;
   });
