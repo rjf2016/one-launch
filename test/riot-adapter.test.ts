@@ -531,15 +531,22 @@ describe('Riot shutdown', () => {
   it('waits out a client that restarts itself after the close, closes it again, and gives up after three rounds', async () => {
     processes.setRunning(RIOT_CLIENT_EXE, true);
     let restarts = 1;
+    let restartPending = false;
     const close = processes.close.bind(processes);
+    const isRunning = processes.isRunning.bind(processes);
     processes.close = async (name) => {
       await close(name);
-      if (restarts-- > 0) {
-        setTimeout(() => {
-          processes.setRunning(name, true);
-          writeLog(fixture('2026-10-04T20-34-14_10001_Riot Client.log'));
-        }, 8);
+      restartPending = restarts-- > 0;
+    };
+    // The restart follows the exit the adapter saw, not a timer, so a stalled runner cannot hide it from the watch.
+    processes.isRunning = async (name) => {
+      const running = await isRunning(name);
+      if (!running && restartPending && name === RIOT_CLIENT_EXE) {
+        restartPending = false;
+        processes.setRunning(name, true);
+        writeLog(fixture('2026-10-04T20-34-14_10001_Riot Client.log'));
       }
+      return running;
     };
     await adapter().shutdown();
     expect(kinds()).toEqual([`close ${RIOT_CLIENT_EXE}`, `close ${RIOT_CLIENT_EXE}`]);
