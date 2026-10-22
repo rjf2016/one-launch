@@ -19,6 +19,7 @@ import { SettingsService } from '../src/main/services/settings';
 import type { Vault } from '../src/main/services/vault';
 import { VaultHealth } from '../src/main/services/vault-health';
 import type { IpcDeps } from '../src/main/ipc';
+import { MemoryLoginItem, type LoginItem } from '../src/main/platform/login-item';
 import { UpdateNotReadyError } from '../src/main/updates/update-service';
 
 class FakeVault implements Vault {
@@ -49,6 +50,7 @@ let rescans = 0;
 let artworkStarts = 0;
 let installRequests = 0;
 let updateReady = false;
+let loginItem: LoginItem;
 /** A rescan in the fake main process finishes only when this does. */
 let rescanGate: Promise<void> = Promise.resolve();
 
@@ -62,6 +64,7 @@ beforeEach(() => {
   artworkStarts = 0;
   installRequests = 0;
   updateReady = false;
+  loginItem = new MemoryLoginItem();
   rescanGate = Promise.resolve();
   const db = openDatabase(':memory:');
   migrate(db);
@@ -92,6 +95,10 @@ beforeEach(() => {
         if (!updateReady) throw new UpdateNotReadyError();
         installRequests++;
       },
+    },
+    loginItem: {
+      status: () => loginItem.status(),
+      set: (openAtLogin: boolean) => loginItem.set(openAtLogin),
     },
     launchers: {
       installFromExe: async (launcher: string, exePath: string) =>
@@ -188,6 +195,28 @@ describe('IPC handlers', () => {
     busy = false;
     expect(await call('updates:install')).toEqual({ ok: true, data: { ok: true } });
     expect(installRequests).toBe(1);
+  });
+
+  it('reports and changes Start with Windows', async () => {
+    expect(await call('autostart:status')).toEqual({ ok: true, data: { available: true, openAtLogin: false } });
+    expect(await call('autostart:set', { openAtLogin: true })).toEqual({ ok: true, data: { available: true, openAtLogin: true } });
+    expect(await call('autostart:status')).toEqual({ ok: true, data: { available: true, openAtLogin: true } });
+    expect(await call('autostart:set', { openAtLogin: false })).toEqual({ ok: true, data: { available: true, openAtLogin: false } });
+  });
+
+  it('refuses Start with Windows on a copy that may not register, and a body that is not a boolean', async () => {
+    let writes = 0;
+    loginItem = {
+      status: async () => ({ available: false, openAtLogin: false }),
+      set: async () => {
+        writes++;
+        return { available: false, openAtLogin: false };
+      },
+    };
+    expect(await call('autostart:status')).toEqual({ ok: true, data: { available: false, openAtLogin: false } });
+    expect(await call('autostart:set', { openAtLogin: true })).toMatchObject({ ok: false, error: { code: 'UNAVAILABLE' } });
+    expect(await call('autostart:set', { openAtLogin: 'true' } as never)).toMatchObject({ ok: false, error: { code: 'BAD_REQUEST' } });
+    expect(writes).toBe(0);
   });
 
   it('never hands a real secret back to the renderer', async () => {

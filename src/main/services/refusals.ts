@@ -17,6 +17,7 @@ export const REFUSAL_CODES: ReadonlySet<string> = new Set([
   'NOT_READY',
   'PROCESS_ACCESS_DENIED',
   'SWITCH_BLOCKED',
+  'UNAVAILABLE',
 ]);
 
 /** The error's code when it is an expected refusal, else null. */

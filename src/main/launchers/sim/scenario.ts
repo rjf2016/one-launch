@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { LauncherId } from '@shared/models';
+import { MemoryLoginItem } from '../../platform/login-item';
 import type { LauncherPlatform } from '../../platform/wiring';
 import { StaticRegistry } from '../../platform/registry';
 import type { Logger } from '../../services/logger';
@@ -176,6 +177,7 @@ export function materializeScenario(opts: MaterializeOptions): LauncherPlatform 
     openExternal: async (url) => report.opened(url),
     fetch: artwork,
     riotLocalLaunch,
+    loginItem: new MemoryLoginItem(),
     roots: {
       steam: { defaultInstallDir: roots.nowhere },
       epic: { localAppData: roots.localAppData, programData: roots.programData, defaultInstallDir: roots.nowhere },

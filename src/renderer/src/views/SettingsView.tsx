@@ -1,4 +1,4 @@
-import { FolderOpen, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
+import { FolderOpen, ShieldCheck, ShieldOff } from 'lucide-react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { BATTLENET_LAUNCH_FORMS, EPIC_LAUNCH_URI_FORMS, LOG_LEVELS, type BattlenetLaunchForm, type EpicLaunchUriForm, type LogLevel } from '@shared/models';
 import { ArtworkPanel } from '../components/ArtworkPanel';
@@ -41,7 +41,7 @@ type EditableSetting =
   | 'whatsNew.enabled';
 
 interface SettingError {
-  key: EditableSetting;
+  key: EditableSetting | 'autostart';
   message: string;
 }
 
@@ -57,6 +57,7 @@ export function SettingsView() {
   const openSetupGuide = useUiStore((s) => s.openSetupGuide);
   const info = useIpcQuery(() => ipc.invoke('app:info'));
   const vault = useIpcQuery(() => ipc.invoke('vault:status'));
+  const autostart = useIpcQuery(() => ipc.invoke('autostart:status'));
   const settings = useIpcQuery(() => ipc.invoke('settings:getAll'), [settingsRevision]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [selfTest, setSelfTest] = useState<SelfTest>({ state: 'idle' });
@@ -108,7 +109,17 @@ export function SettingsView() {
     }
   }
 
-  const errorFor = (key: EditableSetting): string | null => (settingError?.key === key ? settingError.message : null);
+  async function setAutostart(next: boolean): Promise<void> {
+    setSettingError(null);
+    try {
+      await ipc.invoke('autostart:set', { openAtLogin: next });
+    } catch (err) {
+      setSettingError({ key: 'autostart', message: err instanceof Error ? err.message : String(err) });
+    }
+    autostart.reload();
+  }
+
+  const errorFor = (key: SettingError['key']): string | null => (settingError?.key === key ? settingError.message : null);
 
   async function openPath(target: 'logs' | 'data'): Promise<void> {
     setPathError(null);
@@ -174,22 +185,24 @@ export function SettingsView() {
             {tab === 'general' ? (
               <>
                 <Panel title="General">
-                  <Row
-                    label="Keep running in the system tray"
-                    hint="Closing the window keeps One Launch running in the tray, where you can reopen or quit it."
-                    error={errorFor('window.closeToTray')}
-                  >
+                  <Row label="Start with Windows" hint="Starts One Launch when you sign in to Windows." error={errorFor('autostart')}>
                     <Toggle
-                      label="Keep running in the system tray"
+                      label="Start with Windows"
+                      checked={autostart.data?.openAtLogin ?? false}
+                      disabled={autostart.loading || autostart.data?.available !== true}
+                      onChange={(next) => void setAutostart(next)}
+                    />
+                  </Row>
+                  <Row label="Minimize One Launch to System Tray" hint="Closing One Launch minimizes the app." error={errorFor('window.closeToTray')}>
+                    <Toggle
+                      label="Minimize One Launch to System Tray"
                       checked={closeToTray}
                       disabled={settings.loading}
                       onChange={(next) => void setSetting('window.closeToTray', String(next))}
                     />
                   </Row>
                   <Row label="Setup guide" hint="The welcome steps: your launchers, how Play works, and adding accounts.">
-                    <Button icon={<Sparkles />} onClick={() => openSetupGuide('settings')}>
-                      Show again
-                    </Button>
+                    <Button onClick={() => openSetupGuide('settings')}>Show again</Button>
                   </Row>
                 </Panel>
 

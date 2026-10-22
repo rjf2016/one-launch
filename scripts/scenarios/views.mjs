@@ -78,7 +78,7 @@ export default async (d) => {
   }
 
   const SETTINGS_TABS = [
-    ['General', 'Keep running in the system tray'],
+    ['General', 'Minimize One Launch to System Tray'],
     ['Launchers', 'Re-check'],
     ['Artwork', 'Fetch artwork automatically'],
     ['Backups', 'Snapshots to keep'],
@@ -92,7 +92,7 @@ export default async (d) => {
   };
 
   await d.click('Settings');
-  await d.waitFor('Keep running in the system tray');
+  await d.waitFor('Minimize One Launch to System Tray');
   await d.shot('settings');
   for (const [tab, marker] of SETTINGS_TABS.slice(1)) {
     await openTab(tab, marker);
@@ -128,7 +128,7 @@ export default async (d) => {
     }),
   );
   await d.click('General');
-  await d.waitFor('Keep running in the system tray');
+  await d.waitFor('Minimize One Launch to System Tray');
 
   const hasNotes = await d.evaluate(() => {
     const button = document.querySelector('button[aria-label="Show what\'s new"]');

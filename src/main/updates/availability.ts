@@ -10,8 +10,7 @@ export const UNINSTALLER_NAME = 'Uninstall One Launch.exe';
 
 export type UpdateAvailability = { ok: true } | { ok: false; reason: UpdateUnavailableReason };
 
-export interface AvailabilityInput {
-  testFeed: boolean;
+export interface InstallInput {
   isPackaged: boolean;
   dataDirSource: DataDirSource;
   execPath: string;
@@ -19,8 +18,17 @@ export interface AvailabilityInput {
   perUserInstallLocation: () => Promise<string | null>;
 }
 
+export interface AvailabilityInput extends InstallInput {
+  testFeed: boolean;
+}
+
 export async function updateAvailability(input: AvailabilityInput): Promise<UpdateAvailability> {
   if (input.testFeed) return { ok: true };
+  return perUserInstall(input);
+}
+
+/** Whether this is a per-user install's exe running on the default data folder. */
+export async function perUserInstall(input: InstallInput): Promise<UpdateAvailability> {
   if (!input.isPackaged) return { ok: false, reason: 'development' };
   if (input.dataDirSource !== 'default') return { ok: false, reason: 'custom-data-folder' };
   const exeDir = dirname(input.execPath);

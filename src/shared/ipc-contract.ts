@@ -13,6 +13,7 @@ import type {
   AppInfo,
   ArtworkKind,
   ArtworkStatus,
+  AutostartStatus,
   BackupSnapshot,
   Game,
   InstalledGame,
@@ -149,6 +150,11 @@ export interface IpcContract {
   /** Leaves the launcher as it is and forgets the interrupted switch. */
   'recovery:dismiss': { req: undefined; res: { ok: true } };
 
+  // --- autostart: the Windows login item (HKCU Run value) that starts One Launch at sign-in ----------
+  'autostart:status': { req: undefined; res: AutostartStatus };
+  /** Registers or removes the login item. UNAVAILABLE when autostart:status says this copy may not. */
+  'autostart:set': { req: { openAtLogin: boolean }; res: AutostartStatus };
+
   'updates:status': { req: undefined; res: UpdateStatus };
   /** Starts a check (and, when a signed update is found, its download) and answers at once; poll updates:status. */
   'updates:check': { req: undefined; res: UpdateStatus };
@@ -211,6 +217,8 @@ export const IPC_CHANNELS = [
   'recovery:get',
   'recovery:restore',
   'recovery:dismiss',
+  'autostart:status',
+  'autostart:set',
   'updates:status',
   'updates:check',
   'updates:install',

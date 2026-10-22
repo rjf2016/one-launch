@@ -1,4 +1,4 @@
-import { PartyPopper, RefreshCw, RotateCw } from 'lucide-react';
+import { RefreshCw, RotateCw } from 'lucide-react';
 import { useState } from 'react';
 import type { SettingKey, UpdateStatus, UpdateUnavailableReason } from '@shared/models';
 import { latestWhatsNew } from '@shared/whats-new';
@@ -59,7 +59,7 @@ interface UpdatesPanelProps {
   whatsNewOn: boolean;
   settingsLoading: boolean;
   /** The last setting change on the page that was not saved, shown under its row when it is one of this panel's. */
-  settingError?: { key: SettingKey; message: string } | null;
+  settingError?: { key: string; message: string } | null;
   onAuto: (next: boolean) => void;
   onWhatsNewOn: (next: boolean) => void;
 }
@@ -99,7 +99,6 @@ export function UpdatesPanel({ version, auto, whatsNewOn, settingsLoading, setti
   return (
     <Panel
       title="Updates"
-      description="Updates come from the GitHub releases; nothing about your accounts is sent."
       actions={
         status?.state === 'ready' ? (
           <Button variant="primary" icon={<RotateCw />} disabled={restarting || running} onClick={() => void restart()}>
@@ -123,11 +122,6 @@ export function UpdatesPanel({ version, auto, whatsNewOn, settingsLoading, setti
       >
         <Toggle label="Keep One Launch updated automatically" checked={auto} disabled={settingsLoading} onChange={onAuto} />
       </Row>
-      <Row label="Version" {...(hint ? { hint } : {})}>
-        <span className="truncate">
-          {version ?? '…'} · {stateText(status)}
-        </span>
-      </Row>
       <Row
         label="Show what's new after an update"
         hint="The first time you open One Launch after an update, a short list of what changed."
@@ -135,9 +129,13 @@ export function UpdatesPanel({ version, auto, whatsNewOn, settingsLoading, setti
       >
         <Toggle label="Show what's new after an update" checked={whatsNewOn} disabled={settingsLoading} onChange={onWhatsNewOn} />
       </Row>
+      <Row label="Version" {...(hint ? { hint } : {})}>
+        <span className="truncate">
+          {version ?? '…'} · {stateText(status)}
+        </span>
+      </Row>
       <Row label="What's new" hint="The changes in the latest update.">
         <Button
-          icon={<PartyPopper />}
           aria-label="Show what's new"
           disabled={!latestNotes}
           onClick={() => {

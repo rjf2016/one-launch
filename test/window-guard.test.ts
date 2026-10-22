@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { closeRequestAction, isTrustedRendererUrl, placementFrom } from '../src/main/window-guard';
+import { closeRequestAction, isTrustedRendererUrl, placementFrom, startHidden } from '../src/main/window-guard';
 
 describe('closeRequestAction', () => {
   it('hides to the tray when the setting is on, even during a switch', () => {
@@ -15,6 +15,21 @@ describe('closeRequestAction', () => {
   it('a quit already under way closes whatever the setting says', () => {
     expect(closeRequestAction({ quitting: true, closeToTray: true, switchBusy: true })).toBe('close');
     expect(closeRequestAction({ quitting: true, closeToTray: false, switchBusy: false })).toBe('close');
+  });
+});
+
+describe('startHidden', () => {
+  const exe = 'C:\\Program Files\\One Launch\\One Launch.exe';
+
+  it('starts in the tray only when the login item asked for it and the tray is on', () => {
+    expect(startHidden({ argv: [exe, '--start-hidden'], closeToTray: true })).toBe(true);
+    expect(startHidden({ argv: [exe, '--data-dir=D:\\x', '--start-hidden'], closeToTray: true })).toBe(true);
+  });
+
+  it('shows the window with the tray off, without the flag, or with a look-alike argument', () => {
+    expect(startHidden({ argv: [exe, '--start-hidden'], closeToTray: false })).toBe(false);
+    expect(startHidden({ argv: [exe], closeToTray: true })).toBe(false);
+    expect(startHidden({ argv: [exe, '--start-hidden=false', '--START-HIDDEN'], closeToTray: true })).toBe(false);
   });
 });
 

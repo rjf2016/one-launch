@@ -2,7 +2,7 @@
 //   node scripts/drive.mjs scripts/scenarios/views.mjs --shots=<folder>
 //   node scripts/drive.mjs scripts/scenarios/<scenario>.mjs [--packaged] [--fake[=<name|folder>]] [--knobs=<json>] [--keep] [--shots=<dir>] [--port=<n>] [--hold[=<minutes>]] [--args="<chromium switches>"]
 // Unpackaged runs need `npx electron-vite build` first; --packaged needs `npm run build` and never combines with --fake.
-// --args passes extra Chromium switches to the app (a startup trace: --args="--trace-startup=devtools.timeline,v8 --trace-startup-file=<file>"); never --data-dir.
+// --args passes extra Chromium switches to the app (a startup trace: --args="--trace-startup=devtools.timeline,v8 --trace-startup-file=<file>"), after the scenario's own options.args; never --data-dir.
 // Inside --args, quote a value with spaces: --args='--trace-startup-file="C:\trace files\startup.json"'.
 // --hold keeps the app up at the scenario's end state for an interactive look over CDP (see the run-one-launch skill).
 // An agent's local Claude settings (.claude/settings.local.json) let it run this on scripts/scenarios/ without asking, so it imports from nowhere else and starts only the repo's own builds.
@@ -58,6 +58,6 @@ const { failures } = await runScenario(mod, {
   keep: flags.keep ? true : undefined,
   shots: typeof flags.shots === 'string' ? flags.shots : undefined,
   port: typeof flags.port === 'string' ? Number(flags.port) : undefined,
-  args,
+  args: args && mod.options?.args ? [...mod.options.args, ...args] : args,
 });
 process.exit(failures === 0 ? 0 : 1);
