@@ -6,13 +6,13 @@ import { sleep } from '../app-driver.mjs';
 
 export const name = 'close-to-tray';
 
-const LABEL = 'Keep running in the system tray';
+const LABEL = 'Minimize One Launch to System Tray';
 const trayChecked = (d) => d.evaluate((label) => document.querySelector(`[role="switch"][aria-label="${label}"]`)?.getAttribute('aria-checked'), LABEL);
 
 export default async (d) => {
   await d.click('Settings');
   await d.waitFor(LABEL);
-  await d.waitFor(() => !document.querySelector('[role="switch"][aria-label="Keep running in the system tray"]')?.hasAttribute('disabled'));
+  await d.waitFor(() => !document.querySelector('[role="switch"][aria-label="Minimize One Launch to System Tray"]')?.hasAttribute('disabled'));
   d.check('the toggle is on by default', (await trayChecked(d)) === 'true');
   d.check('nothing is stored for it yet', (await d.invoke('settings:getAll')).settings['window.closeToTray'] === undefined);
   await d.shot('settings-general');
@@ -30,7 +30,7 @@ export default async (d) => {
   await d.shot('after-second-start');
 
   await d.click(LABEL);
-  await d.waitFor(() => document.querySelector('[role="switch"][aria-label="Keep running in the system tray"]')?.getAttribute('aria-checked') === 'false');
+  await d.waitFor(() => document.querySelector('[role="switch"][aria-label="Minimize One Launch to System Tray"]')?.getAttribute('aria-checked') === 'false');
   d.check('the setting is stored off', (await d.invoke('settings:getAll')).settings['window.closeToTray'] === 'false');
   // A capture right after the flip still shows the old frame; give the toggle its transition.
   await sleep(400);

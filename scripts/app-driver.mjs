@@ -466,7 +466,7 @@ export class Driver {
 
   /**
    * Asks Windows to close the main window (WM_CLOSE, what the caption button sends), so main's close handlers
-   * run: with "Keep running in the system tray" on (the default) the window hides and the app stays up; with it
+   * run: with "Minimize One Launch to System Tray" on (the default) the window hides and the app stays up; with it
    * off, during a switch that is the quit prompt. Returns at once; follow with waitForExit(). A renderer-side
    * window.close() or CDP Page.close skips those handlers, which is why close() cannot be used for this.
    */

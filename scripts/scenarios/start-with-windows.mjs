@@ -5,7 +5,7 @@ export const name = 'start-with-windows';
 export const options = { args: ['--start-hidden'] };
 
 const AUTOSTART = 'Start with Windows';
-const TRAY = 'Keep running in the system tray';
+const TRAY = 'Minimize One Launch to System Tray';
 const switchState = (d, label) => d.evaluate((l) => document.querySelector(`[role="switch"][aria-label="${l}"]`)?.getAttribute('aria-checked'), label);
 const switchEnabled = (d, label) => d.evaluate((l) => document.querySelector(`[role="switch"][aria-label="${l}"]`)?.hasAttribute('disabled') === false, label);
 const count = (d, text) => d.readLog().split(text).length - 1;
@@ -59,7 +59,7 @@ export default async (d) => {
   d.check('a second click turns it off', (await d.invoke('autostart:status')).openAtLogin === false);
 
   await d.click(TRAY);
-  await d.waitFor(() => document.querySelector('[role="switch"][aria-label="Keep running in the system tray"]')?.getAttribute('aria-checked') === 'false');
+  await d.waitFor(() => document.querySelector('[role="switch"][aria-label="Minimize One Launch to System Tray"]')?.getAttribute('aria-checked') === 'false');
   d.check('the tray setting is stored off', (await d.invoke('settings:getAll')).settings['window.closeToTray'] === 'false');
 
   const startsBefore = count(d, 'started in the tray');

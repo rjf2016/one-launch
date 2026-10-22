@@ -1,4 +1,4 @@
-import { FolderOpen, ShieldCheck, ShieldOff, Sparkles } from 'lucide-react';
+import { FolderOpen, ShieldCheck, ShieldOff } from 'lucide-react';
 import { lazy, Suspense, useRef, useState } from 'react';
 import { BATTLENET_LAUNCH_FORMS, EPIC_LAUNCH_URI_FORMS, LOG_LEVELS, type BattlenetLaunchForm, type EpicLaunchUriForm, type LogLevel } from '@shared/models';
 import { ArtworkPanel } from '../components/ArtworkPanel';
@@ -185,11 +185,7 @@ export function SettingsView() {
             {tab === 'general' ? (
               <>
                 <Panel title="General">
-                  <Row
-                    label="Start with Windows"
-                    hint="Starts One Launch when you sign in to Windows, in the tray when it keeps running there."
-                    error={errorFor('autostart')}
-                  >
+                  <Row label="Start with Windows" hint="Starts One Launch when you sign in to Windows." error={errorFor('autostart')}>
                     <Toggle
                       label="Start with Windows"
                       checked={autostart.data?.openAtLogin ?? false}
@@ -197,22 +193,16 @@ export function SettingsView() {
                       onChange={(next) => void setAutostart(next)}
                     />
                   </Row>
-                  <Row
-                    label="Keep running in the system tray"
-                    hint="Closing the window keeps One Launch running in the tray, where you can reopen or quit it."
-                    error={errorFor('window.closeToTray')}
-                  >
+                  <Row label="Minimize One Launch to System Tray" hint="Closing One Launch minimizes the app." error={errorFor('window.closeToTray')}>
                     <Toggle
-                      label="Keep running in the system tray"
+                      label="Minimize One Launch to System Tray"
                       checked={closeToTray}
                       disabled={settings.loading}
                       onChange={(next) => void setSetting('window.closeToTray', String(next))}
                     />
                   </Row>
                   <Row label="Setup guide" hint="The welcome steps: your launchers, how Play works, and adding accounts.">
-                    <Button icon={<Sparkles />} onClick={() => openSetupGuide('settings')}>
-                      Show again
-                    </Button>
+                    <Button onClick={() => openSetupGuide('settings')}>Show again</Button>
                   </Row>
                 </Panel>
 

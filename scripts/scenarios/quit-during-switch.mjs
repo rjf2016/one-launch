@@ -1,5 +1,5 @@
 // Closing the window while a switch runs, through the caption button's path (WM_CLOSE, see Driver.closeWindow),
-// with "Keep running in the system tray" off (on, the default, a close only hides the window; see close-to-tray.mjs).
+// with "Minimize One Launch to System Tray" off (on, the default, a close only hides the window; see close-to-tray.mjs).
 // The prompt is native, so the scenario answers it through knobs.json: "Keep running" leaves the app and the
 // switch where they are; "Quit anyway" aborts the switch and exits with 0, the journal settled. The fake Epic
 // launcher never signs in, so the switch is parked in "Sign in" meanwhile.

@@ -50,7 +50,7 @@ function settingsPage(initial: Partial<Record<SettingKey, string>> = {}, appInfo
   });
 }
 
-const traySwitch = () => screen.findByRole('switch', { name: 'Keep running in the system tray' });
+const traySwitch = () => screen.findByRole('switch', { name: 'Minimize One Launch to System Tray' });
 const tab = (name: string) => screen.getByRole('tab', { name });
 
 describe('Settings › General: keep running in the system tray', () => {
@@ -177,7 +177,7 @@ describe('Settings › tabs', () => {
     expect(tab('General').getAttribute('aria-selected')).toBe('false');
     expect(await screen.findByRole('heading', { name: 'Backups' })).toBeTruthy();
     await waitFor(() => expect(bridge.sent('backups:list').length).toBeGreaterThan(0));
-    expect(screen.queryByRole('switch', { name: 'Keep running in the system tray' })).toBeNull();
+    expect(screen.queryByRole('switch', { name: 'Minimize One Launch to System Tray' })).toBeNull();
   });
 
   it('moves with the arrow keys, Home and End, wrapping at the ends', async () => {
