@@ -6,7 +6,7 @@ import type { DataDirSource } from '../platform/paths';
 // electron-builder names the installer's registry key UUIDv5(appId, its own namespace); test/update-availability.test.ts recomputes it from electron-builder.yml.
 export const INSTALLER_GUID = '37275e3e-77ba-54aa-bc32-31551d28dc0d';
 export const INSTALL_REGISTRY_KEY = `Software\\${INSTALLER_GUID}`;
-export const UNINSTALLER_NAME = 'Uninstall One Launch.exe';
+export const UNINSTALLER_NAME = 'Uninstall OneLaunch.exe';
 
 export type UpdateAvailability = { ok: true } | { ok: false; reason: UpdateUnavailableReason };
 

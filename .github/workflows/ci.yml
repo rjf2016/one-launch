@@ -45,7 +45,7 @@ jobs:
       - name: Packaged build contains the app
         shell: pwsh
         run: |
-          if (-not (Test-Path 'dist/win-unpacked/One Launch.exe')) { throw 'One Launch.exe missing' }
+          if (-not (Test-Path 'dist/win-unpacked/OneLaunch.exe')) { throw 'OneLaunch.exe missing' }
           if (-not (Test-Path 'dist/win-unpacked/resources/app.asar.unpacked/node_modules/better-sqlite3/prebuilds/win32-x64.node')) { throw 'better-sqlite3 prebuild missing' }
           if (-not (Test-Path 'dist/win-unpacked/THIRD-PARTY-NOTICES.txt')) { throw 'THIRD-PARTY-NOTICES.txt missing' }
           if (-not (Get-ChildItem 'dist/OneLaunch-*-setup.exe')) { throw 'installer missing' }
