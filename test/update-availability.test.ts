@@ -2,12 +2,12 @@ import { generateKeyPairSync } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { UUID } from 'builder-util-runtime';
 import { describe, expect, it } from 'vitest';
-import { INSTALLER_GUID, updateAvailability, type AvailabilityInput } from '../src/main/updates/availability';
+import { INSTALLER_GUID, UNINSTALLER_NAME, updateAvailability, type AvailabilityInput } from '../src/main/updates/availability';
 import { keyIdOf, publicKeyOf } from '../src/main/updates/manifest';
 import { resolveUpdateTestFeed, UpdateTestFeedError } from '../src/main/updates/test-feed';
 
-const EXE = 'C:\\Users\\player\\AppData\\Local\\Programs\\one-launch\\One Launch.exe';
-const DIR = 'C:\\Users\\player\\AppData\\Local\\Programs\\one-launch';
+const EXE = 'C:\\Users\\player\\AppData\\Local\\Programs\\OneLaunch\\OneLaunch.exe';
+const DIR = 'C:\\Users\\player\\AppData\\Local\\Programs\\OneLaunch';
 
 function input(overrides: Partial<AvailabilityInput> = {}): AvailabilityInput {
   return {
@@ -15,7 +15,7 @@ function input(overrides: Partial<AvailabilityInput> = {}): AvailabilityInput {
     isPackaged: true,
     dataDirSource: 'default',
     execPath: EXE,
-    fileExists: (p) => p === `${DIR}\\Uninstall One Launch.exe`,
+    fileExists: (p) => p === `${DIR}\\${UNINSTALLER_NAME}`,
     perUserInstallLocation: async () => DIR,
     ...overrides,
   };
@@ -28,6 +28,12 @@ describe('which copies may update themselves', () => {
     expect(UUID.v5(appId!, UUID.parse('50e065bc-3134-11e6-9bab-38c9862bdaf3'))).toBe(INSTALLER_GUID);
   });
 
+  it('names the uninstaller after the executable name electron-builder is configured with', () => {
+    const executableName = /^executableName:\s*(\S+)\s*$/m.exec(readFileSync('electron-builder.yml', 'utf8'))?.[1];
+    expect(executableName).toBe('OneLaunch');
+    expect(UNINSTALLER_NAME).toBe(`Uninstall ${executableName}.exe`);
+  });
+
   it('allows an installed, per-user copy on the default data folder', async () => {
     expect(await updateAvailability(input())).toEqual({ ok: true });
     expect(await updateAvailability(input({ perUserInstallLocation: async () => `${DIR.toUpperCase()}\\` }))).toEqual({ ok: true });
@@ -36,7 +42,7 @@ describe('which copies may update themselves', () => {
   it('refuses development runs, scratch data folders and loose copies of the exe', async () => {
     expect(await updateAvailability(input({ isPackaged: false }))).toEqual({ ok: false, reason: 'development' });
     expect(await updateAvailability(input({ dataDirSource: 'flag' }))).toEqual({ ok: false, reason: 'custom-data-folder' });
-    expect(await updateAvailability(input({ execPath: 'D:\\repo\\dist\\win-unpacked\\One Launch.exe' }))).toEqual({ ok: false, reason: 'not-installed' });
+    expect(await updateAvailability(input({ execPath: 'D:\\repo\\dist\\win-unpacked\\OneLaunch.exe' }))).toEqual({ ok: false, reason: 'not-installed' });
   });
 
   it('refuses an install made for all users, whose update would need administrator rights', async () => {

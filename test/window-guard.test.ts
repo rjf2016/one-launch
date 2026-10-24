@@ -19,7 +19,7 @@ describe('closeRequestAction', () => {
 });
 
 describe('startHidden', () => {
-  const exe = 'C:\\Program Files\\One Launch\\One Launch.exe';
+  const exe = 'C:\\Program Files\\One Launch\\OneLaunch.exe';
 
   it('starts in the tray only when the login item asked for it and the tray is on', () => {
     expect(startHidden({ argv: [exe, '--start-hidden'], closeToTray: true })).toBe(true);
