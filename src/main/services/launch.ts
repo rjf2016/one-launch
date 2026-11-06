@@ -58,6 +58,8 @@ export interface StartLaunchInput {
   gameId: string | null;
   /** The user has confirmed the launcher (and any running game) may be closed. */
   confirmClose: boolean;
+  /** A one-click Play from a game card, with no dialog: main may hide the window once a direct job has launched. */
+  instant?: boolean;
 }
 
 const HISTORY_LIMIT = 20;
@@ -95,6 +97,8 @@ export class LaunchService {
       settings: SettingsService;
       log: Logger;
       journal?: SwitchJournal;
+      /** Called once a job has settled, with its final snapshot. */
+      onFinished?: (job: LaunchJob, input: { instant: boolean }) => void;
     },
   ) {
     this.insertHistory = db.prepare<[string, string, string, string, string]>(
@@ -169,23 +173,29 @@ export class LaunchService {
       const account = this.deps.accounts.require(input.accountId);
       const game = this.gameFor(account, input.gameId);
 
+      let pf: SwitchPreflight | null = null;
       if (!input.confirmClose) {
-        const pf = await this.freshPreflight(account, game);
+        pf = await this.freshPreflight(account, game);
         if (pf.launcherRunning && !pf.alreadyActive) {
           throw new AdapterError(account.launcher, 'start', new ConfirmationRequiredError(pf.closeMessage, pf.runningGame));
         }
         if (this.closing) throw new LaunchBusyError();
       }
 
+      // The launcher is running and signed in as the account, so a switch would touch nothing: the job goes straight
+      // to the game launch. A plain switch still runs the adapter, since confirming the sign-in is its whole point.
+      const direct = pf !== null && game !== null && pf.alreadyActive && pf.launcherRunning;
       const launchStep: JobStep | null = game ? { id: 'launch', title: `Launch ${game.name}`, status: 'pending', detail: '' } : null;
+      const skipped: JobStep[] = direct ? pf!.plan.steps.map((s) => ({ id: s.id, title: s.title, status: 'skipped', detail: s.detail ?? '' })) : [];
       const job: LaunchJob = {
         id: randomUUID(),
         state: 'running',
         launcher: account.launcher,
         account: { id: account.id, displayName: account.displayName, login: account.login },
         game: game ? { id: game.id, name: game.name, launcherGameId: game.launcherGameId } : null,
-        steps: launchStep ? [launchStep] : [],
+        steps: launchStep ? [...skipped, launchStep] : [],
         attention: null,
+        direct,
         switched: false,
         handOff: null,
         backupId: null,
@@ -196,8 +206,8 @@ export class LaunchService {
       };
       this.current = job;
       this.controller = new AbortController();
-      this.deps.log.info('launch job started', { jobId: job.id, accountId: account.id, gameId: game?.id ?? null });
-      void this.run(job, account, game, input.confirmClose, this.controller.signal);
+      this.deps.log.info('launch job started', { jobId: job.id, accountId: account.id, gameId: game?.id ?? null, direct });
+      void this.run(job, account, game, { confirmClose: input.confirmClose, instant: input.instant === true }, this.controller.signal);
       return this.snapshot(job);
     } finally {
       this.starting = false;
@@ -267,8 +277,14 @@ export class LaunchService {
     }
   }
 
-  private async run(job: LaunchJob, account: Account, game: Game | null, confirmClose: boolean, signal: AbortSignal): Promise<void> {
-    const launchStep: JobStep | null = game ? { id: 'launch', title: `Launch ${game.name}`, status: 'pending', detail: '' } : null;
+  private async run(
+    job: LaunchJob,
+    account: Account,
+    game: Game | null,
+    input: { confirmClose: boolean; instant: boolean },
+    signal: AbortSignal,
+  ): Promise<void> {
+    const launchStep: JobStep | null = game ? job.steps[job.steps.length - 1]! : null;
     const startedMs = Date.now();
     const stepStarts = new Map<string, number>();
     /** Logs how long each step ran, from the moment it was reported running to the moment it was not. */
@@ -290,10 +306,24 @@ export class LaunchService {
     let result: LaunchResult = 'failed';
     const journal = this.deps.journal;
     try {
+      if (job.direct && game && launchStep) {
+        job.switched = true;
+        launchStep.status = 'running';
+        timeSteps();
+        const { command, handOff } = await this.deps.launchers.launchGame(account.launcher, game, { signal, startedBySwitch: false });
+        launchStep.status = 'done';
+        launchStep.detail = `Sent ${command}`;
+        job.handOff = handOff ?? null;
+        this.deps.accounts.touchLastUsed(account.id);
+        result = 'ok';
+        job.state = 'done';
+        this.deps.log.info('launch job direct', { jobId: job.id, ms: Date.now() - startedMs });
+        return;
+      }
       journal?.begin({ jobId: job.id, launcher: account.launcher, accountId: account.id });
       const switched = await this.deps.launchers
         .switch(account, {
-          confirmClose,
+          confirmClose: input.confirmClose,
           signal,
           ...(game ? { game: { launcherGameId: game.launcherGameId, name: game.name } } : {}),
           onProgress: (steps) => {
@@ -379,6 +409,11 @@ export class LaunchService {
       if (this.recent.length > HISTORY_LIMIT) this.recent.length = HISTORY_LIMIT;
       this.deps.log.info('launch job finished', { jobId: job.id, state: job.state, restored: job.restored, ms: Date.now() - startedMs });
       this.notifyIdle();
+      try {
+        this.deps.onFinished?.(this.snapshot(job), { instant: input.instant });
+      } catch (err) {
+        this.deps.log.warn('launch job finished hook failed', { jobId: job.id, error: err });
+      }
     }
   }
 

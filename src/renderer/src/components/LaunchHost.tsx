@@ -20,7 +20,9 @@ function LaunchBanner({ launch }: { launch: ActiveLaunch }) {
     ? job.attention
       ? `Waiting for you to sign in as ${job.account.displayName}`
       : job.game
-        ? `Switching to ${job.account.displayName} and launching ${job.game.name}…`
+        ? job.direct
+          ? `Launching ${what}…`
+          : `Switching to ${job.account.displayName} and launching ${job.game.name}…`
         : `Switching to ${job.account.displayName}…`
     : job.state === 'done'
       ? job.handOff
@@ -32,7 +34,9 @@ function LaunchBanner({ launch }: { launch: ActiveLaunch }) {
         ? `The switch to ${job.account.displayName} is waiting for a sign-in`
         : job.state === 'cancelled'
           ? `The switch to ${job.account.displayName} was stopped`
-          : `The switch to ${job.account.displayName} failed`;
+          : job.switched && job.game
+            ? `Could not launch ${job.game.name}`
+            : `The switch to ${job.account.displayName} failed`;
   const tone = running
     ? 'border-accent/30 bg-accent-soft text-text'
     : job.state === 'done'
@@ -110,7 +114,15 @@ export function LaunchHost() {
   return (
     <>
       {active && !request ? <LaunchBanner launch={active} /> : null}
-      {request ? <LaunchDialog key={request.key} game={request.game} initialAccountId={request.initialAccountId} onClose={closeLaunch} /> : null}
+      {request ? (
+        <LaunchDialog
+          key={request.key}
+          game={request.game}
+          initialAccountId={request.initialAccountId}
+          instant={request.instant ?? false}
+          onClose={closeLaunch}
+        />
+      ) : null}
     </>
   );
 }

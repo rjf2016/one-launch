@@ -3,7 +3,7 @@
 // instead of "Launched". No launch command is sent: the Riot Client's one start carries the game's arguments, as its
 // shortcut would, so it opens the page the update sits on, and nothing follows. Battle.net (Overwatch) and the Riot
 // Client (VALORANT, which the running client reported out of date in its log) in one session.
-import { finishDialog, watchDialog } from './lib.mjs';
+import { finishDialog, startPlay, watchDialog } from './lib.mjs';
 
 const MAIN_UID = '11111111-1111-4111-8111-111111111111';
 
@@ -38,6 +38,12 @@ export default async (d) => {
   d.check('the switch itself counts', text.includes('Battle.net is signed in as Alt; only the game launch failed.'));
   await finishDialog(d, 'update');
 
+  // A failed launch leaves no last account on the card, so the poster still opens the picker; the menu's "Play as…" always does.
+  await startPlay(d, { game: 'Overwatch', account: 'Alt', tag: 'update-again' });
+  text = await watchDialog(d, { until: (t) => t.includes('only the game launch failed'), tag: 'update-again' });
+  d.check('the second try through Play as… failed the same way', text.includes('only the game launch failed'));
+  await finishDialog(d, 'update-again');
+
   await d.click('Play VALORANT');
   await d.waitFor('The Riot Client wants to update VALORANT first.');
   d.check('the Riot picker says the same', await d.has('the game only starts once you update it in the Riot Client window'));
@@ -59,6 +65,11 @@ export default async (d) => {
     'no launch command was sent to either client: no --exec for Battle.net, and the Riot Client only its one start with the game’s arguments, which opens the page the update sits on',
     !report.processEvents.some((e) => e.args.some((a) => a.startsWith('--exec='))) &&
       report.processEvents.filter((e) => e.kind === 'start' && e.exe.endsWith('RiotClientServices.exe')).length === 1,
+    JSON.stringify(report.processEvents),
+  );
+  d.check(
+    'the second Overwatch try found Battle.net signed in as Alt and went straight to the (refused) launch: one Battle.net start in all',
+    report.processEvents.filter((e) => e.kind === 'start' && e.exe.endsWith('Battle.net Launcher.exe')).length === 1,
     JSON.stringify(report.processEvents),
   );
   d.check('the Battle.net switch wrote the account', report.registryWrites.length > 0);

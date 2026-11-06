@@ -1,4 +1,4 @@
-import { AlertTriangle, MoreHorizontal, Play } from 'lucide-react';
+import { AlertTriangle, Loader2, MoreHorizontal, Play } from 'lucide-react';
 import { memo, useState, type MouseEvent } from 'react';
 import { LAUNCHER_DISPLAY_NAMES, type Game } from '@shared/models';
 import { formatRelative } from '../lib/time';
@@ -11,6 +11,8 @@ interface GameCardProps {
   onOpen: (game: Game) => void;
   /** Opens the card menu at the given screen position. */
   onMenu: (game: Game, x: number, y: number) => void;
+  /** A one-click Play on this card is being checked: the Play mark spins and stays visible until the launch is away or the dialog shows. */
+  busy?: boolean;
 }
 
 /** Last played by whichever source is newer: the launcher's own record or a One Launch launch. */
@@ -32,7 +34,7 @@ function monogram(name: string): string {
 }
 
 /** Memoised: a hundred of these sit in the grid, and the Library re-renders on every status poll and keystroke. */
-export const GameCard = memo(function GameCard({ game, now, onOpen, onMenu }: GameCardProps) {
+export const GameCard = memo(function GameCard({ game, now, onOpen, onMenu, busy = false }: GameCardProps) {
   const [loaded, setLoaded] = useState(false);
   const grid = game.artwork?.grid ?? null;
   /** The launcher's own icon stands in for a cover: a square mark on the poster background, with the name kept. */
@@ -55,7 +57,13 @@ export const GameCard = memo(function GameCard({ game, now, onOpen, onMenu }: Ga
       className="group relative overflow-hidden rounded-panel border border-border bg-surface text-left transition-colors duration-150 hover:border-border-strong focus-within:border-accent"
       onContextMenu={openMenu}
     >
-      <button type="button" onClick={() => onOpen(game)} className="block w-full text-left focus-visible:outline-none" aria-label={`Play ${game.name}`}>
+      <button
+        type="button"
+        onClick={() => onOpen(game)}
+        aria-busy={busy || undefined}
+        className="block w-full text-left focus-visible:outline-none"
+        aria-label={`Play ${game.name}`}
+      >
         <div className="relative flex aspect-[2/3] items-end overflow-hidden bg-gradient-to-b from-surface-2 to-surface-3 p-3">
           {!grid || !loaded ? (
             <span
@@ -86,9 +94,11 @@ export const GameCard = memo(function GameCard({ game, now, onOpen, onMenu }: Ga
               <AlertTriangle className="size-3" /> Update
             </span>
           ) : null}
-          <span className="absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-bg/80 to-transparent pt-10 pb-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+          <span
+            className={`absolute inset-x-0 bottom-0 flex items-center justify-center bg-gradient-to-t from-bg/80 to-transparent pt-10 pb-3 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${busy ? 'opacity-100' : 'opacity-0'}`}
+          >
             <span className="flex size-10 items-center justify-center rounded-full bg-accent text-white shadow [&>svg]:size-5">
-              <Play />
+              {busy ? <Loader2 className="animate-spin" /> : <Play />}
             </span>
           </span>
         </div>

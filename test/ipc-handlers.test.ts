@@ -148,6 +148,9 @@ describe('IPC handlers', () => {
     expect(await call('settings:set', { key: 'riot.pressPlay', value: 'maybe' })).toMatchObject({ ok: false, error: { code: 'BAD_REQUEST' } });
     expect(await call('settings:set', { key: 'riot.pressPlay', value: 'false' })).toEqual({ ok: true, data: { ok: true } });
     expect(settings.getBool('riot.pressPlay', true)).toBe(false);
+    expect(await call('settings:set', { key: 'play.hideToTray', value: 'yes' })).toMatchObject({ ok: false, error: { code: 'BAD_REQUEST' } });
+    expect(await call('settings:set', { key: 'play.hideToTray', value: 'false' })).toEqual({ ok: true, data: { ok: true } });
+    expect(settings.getBool('play.hideToTray', true)).toBe(false);
     expect(await call('settings:set', { key: 'dryRun', value: 'false' })).toEqual({ ok: true, data: { ok: true } });
     expect(await call('settings:set', { key: 'backups.keep', value: '30' })).toEqual({ ok: true, data: { ok: true } });
     expect(settings.getBool('dryRun', true)).toBe(false);

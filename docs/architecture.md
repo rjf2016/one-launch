@@ -105,6 +105,7 @@ Strings in `settings`; `getBool` treats `true`/`1` as true. Keys: `SETTING_KEYS`
 | --- | --- | --- |
 | `dryRun` | off | Preview mode: a launch returns the plan, changes nothing. |
 | `steam.autoLogin` | off | On puts the stored password on Steam's command line. |
+| `play.hideToTray` | on | After a one-click Play that needed no switch (`switching.md` › The launch job, direct), the window hides to the tray as the game starts. Only with `window.closeToTray` on and a tray icon present (`hideAfterInstantPlay` in `window-guard.ts`). |
 | `artwork.autoFetch` | on | See `artwork.md`. |
 | `backups.keep` | 20 | Snapshots per launcher (1..200), applied at the next snapshot. |
 | `logLevel` | `info` | Applied at once; dev always starts at `debug`. |

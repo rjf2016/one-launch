@@ -1,4 +1,4 @@
-import { ArrowDownUp, Clock, Filter, Gamepad2, ImagePlus, Images, RefreshCw, Search, SearchX, X } from 'lucide-react';
+import { ArrowDownUp, Clock, Filter, Gamepad2, ImagePlus, Images, RefreshCw, Search, SearchX, Users, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { RECENT_LIMIT } from '@shared/ipc-contract';
 import { LAUNCHER_DISPLAY_NAMES, LAUNCHER_IDS, type ArtworkSource, type ArtworkStatus, type Game, type LauncherId, type RecentLaunch } from '@shared/models';
@@ -50,6 +50,12 @@ interface Menu {
   y: number;
 }
 
+/** Whether a Play for this game may skip the dialog: nothing to say about an update, and no job to attach to. */
+function playsAtOnce(game: Game): boolean {
+  const updateFirst = game.needsUpdate && game.launcher !== 'steam';
+  return !updateFirst && useUiStore.getState().activeLaunch?.job.state !== 'running';
+}
+
 export function LibraryView() {
   const games = useIpcQuery(
     () => ipc.invoke('library:list'),
@@ -64,6 +70,7 @@ export function LibraryView() {
   const openSettings = useUiStore((s) => s.openSettings);
   const openLaunch = useUiStore((s) => s.openLaunch);
   const activeState = useUiStore((s) => s.activeLaunch?.job.state ?? null);
+  const checkingGameId = useUiStore((s) => (s.launchRequest?.instant ? (s.launchRequest.game?.id ?? null) : null));
   const launcherStatus = useUiStore((s) => s.launcherStatus);
   const setLauncherStatus = useUiStore((s) => s.setLauncherStatus);
   const [scanning, setScanning] = useState(false);
@@ -75,7 +82,17 @@ export function LibraryView() {
   const [menu, setMenu] = useState<Menu | null>(null);
   const [status, setStatus] = useState<ArtworkStatus | null>(null);
   const [now, setNow] = useState(() => Date.now());
-  const openCard = useCallback((g: Game) => openLaunch({ game: g, initialAccountId: null }), [openLaunch]);
+  // One click plays as the account the game was last launched with. The dialog comes up when there is no such
+  // account, the launcher will not start the game before an update (Steam updates on the way, as its own Play
+  // does), or a job is still running (the dialog attaches to it).
+  const openCard = useCallback(
+    (g: Game) => {
+      const last = g.lastLaunch;
+      if (last && last.accountName !== null && playsAtOnce(g)) openLaunch({ game: g, initialAccountId: last.accountId, instant: true });
+      else openLaunch({ game: g, initialAccountId: last?.accountId ?? null });
+    },
+    [openLaunch],
+  );
   const openCardMenu = useCallback((g: Game, x: number, y: number) => setMenu({ game: g, x, y }), []);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 60_000);
@@ -248,7 +265,13 @@ export function LibraryView() {
 
   function openRecent(entry: RecentLaunch): void {
     const game = list.find((g) => g.id === entry.gameId);
-    if (game) openLaunch({ game, initialAccountId: entry.accountId });
+    if (!game) return;
+    openLaunch({ game, initialAccountId: entry.accountId, instant: playsAtOnce(game) });
+  }
+
+  function playAs(game: Game): void {
+    setMenu(null);
+    openLaunch({ game, initialAccountId: game.lastLaunch?.accountId ?? null });
   }
 
   const artworkBusy = status ? status.queued + status.running : 0;
@@ -363,6 +386,7 @@ export function LibraryView() {
           title={menu.game.name}
           subtitle={menu.game.artwork ? `Artwork: ${ARTWORK_SOURCE_NAMES[menu.game.artwork.source]}` : (menu.game.artworkError ?? 'No artwork yet')}
           items={[
+            { id: 'play-as', label: 'Play as…', icon: <Users />, onSelect: () => playAs(menu.game) },
             { id: 'refresh', label: 'Refresh artwork', icon: <RefreshCw />, onSelect: () => void refreshArtwork(menu.game) },
             { id: 'choose', label: 'Choose portrait image…', icon: <ImagePlus />, onSelect: () => void chooseImage(menu.game) },
           ]}
@@ -452,7 +476,7 @@ export function LibraryView() {
             // auto-rows-max: with overflow-hidden cards, auto rows would be squeezed to fit the scroll container instead of growing.
             <div className="grid auto-rows-max grid-cols-[repeat(auto-fill,minmax(160px,1fr))] content-start gap-4 2xl:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] 2xl:gap-5">
               {visible.map((g) => (
-                <GameCard key={g.id} game={g} now={now} onOpen={openCard} onMenu={openCardMenu} />
+                <GameCard key={g.id} game={g} now={now} onOpen={openCard} onMenu={openCardMenu} busy={g.id === checkingGameId} />
               ))}
             </div>
           )}

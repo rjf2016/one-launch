@@ -212,6 +212,7 @@ export type SettingKey =
   | 'battlenet.launch'
   | 'steam.autoLogin'
   | 'riot.pressPlay'
+  | 'play.hideToTray'
   | 'steam.path'
   | 'epic.path'
   | 'battlenet.path'
@@ -232,6 +233,7 @@ export const SETTING_KEYS = [
   'battlenet.launch',
   'steam.autoLogin',
   'riot.pressPlay',
+  'play.hideToTray',
   'steam.path',
   'epic.path',
   'battlenet.path',
@@ -582,6 +584,8 @@ export interface LaunchJob {
   steps: JobStep[];
   /** Set while the switch needs the user in the launcher window; null otherwise. */
   attention: LaunchAttention | null;
+  /** The launcher was already running as the account, so the job went straight to the game launch: nothing written, snapshotted, or journaled. */
+  direct: boolean;
   /** The account switch itself completed (the launcher signed in as the account), whatever happened to the launch after it. */
   switched: boolean;
   /** What the user must still do in the launcher window for the game to start, when the launcher only opened its page (Riot); null when the launcher started the game. */

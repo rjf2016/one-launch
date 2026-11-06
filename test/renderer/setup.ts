@@ -12,4 +12,13 @@ if (!window.matchMedia) {
   })) as typeof window.matchMedia;
 }
 
+// jsdom has no ResizeObserver either; the Recent strip's scroller observes its children.
+if (!window.ResizeObserver) {
+  window.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  } as unknown as typeof window.ResizeObserver;
+}
+
 export {};

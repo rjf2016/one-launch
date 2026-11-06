@@ -206,6 +206,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         key === 'artwork.autoFetch' ||
         key === 'steam.autoLogin' ||
         key === 'riot.pressPlay' ||
+        key === 'play.hideToTray' ||
         key === 'firstRun.dismissed' ||
         key === 'window.closeToTray' ||
         key === 'updates.auto' ||
@@ -490,8 +491,9 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     const accountId = expectString(body['accountId'], 'accountId', MAX_ID_LENGTH);
     const gameId = expectNullableString(body['gameId'], 'gameId', MAX_ID_LENGTH) ?? null;
     const confirmClose = body['confirmClose'] === true;
-    const job = await deps.launch.start({ accountId, gameId, confirmClose });
-    log.info('launch job accepted', { jobId: job.id, accountId, gameId, confirmClose });
+    const instant = body['instant'] === true;
+    const job = await deps.launch.start({ accountId, gameId, confirmClose, instant });
+    log.info('launch job accepted', { jobId: job.id, accountId, gameId, confirmClose, instant, direct: job.direct });
     return { job };
   });
 

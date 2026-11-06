@@ -45,6 +45,8 @@ Key files: `src/main/launchers/types.ts` (contract), `src/main/services/launcher
 
 **`start({accountId, gameId|null, confirmClose})`**: refuses with `BUSY` (busy or closing) or `DRY_RUN`. It sets `starting` synchronously *before* awaiting the preflight, so two concurrent starts cannot both pass. It rejects a game and account from different launchers, and when `confirmClose` is false checks the preflight again (throwing `CONFIRM_REQUIRED`, which sends the dialog to its confirm stage); the dialog's own preflight answers that check when it is for the same account and under 10 s old, so the usual Play pays for one plan here, not two. Each preflight answers one start. Then it creates the job with a fresh `AbortController`, runs `run()` in the background, and returns a snapshot. `gameId: null` means switch only.
 
+**Direct jobs.** When the preflight the start consumed says `alreadyActive && launcherRunning` and a game is named, the job is `direct`: the adapter's switch is never called (no journal, no snapshot, no second round of process or registry checks), the plan's steps go on the job as `skipped`, `switched` is set, and `run()` goes straight to `launchGame` with `startedBySwitch: false`, then `touchLastUsed`, the history row, and `done`. A plain switch (`gameId: null`) and a start with `confirmClose` never go direct. The input's `instant` flag (a one-click Play from a card) changes nothing here; `deps.onFinished(job, { instant })` runs after every job settles, and main uses it to hide the window after an instant direct job that ended `done` (`architecture.md` › Settings, `play.hideToTray`).
+
 **`run()`**:
 - Begins the journal, then calls `launchers.switch()`. `onProgress` replaces `job.steps` (plus the game's `launch` step); `onAttention` sets `job.attention`.
 - Clears the journal as soon as the switch settles, before the game launch, so a crash during the launch never offers to undo a finished switch.
@@ -55,7 +57,7 @@ Key files: `src/main/launchers/types.ts` (contract), `src/main/services/launcher
 
 **Steps and phases:** the adapters' step ids are `close`, `capture`, `backup`, `file`, `registry…`, `start`, `wait`, `verify`, `login`, `manual`, `recapture`, and `LaunchService` adds `launch`. `src/renderer/src/lib/phases.ts` folds them into five phases. A new step id must be added there (otherwise it falls into "Switch") and, if it runs after the writes, to `AFTER_WRITES` in the journal.
 
-**Renderer:** `LaunchHost.tsx` polls `launch:status` every 150 ms while `running`. `LaunchDialog.tsx` picks the outcome sentence from `state`, `switched`, and `restored`. See the renderer doc.
+**Renderer:** `LaunchHost.tsx` polls `launch:status` every 150 ms while `running`. `LaunchDialog.tsx` picks the outcome sentence from `state`, `switched`, and `restored`; an instant request keeps the dialog out of sight unless something needs the user. See the renderer doc.
 
 **Cancel and quit:** `cancel(jobId)` aborts only the current running job. At quit, "Quit anyway" calls `stop()` (sets `closing`, aborts), then `whenIdle(10 s)`. Logoff (`session-end`) does the same without a prompt. A switch that outlives the wait leaves its journal behind.
 

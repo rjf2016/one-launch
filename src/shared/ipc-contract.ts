@@ -136,7 +136,7 @@ export interface IpcContract {
    * while the setting is on, CONFIRM_REQUIRED when the launcher would be closed without confirmClose,
    * and BUSY while another job runs. Poll launch:status for progress.
    */
-  'launch:start': { req: { accountId: string; gameId: string | null; confirmClose: boolean }; res: { job: LaunchJob } };
+  'launch:start': { req: { accountId: string; gameId: string | null; confirmClose: boolean; instant?: boolean }; res: { job: LaunchJob } };
   'launch:status': { req: { jobId: string }; res: { job: LaunchJob } };
   /** Aborts the job. Before the launcher has been started again, anything written is put back; after that the launcher is left where it is. */
   'launch:cancel': { req: { jobId: string }; res: { job: LaunchJob } };

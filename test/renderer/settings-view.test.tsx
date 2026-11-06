@@ -78,6 +78,34 @@ describe('Settings › General: keep running in the system tray', () => {
   });
 });
 
+describe('Settings › Launchers: hide One Launch after Play', () => {
+  const hideSwitch = () => screen.findByRole('switch', { name: 'Hide One Launch after Play' });
+
+  it('is on until the user turns it off, and stores the choice', async () => {
+    const bridge = settingsPage();
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    await user.click(tab('Launchers'));
+    const toggle = await hideSwitch();
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('true'));
+    expect(screen.getByText('Sends the window to the tray as the game starts, when no account switch is needed.')).toBeTruthy();
+    await user.click(toggle);
+    await waitFor(() => expect(bridge.sent('settings:set')).toEqual([{ key: 'play.hideToTray', value: 'false' }]));
+    await waitFor(() => expect(toggle.getAttribute('aria-checked')).toBe('false'));
+  });
+
+  it('is off and disabled while the window does not stay in the tray, and says what it needs', async () => {
+    settingsPage({ 'window.closeToTray': 'false' });
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    await user.click(tab('Launchers'));
+    const toggle = await hideSwitch();
+    await waitFor(() => expect(toggle.hasAttribute('disabled')).toBe(true));
+    expect(toggle.getAttribute('aria-checked')).toBe('false');
+    expect(screen.getByText('Needs Minimize One Launch to System Tray, in General.')).toBeTruthy();
+  });
+});
+
 describe('Settings › General: start with Windows', () => {
   const autostartSwitch = () => screen.findByRole('switch', { name: 'Start with Windows' });
 

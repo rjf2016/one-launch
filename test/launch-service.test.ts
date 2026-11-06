@@ -58,6 +58,9 @@ class ScriptedSteam implements LauncherAdapter {
   readonly id = 'steam' as const;
   readonly displayName = 'Steam';
   running = false;
+  /** The files already name the account and, if Steam runs, it is signed in as it: a switch would change nothing. */
+  alreadyActive = false;
+  switches = 0;
   strategy: SwitchPlan['strategy'] = 'remembered';
   /** Mirrors the real adapter: the credentials path is executable only with a stored password. */
   executableWithSecret = false;
@@ -84,7 +87,17 @@ class ScriptedSteam implements LauncherAdapter {
       account: { id: account.id, displayName: account.displayName, login: account.login, launcherUid: account.launcherUid },
       strategy: this.strategy,
       current: { mostRecentLogin: null, autoLoginUser: null, running: this.running },
-      steps: [],
+      steps: [
+        {
+          id: 'close',
+          kind: 'process',
+          title: 'Close Steam',
+          target: 'steam.exe',
+          detail: 'Skipped: Steam is already signed in as this account.',
+          changes: [],
+          skipped: true,
+        },
+      ],
       warnings: this.strategy === 'credentials' && !(this.executableWithSecret && account.hasSecret) ? ['No password is stored.'] : [],
       notes: [],
       executable: this.strategy === 'remembered' || (this.executableWithSecret && account.hasSecret),
@@ -131,7 +144,7 @@ class ScriptedSteam implements LauncherAdapter {
       plan: this.plan(account),
       launcherRunning: this.running,
       runningGame: game,
-      alreadyActive: false,
+      alreadyActive: this.alreadyActive,
       closeMessage: game ? `Steam is running ${game.name}. Switching closes Steam and the game.` : 'Steam is running. Switching closes it.',
     };
   }
@@ -140,6 +153,7 @@ class ScriptedSteam implements LauncherAdapter {
   switchAccount(account: AccountRef, opts: SwitchOptions): Promise<SwitchPlan | SwitchResult>;
   async switchAccount(account: AccountRef, opts: SwitchOptions): Promise<SwitchPlan | SwitchResult> {
     if (opts.dryRun) return this.plan(account);
+    this.switches++;
     this.lastOpts = opts;
     this.passwordSeen = opts.getPassword ? opts.getPassword() : undefined;
     const steps: JobStep[] = [
@@ -203,7 +217,7 @@ class ScriptedSteam implements LauncherAdapter {
   }
 }
 
-function setup(opts: { dryRun?: boolean; journal?: SwitchJournal } = {}) {
+function setup(opts: { dryRun?: boolean; journal?: SwitchJournal; onFinished?: (job: LaunchJob, input: { instant: boolean }) => void } = {}) {
   const db = openDatabase(':memory:');
   migrate(db);
   const accounts = new AccountsService(db, new FakeVault());
@@ -213,7 +227,15 @@ function setup(opts: { dryRun?: boolean; journal?: SwitchJournal } = {}) {
   const steam = new ScriptedSteam();
   const log = createLogger('test:launch');
   const launchers = new LauncherService([steam], accounts, log);
-  const launch = new LaunchService(db, { launchers, accounts, library, settings, log, ...(opts.journal ? { journal: opts.journal } : {}) });
+  const launch = new LaunchService(db, {
+    launchers,
+    accounts,
+    library,
+    settings,
+    log,
+    ...(opts.journal ? { journal: opts.journal } : {}),
+    ...(opts.onFinished ? { onFinished: opts.onFinished } : {}),
+  });
   library.sync('steam', [GAME]);
   const game = library.list()[0]!;
   const account = accounts.create({ launcher: 'steam', displayName: 'Third', login: 'user_3', launcherUid: '76561198000000003' });
@@ -319,6 +341,86 @@ describe('LaunchService.start', () => {
     job = await waitDone(launch, (await launch.start({ accountId: account.id, gameId: null, confirmClose: false })).id);
     expect(job.state).toBe('done');
     expect(steam.lastOpts?.game).toBeUndefined();
+  });
+
+  it('a preflight that names the account as already signed in means a direct job: no switch, straight to the launch', async () => {
+    const finished: [LaunchJob, { instant: boolean }][] = [];
+    const { launch, steam, account, game, accounts, db } = setup({ onFinished: (job, input) => finished.push([job, input]) });
+    steam.running = true;
+    steam.alreadyActive = true;
+    await launch.preflight(account.id, game.id);
+    const started = await launch.start({ accountId: account.id, gameId: game.id, confirmClose: false, instant: true });
+    expect(started.direct).toBe(true);
+    expect(started.steps.map((s) => [s.title, s.status])).toEqual([
+      ['Close Steam', 'skipped'],
+      ['Launch Rocket League', 'running'],
+    ]);
+
+    const job = await waitDone(launch, started.id);
+    expect(job).toMatchObject({ state: 'done', direct: true, switched: true, backupId: null, restored: null, error: null });
+    expect(job.steps.map((s) => [s.title, s.status])).toEqual([
+      ['Close Steam', 'skipped'],
+      ['Launch Rocket League', 'done'],
+    ]);
+    expect(steam.switches).toBe(0);
+    expect(steam.preflights).toBe(1);
+    expect(steam.launched).toEqual(['252950']);
+    expect(steam.launchStartedBySwitch).toBe(false);
+    expect(accounts.require(account.id).lastUsedAt).not.toBeNull();
+    const history = db.prepare<[], { game_id: string; account_id: string; result: string }>('SELECT game_id, account_id, result FROM launch_history').all();
+    expect(history).toEqual([{ game_id: game.id, account_id: account.id, result: 'ok' }]);
+    expect(finished).toHaveLength(1);
+    expect(finished[0]![0]).toMatchObject({ id: started.id, state: 'done', direct: true });
+    expect(finished[0]![1]).toEqual({ instant: true });
+  });
+
+  it('a plain switch, a closed launcher, or a confirmed close never goes direct', async () => {
+    const { launch, steam, account, game } = setup();
+    steam.alreadyActive = true;
+    steam.running = true;
+    let job = await waitDone(launch, (await launch.start({ accountId: account.id, gameId: null, confirmClose: false })).id);
+    expect(job).toMatchObject({ state: 'done', direct: false });
+    expect(steam.switches).toBe(1);
+
+    steam.running = false;
+    job = await waitDone(launch, (await launch.start({ accountId: account.id, gameId: game.id, confirmClose: false })).id);
+    expect(job).toMatchObject({ state: 'done', direct: false });
+    expect(steam.switches).toBe(2);
+
+    steam.running = true;
+    job = await waitDone(launch, (await launch.start({ accountId: account.id, gameId: game.id, confirmClose: true })).id);
+    expect(job).toMatchObject({ state: 'done', direct: false });
+    expect(steam.switches).toBe(3);
+    expect(steam.launched).toEqual(['252950', '252950']);
+  });
+
+  it('a direct launch that fails leaves the launcher signed in: failed with switched, and the hook hears about it', async () => {
+    const finished: LaunchJob[] = [];
+    const { launch, steam, account, game, db } = setup({ onFinished: (job) => finished.push(job) });
+    steam.running = true;
+    steam.alreadyActive = true;
+    steam.launchGame = async () => {
+      throw new Error('Rocket League needs an update before it can start.');
+    };
+    const job = await waitDone(launch, (await launch.start({ accountId: account.id, gameId: game.id, confirmClose: false, instant: true })).id);
+    expect(job).toMatchObject({
+      state: 'failed',
+      direct: true,
+      switched: true,
+      restored: null,
+      error: 'Steam: Rocket League needs an update before it can start.',
+    });
+    expect(job.steps.map((s) => s.status)).toEqual(['skipped', 'failed']);
+    expect(db.prepare<[], { result: string }>('SELECT result FROM launch_history').all()).toEqual([{ result: 'failed' }]);
+    expect(finished.map((j) => j.state)).toEqual(['failed']);
+  });
+
+  it('preview mode refuses an instant start like any other', async () => {
+    const { launch, steam, account, game } = setup({ dryRun: true });
+    steam.running = true;
+    steam.alreadyActive = true;
+    await expect(launch.start({ accountId: account.id, gameId: game.id, confirmClose: false, instant: true })).rejects.toMatchObject({ code: 'DRY_RUN' });
+    expect(steam.launched).toEqual([]);
   });
 
   it('reuses the dialog’s preflight for the account whatever the game, since what the start reads from it does not depend on one', async () => {

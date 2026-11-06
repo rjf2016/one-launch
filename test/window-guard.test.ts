@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { closeRequestAction, isTrustedRendererUrl, placementFrom, startHidden } from '../src/main/window-guard';
+import { closeRequestAction, hideAfterInstantPlay, isTrustedRendererUrl, placementFrom, startHidden } from '../src/main/window-guard';
+
+describe('hideAfterInstantPlay', () => {
+  const all = { instant: true, direct: true, done: true, trayPresent: true, closeToTray: true, hideToTray: true };
+
+  it('hides only after a one-click Play that needed no switch and launched', () => {
+    expect(hideAfterInstantPlay(all)).toBe(true);
+  });
+
+  it('keeps the window for a dialog Play, a switch, a failure, and whenever there is no tray to come back from', () => {
+    for (const key of Object.keys(all) as (keyof typeof all)[]) {
+      expect(hideAfterInstantPlay({ ...all, [key]: false }), key).toBe(false);
+    }
+  });
+});
 
 describe('closeRequestAction', () => {
   it('hides to the tray when the setting is on, even during a switch', () => {
