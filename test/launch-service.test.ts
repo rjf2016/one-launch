@@ -374,6 +374,33 @@ describe('LaunchService.start', () => {
     expect(finished[0]![1]).toEqual({ instant: true });
   });
 
+  it('a direct candidate looks again when the dialog’s preflight is old enough for the user to have acted on it', async () => {
+    const { launch, steam, account, game } = setup();
+    steam.running = true;
+    steam.alreadyActive = true;
+    vi.useFakeTimers({ toFake: ['Date'] });
+    try {
+      await launch.preflight(account.id, game.id);
+      vi.setSystemTime(Date.now() + 3_000);
+      steam.alreadyActive = false;
+      await expect(launch.start({ accountId: account.id, gameId: game.id, confirmClose: false, instant: true })).rejects.toMatchObject({
+        code: 'CONFIRM_REQUIRED',
+      });
+      expect(steam.preflights).toBe(2);
+      expect(steam.launched).toEqual([]);
+
+      steam.alreadyActive = true;
+      await launch.preflight(account.id, game.id);
+      vi.setSystemTime(Date.now() + 3_000);
+      const job = await waitDone(launch, (await launch.start({ accountId: account.id, gameId: game.id, confirmClose: false, instant: true })).id);
+      expect(job).toMatchObject({ state: 'done', direct: true });
+      expect(steam.preflights).toBe(4);
+      expect(steam.switches).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('a plain switch, a closed launcher, or a confirmed close never goes direct', async () => {
     const { launch, steam, account, game } = setup();
     steam.alreadyActive = true;

@@ -66,6 +66,8 @@ const HISTORY_LIMIT = 20;
 
 /** A preflight the dialog took this recently answers the start that follows it; an older one is taken again. */
 const PREFLIGHT_REUSE_MS = 10_000;
+/** A direct job trusts a reused preflight only this young: one the user had time to act on is taken again, since nothing else checks the account. */
+const PREFLIGHT_DIRECT_MS = 2_000;
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -175,7 +177,11 @@ export class LaunchService {
 
       let pf: SwitchPreflight | null = null;
       if (!input.confirmClose) {
-        pf = await this.freshPreflight(account, game);
+        const fresh = await this.freshPreflight(account, game);
+        pf = fresh.pf;
+        if (game && pf.alreadyActive && pf.launcherRunning && fresh.ageMs > PREFLIGHT_DIRECT_MS) {
+          pf = await this.deps.launchers.preflight(account, game);
+        }
         if (pf.launcherRunning && !pf.alreadyActive) {
           throw new AdapterError(account.launcher, 'start', new ConfirmationRequiredError(pf.closeMessage, pf.runningGame));
         }
@@ -224,12 +230,15 @@ export class LaunchService {
     return game;
   }
 
-  /** The dialog's own preflight when it is for this account and fresh, else a new one; what the start reads from it does not depend on the game. Each preflight answers one start. */
-  private async freshPreflight(account: Account, game: Game | null): Promise<SwitchPreflight> {
+  /** The dialog's own preflight when it is for this account and fresh (with its age), else a new one; what the start reads from it does not depend on the game. Each preflight answers one start. */
+  private async freshPreflight(account: Account, game: Game | null): Promise<{ pf: SwitchPreflight; ageMs: number }> {
     const last = this.lastPreflight;
     this.lastPreflight = null;
-    if (last && last.accountId === account.id && Date.now() - last.at <= PREFLIGHT_REUSE_MS) return last.pf;
-    return this.deps.launchers.preflight(account, game ?? undefined);
+    if (last && last.accountId === account.id) {
+      const ageMs = Date.now() - last.at;
+      if (ageMs <= PREFLIGHT_REUSE_MS) return { pf: last.pf, ageMs };
+    }
+    return { pf: await this.deps.launchers.preflight(account, game ?? undefined), ageMs: 0 };
   }
 
   /** A switch or launch is in progress, or is being started. Quitting now would leave the launcher half-switched. */
