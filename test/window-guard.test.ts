@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { closeRequestAction, hideAfterInstantPlay, isTrustedRendererUrl, placementFrom, startHidden } from '../src/main/window-guard';
 
 describe('hideAfterInstantPlay', () => {
-  const all = { instant: true, direct: true, done: true, trayPresent: true, closeToTray: true, hideToTray: true };
+  const all = { instant: true, direct: true, done: true, handOff: false, trayPresent: true, closeToTray: true, hideToTray: true };
 
   it('hides only after a one-click Play that needed no switch and launched', () => {
     expect(hideAfterInstantPlay(all)).toBe(true);
@@ -10,8 +10,13 @@ describe('hideAfterInstantPlay', () => {
 
   it('keeps the window for a dialog Play, a switch, a failure, and whenever there is no tray to come back from', () => {
     for (const key of Object.keys(all) as (keyof typeof all)[]) {
+      if (key === 'handOff') continue;
       expect(hideAfterInstantPlay({ ...all, [key]: false }), key).toBe(false);
     }
+  });
+
+  it('keeps the window when the launch ended with an instruction for the user, as a Riot launch can', () => {
+    expect(hideAfterInstantPlay({ ...all, handOff: true })).toBe(false);
   });
 });
 

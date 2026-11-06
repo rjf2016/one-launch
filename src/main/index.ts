@@ -592,6 +592,7 @@ async function bootstrap(): Promise<void> {
         instant,
         direct: job.direct,
         done: job.state === 'done',
+        handOff: job.handOff !== null,
         trayPresent: tray !== null,
         closeToTray: closeToTray(),
         hideToTray: settings.getBool('play.hideToTray', true),

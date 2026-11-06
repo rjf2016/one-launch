@@ -32,17 +32,19 @@ export function closeRequestAction(state: { quitting: boolean; closeToTray: bool
 /**
  * Whether the window hides to the tray once a one-click Play has launched its game: the user is looking at the
  * launcher or the game by then, as they would be launching directly. Only a job that went straight to the launch
- * (nothing switched) and ended well; a switch or a failure keeps the window where its progress and banner are.
+ * (nothing switched) and ended well; a switch, a failure, or a launch that still needs the user (Riot's "press Play")
+ * keeps the window where its progress and banner are.
  */
 export function hideAfterInstantPlay(state: {
   instant: boolean;
   direct: boolean;
   done: boolean;
+  handOff: boolean;
   trayPresent: boolean;
   closeToTray: boolean;
   hideToTray: boolean;
 }): boolean {
-  return state.instant && state.direct && state.done && state.trayPresent && state.closeToTray && state.hideToTray;
+  return state.instant && state.direct && state.done && !state.handOff && state.trayPresent && state.closeToTray && state.hideToTray;
 }
 
 // Without the tray there would be no way back to a window that never showed.
