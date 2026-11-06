@@ -36,7 +36,7 @@ function scenarioFile(arg) {
 const { positional, flags } = parseArgs(process.argv.slice(2));
 if (!positional[0]) refuse(USAGE);
 if (flags.exe !== undefined)
-  refuse('--exe is not supported: the driver starts only the electron.exe in node_modules or, with --packaged, dist/win-unpacked/One Launch.exe.');
+  refuse('--exe is not supported: the driver starts only the electron.exe in node_modules or, with --packaged, dist/win-unpacked/OneLaunch.exe.');
 const hold = flags.hold === undefined ? undefined : flags.hold === true ? true : Number(flags.hold);
 if (hold !== undefined && hold !== true && !(hold > 0)) refuse('--hold takes minutes: --hold or --hold=<minutes>');
 let args;

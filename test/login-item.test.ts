@@ -4,7 +4,7 @@ import type { App } from 'electron';
 import { LOGIN_ITEM_NAME, loginItemAvailable, MemoryLoginItem, START_HIDDEN_FLAG, WindowsLoginItem } from '../src/main/platform/login-item';
 import { UNINSTALLER_NAME, type InstallInput } from '../src/main/updates/availability';
 
-const EXE = 'C:\\Users\\someone\\AppData\\Local\\Programs\\One Launch\\One Launch.exe';
+const EXE = 'C:\\Users\\someone\\AppData\\Local\\Programs\\One Launch\\OneLaunch.exe';
 
 function stubApp(willLaunch = false) {
   const calls: { method: string; arg: unknown }[] = [];
@@ -58,7 +58,7 @@ describe('WindowsLoginItem', () => {
 
   it('a reinstall removes an entry for another exe or for an all-users install, and never writes one', () => {
     const nsh = readFileSync(new URL('../build/installer.nsh', import.meta.url), 'utf8');
-    const install = /!macro customInstall([\s\S]*?)!macroend/.exec(nsh)?.[1] ?? '';
+    const install = /!macro customInstall\r?\n([\s\S]*?)!macroend/.exec(nsh)?.[1] ?? '';
     expect(install).toContain(`ReadRegStr $0 HKCU "Software\\Microsoft\\Windows\\CurrentVersion\\Run" "${LOGIN_ITEM_NAME}"`);
     expect(install).toContain('$installMode == "all"');
     expect(install).toContain(`$1 != '"$appExe"'`);
@@ -102,7 +102,7 @@ describe('loginItemAvailable', () => {
   });
 
   it('not for a copy no uninstaller will remove, nor for an all-users install whose uninstaller reaches only one account', async () => {
-    expect(await loginItemAvailable(input({ execPath: 'D:\\repo\\dist\\win-unpacked\\One Launch.exe' }))).toBe(false);
+    expect(await loginItemAvailable(input({ execPath: 'D:\\repo\\dist\\win-unpacked\\OneLaunch.exe' }))).toBe(false);
     expect(await loginItemAvailable(input({ perUserInstallLocation: async () => null }))).toBe(false);
   });
 

@@ -135,7 +135,7 @@ function notices() {
     '',
     'One Launch runs on Electron, which contains Chromium and Node.js. Their licences',
     'are in LICENSE.electron.txt and LICENSES.chromium.html, in the same folder as',
-    'One Launch.exe.',
+    'OneLaunch.exe.',
     '',
     rule,
     'SQLite',
@@ -155,7 +155,7 @@ function notices() {
 
 function licencePage() {
   const own = lf(readFileSync(join(root, 'LICENSE'), 'utf8')).trim();
-  return `${own}\n\n----\n\nOne Launch includes third-party software. The licences are installed next to\nOne Launch.exe: THIRD-PARTY-NOTICES.txt, LICENSE.electron.txt, and\nLICENSES.chromium.html.\n`;
+  return `${own}\n\n----\n\nOne Launch includes third-party software. The licences are installed next to\nOneLaunch.exe: THIRD-PARTY-NOTICES.txt, LICENSE.electron.txt, and\nLICENSES.chromium.html.\n`;
 }
 
 const wanted = [

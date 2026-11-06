@@ -12,7 +12,7 @@ export const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const ELECTRON_EXE = join(repoRoot, 'node_modules', 'electron', 'dist', 'electron.exe');
-const PACKAGED_EXE = join(repoRoot, 'dist', 'win-unpacked', 'One Launch.exe');
+const PACKAGED_EXE = join(repoRoot, 'dist', 'win-unpacked', 'OneLaunch.exe');
 const UNPACKAGED_MAIN = join(repoRoot, 'out', 'main', 'index.js');
 const FAKE_LAUNCHERS_DIR = join(repoRoot, 'test', 'fake-launchers');
 const FIXTURES_DIR = join(repoRoot, 'test', 'fixtures');

@@ -16,7 +16,7 @@ node scripts/drive.mjs scripts/scenarios/views.mjs --shots=<your scratchpad>\sho
 node scripts/drive.mjs scripts/scenarios/play-all.mjs --fake --shots=<your scratchpad>\shots
 ```
 
-- `npm run build` is only for `npm run smoke:packaged` (packaged exe); it fails with `EBUSY` while `dist\win-unpacked\One Launch.exe` is running.
+- `npm run build` is only for `npm run smoke:packaged` (packaged exe); it fails with `EBUSY` while `dist\win-unpacked\OneLaunch.exe` is running.
 - Flags: `--fake[=<name|folder>]` (default `all-four`), `--knobs=<json>` (per-launcher simulator knobs, deep-merged over the scenario's), `--keep` (keep the scratch folder), `--shots=<dir>`, `--port=<n>`, `--packaged` (never with `--fake`), `--hold[=<minutes>]` (keep the app up at the scenario's end state for an interactive look, below).
 - `drive.mjs` runs only a `.mjs` file directly in `scripts/scenarios/` and starts only the repo's own builds; that is what makes its pre-approval in `.claude/settings.local.json` safe. Type the scenario path with forward slashes so the command matches the approved form.
 - Output: one `PASS`/`FAIL` line per check, the screenshot paths, and `Scenario <name> passed.` or `FAILED (n)`. On a failure the scratch folder is kept and its log and `fake-platform.json` are copied next to the screenshots; a screenshot `at-failure.png` is taken if the app is still up.

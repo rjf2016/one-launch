@@ -63,7 +63,7 @@ describe('app paths (B19)', () => {
   });
 
   it('--data-dir= moves everything, packaged or not, and wins over the environment variable (A11)', () => {
-    const exe = 'C:\\Program Files\\One Launch\\One Launch.exe';
+    const exe = 'C:\\Program Files\\One Launch\\OneLaunch.exe';
     state.isPackaged = true;
     expect(configureAppPaths([exe, '--data-dir=D:\\scratch\\packaged'])).toBe('flag');
     expect(state.paths.get('userData')).toBe('D:\\scratch\\packaged');

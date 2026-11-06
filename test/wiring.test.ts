@@ -44,7 +44,7 @@ describe('createPlatform', () => {
       askedWith.push(registry);
       return false;
     },
-    execPath: 'C:\\x\\One Launch.exe',
+    execPath: 'C:\\x\\OneLaunch.exe',
     app: {
       getLoginItemSettings: () => {
         throw new Error('the registry is not read in tests');

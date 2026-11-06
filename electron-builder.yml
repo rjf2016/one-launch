@@ -1,5 +1,7 @@
 appId: dev.onelaunch.app
 productName: One Launch
+# No space in the exe, the uninstaller or the install folder (paths with spaces need quoting wherever they are passed around); productName stays the display name.
+executableName: OneLaunch
 copyright: Copyright © 2026 rjf2016
 directories:
   buildResources: build
@@ -12,7 +14,7 @@ files:
   - '!node_modules/better-sqlite3/{src,deps,build,docs}/**'
   - '!node_modules/better-sqlite3/prebuilds/*'
   - 'node_modules/better-sqlite3/prebuilds/win32-x64.node'
-# Next to One Launch.exe, beside the LICENSE.electron.txt and LICENSES.chromium.html that electron-builder puts there. Written by `npm run notices` and gitignored; build, build:installer and the workflows run it first.
+# Next to OneLaunch.exe, beside the LICENSE.electron.txt and LICENSES.chromium.html that electron-builder puts there. Written by `npm run notices` and gitignored; build, build:installer and the workflows run it first.
 extraFiles:
   - from: build/THIRD-PARTY-NOTICES.txt
     to: THIRD-PARTY-NOTICES.txt
@@ -38,10 +40,10 @@ nsis:
   perMachine: false
   # build/license.txt is written by `npm run notices`: the MIT licence plus where the third-party notices are installed.
   license: build/license.txt
-  # Keep it false. Uninstalling must not delete accounts and backups, and if it were ever turned on it would
-  # target %APPDATA%\One Launch (the product name), not %APPDATA%\OneLaunch where the data really is.
+  # Keep it false. Uninstalling must not delete accounts and backups, and with executableName set it would
+  # delete %APPDATA%\OneLaunch, which is exactly where the data is.
   deleteAppDataOnUninstall: false
-  # The Start with Windows entry (the HKCU Run value OneLaunch): customInstall removes one left for another exe; customUnInstall removes it, except when an install runs the old uninstaller.
+  # customInit (a silent update) and customInstallMode (the wizard) move an install out of the folder named by the old product name (Programs\One Launch) into Programs\OneLaunch. The Start with Windows entry (the HKCU Run value OneLaunch): customInstall removes one left for another exe; customUnInstall removes it, except when an install runs the old uninstaller.
   include: build/installer.nsh
 # Writes latest.yml and resources/app-update.yml. Every build passes --publish never; the release workflow makes the draft and the owner signs and publishes it (docs/development.md, "Releases").
 publish:

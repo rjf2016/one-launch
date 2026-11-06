@@ -47,6 +47,6 @@ Copilot reviews every PR. When asked to handle its comments (`gh api repos/<owne
 
 ## Gotchas
 
-- `npm run build` fails with `EBUSY` while `dist\win-unpacked\One Launch.exe` runs; `npx electron-vite build` is enough for unpackaged runs.
+- `npm run build` fails with `EBUSY` while `dist\win-unpacked\OneLaunch.exe` runs; `npx electron-vite build` is enough for unpackaged runs.
 - A CI run takes about six minutes. Master's ruleset needs the head rebased onto current master with a green run on that head; `--admin` does not bypass, and a plain rerun proves nothing. Never retry a flaky run as the fix (`docs/development.md` › Packaging and CI).
 - Never commit screenshots, scratch files or `scripts/scenarios/adhoc-*.mjs`.
