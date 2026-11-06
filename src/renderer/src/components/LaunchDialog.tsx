@@ -330,13 +330,14 @@ export function LaunchDialog({ game, initialAccountId = null, instant = false, o
     };
   }, []);
 
-  // Follow the job the app already has: a running one always, a finished one when it was for this game.
+  // Follow the job the app already has: a running one always, a finished one when it was for this game and the user
+  // asked to see it. A one-click Play is a new launch, so it lets a finished job's banner go instead.
   useEffect(() => {
     const current = useUiStore.getState().activeLaunch;
     if (!current) return;
-    if (current.job.state === 'running' || (current.game?.id ?? null) === (game?.id ?? null)) setAttachedId(current.job.id);
+    if (current.job.state === 'running' || (!instant && (current.game?.id ?? null) === (game?.id ?? null))) setAttachedId(current.job.id);
     else setActiveLaunch(null);
-  }, [game, setActiveLaunch]);
+  }, [game, instant, setActiveLaunch]);
 
   useEffect(() => {
     if (!attachedId || !active || active.job.id !== attachedId) return;

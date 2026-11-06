@@ -336,6 +336,28 @@ describe('LaunchDialog: a one-click Play (instant)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('starts a new launch when the last one for this game has finished, instead of following it', async () => {
+    const earlier = job({
+      id: 'job-0',
+      state: 'failed',
+      direct: true,
+      switched: true,
+      error: 'Steam did not start the game.',
+      finishedAt: '2026-09-17T10:01:00.000Z',
+    });
+    useUiStore.getState().setActiveLaunch({ job: earlier, game: game() });
+    const fresh = job({ id: 'job-2', direct: true, switched: true });
+    const { bridge, onClose } = instant({
+      'launch:preflight': () => ({ preflight: preflight({ launcherRunning: true, alreadyActive: true }) }),
+      'launch:start': () => ({ job: fresh }),
+    });
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false, instant: true }]));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(useUiStore.getState().activeLaunch?.job).toEqual(fresh);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    useUiStore.getState().setActiveLaunch(null);
+  });
+
   it('shows the running phases for a job that has to switch, and the confirmation when the launcher must close', async () => {
     const { onClose } = instant({ 'launch:preflight': () => ({ preflight: preflight() }), 'launch:start': () => ({ job: job() }) });
     expect(await screen.findByRole('dialog')).toBeTruthy();
