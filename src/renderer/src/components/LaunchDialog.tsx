@@ -44,6 +44,12 @@ interface LaunchDialogProps {
   game: Game | null;
   /** Preselect this account (Recent strip, account page). Falls back to the most recently used one. */
   initialAccountId?: string | null;
+  /**
+   * A one-click Play: the dialog checks the launcher and starts the job as `initialAccountId` without showing
+   * itself. It appears only when something needs the user (a confirmation, a warning, preview mode, an error, a
+   * missing account, or a switch to watch); a job that went straight to the launch closes it and the banner takes over.
+   */
+  instant?: boolean;
   onClose: () => void;
 }
 
@@ -283,11 +289,14 @@ function AccountPicker({ accounts, selected, onSelect }: { accounts: Account[]; 
  * step-by-step progress → launched, or failed with the rollback state. The job itself lives in the
  * store (see LaunchHost), so the dialog can be hidden and reopened while it runs.
  */
-export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchDialogProps) {
+export function LaunchDialog({ game, initialAccountId = null, instant = false, onClose }: LaunchDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
-  useFocusTrap(dialogRef);
+  const [revealed, setRevealed] = useState(false);
+  const silent = instant && !revealed;
+  const autoRan = useRef(false);
+  useFocusTrap(dialogRef, !silent);
   const accounts = useIpcQuery(() => ipc.invoke('accounts:list'));
   const setView = useUiStore((s) => s.setView);
   const newAccount = useUiStore((s) => s.newAccount);
@@ -321,13 +330,14 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
     };
   }, []);
 
-  // Follow the job the app already has: a running one always, a finished one when it was for this game.
+  // Follow the job the app already has: a running one always, a finished one when it was for this game and the user
+  // asked to see it. A one-click Play is a new launch, so it lets a finished job's banner go instead.
   useEffect(() => {
     const current = useUiStore.getState().activeLaunch;
     if (!current) return;
-    if (current.job.state === 'running' || (current.game?.id ?? null) === (game?.id ?? null)) setAttachedId(current.job.id);
+    if (current.job.state === 'running' || (!instant && (current.game?.id ?? null) === (game?.id ?? null))) setAttachedId(current.job.id);
     else setActiveLaunch(null);
-  }, [game, setActiveLaunch]);
+  }, [game, instant, setActiveLaunch]);
 
   useEffect(() => {
     if (!attachedId || !active || active.job.id !== attachedId) return;
@@ -343,15 +353,16 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
   }, [candidates, selected, initialAccountId]);
 
   useEffect(() => {
+    if (silent) return;
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape' && !busy) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose, busy]);
+  }, [onClose, busy, silent]);
 
   useEffect(() => {
-    if (stage.kind !== 'pick') return;
+    if (stage.kind !== 'pick' || silent) return;
     const onKey = (e: KeyboardEvent): void => {
       if (e.key !== 'Enter' || e.ctrlKey || e.altKey || e.shiftKey) return;
       const tag = (e.target as HTMLElement | null)?.tagName;
@@ -365,7 +376,30 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
 
   const account = candidates.find((a) => a.id === selected) ?? null;
   const empty = stage.kind === 'pick' && !accounts.loading && !accounts.error && candidates.length === 0;
-  useFocusWhenReady(account !== null && stage.kind === 'pick', dialogRef, closeRef, primaryRef);
+  useFocusWhenReady(!silent && account !== null && stage.kind === 'pick', dialogRef, closeRef, primaryRef);
+
+  // An instant request plays as the account it came with, once; anything that stops short of a start shows the dialog.
+  // `candidates` is a fresh array every render and `check` a fresh function, so the deps are the values that decide; the ref keeps it to one run.
+  useEffect(() => {
+    if (!instant || autoRan.current || stage.kind !== 'pick' || accounts.loading) return;
+    const wanted = candidates.find((a) => a.id === initialAccountId) ?? null;
+    if (accounts.error || wanted === null) {
+      autoRan.current = true;
+      setRevealed(true);
+      return;
+    }
+    if (selected !== wanted.id) return;
+    autoRan.current = true;
+    void check();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instant, stage.kind, accounts.loading, accounts.error, selected, initialAccountId]);
+
+  // Every stage past the check needs the user, except a job that went straight to the launch (start() closes on it).
+  useEffect(() => {
+    if (!instant || revealed || stage.kind === 'pick' || stage.kind === 'checking') return;
+    if ((stage.kind === 'running' || stage.kind === 'finished') && stage.job.direct) return;
+    setRevealed(true);
+  }, [instant, revealed, stage]);
   const names: PhaseNames = { launcher: clientName, account: account?.displayName ?? '', game: game?.name ?? null };
   const jobNames = (job: LaunchJob): PhaseNames => ({ launcher: clientName, account: job.account.displayName, game: job.game?.name ?? null });
 
@@ -389,9 +423,13 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
     submittingRef.current = true;
     setSubmitting(true);
     try {
-      const { job } = await ipc.invoke('launch:start', { accountId: account.id, gameId: game?.id ?? null, confirmClose });
+      const { job } = await ipc.invoke('launch:start', { accountId: account.id, gameId: game?.id ?? null, confirmClose, instant });
       setActiveLaunch({ job, game });
       if (!mounted.current) return;
+      if (instant && job.direct) {
+        onClose();
+        return;
+      }
       setAttachedId(job.id);
       setStage({ kind: 'running', job });
     } catch (err) {
@@ -459,6 +497,8 @@ export function LaunchDialog({ game, initialAccountId = null, onClose }: LaunchD
   const title = game ? game.name : 'Switch account';
   const actionLabel = game ? 'Play' : 'Switch';
   const actionIcon = game ? <Play /> : <ArrowRightLeft />;
+
+  if (silent) return null;
 
   return (
     <div className="fixed inset-x-0 top-9 bottom-0 z-30 flex items-center justify-center bg-bg/70 p-6" onClick={busy ? undefined : onClose} role="presentation">

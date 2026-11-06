@@ -1,11 +1,33 @@
 // @vitest-environment jsdom
 import './setup';
-import { fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GameCard } from '../../src/renderer/src/components/GameCard';
 import { game } from './harness';
 
 const art = (source: 'steamcdn' | 'launcher', grid: string) => ({ source, grid, hero: null, logo: null, fetchedAt: '2026-10-01T00:00:00.000Z' });
+
+afterEach(cleanup);
+
+describe('GameCard: Play', () => {
+  it('plays on a click or Enter on the poster, and shows who it would play as', () => {
+    const onOpen = vi.fn();
+    const g = game({ lastLaunch: { accountId: 'acct-alt', accountName: 'Alt', launchedAt: '2026-10-01T00:00:00.000Z' } });
+    render(<GameCard game={g} now={Date.now()} onOpen={onOpen} onMenu={vi.fn()} />);
+    const play = screen.getByRole('button', { name: 'Play Dota 2' });
+    expect(screen.getByText(/^Alt/)).toBeTruthy();
+    play.focus();
+    fireEvent.click(play);
+    expect(onOpen).toHaveBeenCalledWith(g);
+    expect(play.getAttribute('aria-busy')).toBeNull();
+  });
+
+  it('spins while a one-click Play is being checked', () => {
+    const { container } = render(<GameCard game={game()} now={Date.now()} onOpen={vi.fn()} onMenu={vi.fn()} busy />);
+    expect(screen.getByRole('button', { name: 'Play Dota 2' }).getAttribute('aria-busy')).toBe('true');
+    expect(container.querySelector('.animate-spin')).not.toBeNull();
+  });
+});
 
 describe('GameCard artwork', () => {
   it('fills the poster with a cover and drops the name once it has loaded', () => {

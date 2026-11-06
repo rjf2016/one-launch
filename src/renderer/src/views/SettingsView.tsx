@@ -36,6 +36,7 @@ type EditableSetting =
   | 'battlenet.launch'
   | 'steam.autoLogin'
   | 'riot.pressPlay'
+  | 'play.hideToTray'
   | 'window.closeToTray'
   | 'updates.auto'
   | 'whatsNew.enabled';
@@ -95,6 +96,7 @@ export function SettingsView() {
   const battlenetLaunch: BattlenetLaunchForm = (settings.data?.settings['battlenet.launch'] as BattlenetLaunchForm | undefined) ?? 'exec';
   const steamAutoLogin = settings.data?.settings['steam.autoLogin'] === 'true';
   const riotPressPlay = settings.data?.settings['riot.pressPlay'] !== 'false';
+  const hideToTray = settings.data?.settings['play.hideToTray'] !== 'false';
   const closeToTray = settings.data?.settings['window.closeToTray'] !== 'false';
   const whatsNewOn = settings.data?.settings['whatsNew.enabled'] !== 'false';
 
@@ -245,6 +247,22 @@ export function SettingsView() {
                       checked={riotPressPlay}
                       disabled={settings.loading}
                       onChange={(next) => void setSetting('riot.pressPlay', String(next))}
+                    />
+                  </Row>
+                  <Row
+                    label="Hide One Launch after Play"
+                    hint={
+                      closeToTray
+                        ? 'Sends the window to the tray as the game starts, when no account switch is needed.'
+                        : 'Needs Minimize One Launch to System Tray, in General.'
+                    }
+                    error={errorFor('play.hideToTray')}
+                  >
+                    <Toggle
+                      label="Hide One Launch after Play"
+                      checked={hideToTray && closeToTray}
+                      disabled={settings.loading || !closeToTray}
+                      onChange={(next) => void setSetting('play.hideToTray', String(next))}
                     />
                   </Row>
                 </Panel>

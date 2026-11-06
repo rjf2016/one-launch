@@ -15,11 +15,16 @@ const MAIN = account({ id: 'acct-main', displayName: 'Main', login: 'user_1', la
 const ALT = account({ id: 'acct-alt', displayName: 'Alt', login: 'user_2', lastUsedAt: '2026-09-17T10:00:00.000Z' });
 const EPIC = account({ id: 'acct-epic', launcher: 'epic', displayName: 'Epic one', login: 'someone@example.com' });
 
-function open(handlers: Handlers = {}, props: { initialAccountId?: string | null; game?: ReturnType<typeof game> | null } = {}) {
+function open(handlers: Handlers = {}, props: { initialAccountId?: string | null; game?: ReturnType<typeof game> | null; instant?: boolean } = {}) {
   const bridge = installBridge({ 'accounts:list': () => ({ accounts: [MAIN, ALT, EPIC] }), ...handlers });
   const onClose = vi.fn();
   const view = render(
-    <LaunchDialog game={props.game === undefined ? game() : props.game} initialAccountId={props.initialAccountId ?? null} onClose={onClose} />,
+    <LaunchDialog
+      game={props.game === undefined ? game() : props.game}
+      initialAccountId={props.initialAccountId ?? null}
+      instant={props.instant ?? false}
+      onClose={onClose}
+    />,
   );
   return { bridge, onClose, user: userEvent.setup(), ...view };
 }
@@ -160,7 +165,7 @@ describe('LaunchDialog: preview mode', () => {
     });
     await user.click(await playButton());
     await user.click(await screen.findByRole('button', { name: 'Turn preview off and play now' }));
-    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false }]));
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false, instant: false }]));
     expect(bridge.sent('settings:set')).toEqual([{ key: 'dryRun', value: 'false' }]);
     expect(bridge.sent('launch:preflight')).toHaveLength(2);
     expect(useUiStore.getState().settingsRevision).toBe(1);
@@ -193,7 +198,7 @@ describe('LaunchDialog: confirmation and refusals', () => {
     expect(await screen.findByText('Steam is running Dota 2. Switching closes both.')).toBeTruthy();
     expect(bridge.sent('launch:start')).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Close Steam and continue' }));
-    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: true }]));
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: true, instant: false }]));
   });
 
   it('shows plan warnings behind Continue without claiming a confirmation', async () => {
@@ -204,7 +209,7 @@ describe('LaunchDialog: confirmation and refusals', () => {
     await user.click(await playButton());
     expect(within(await screen.findByRole('dialog')).getAllByText('No password is stored; Steam may ask you to sign in.').length).toBeGreaterThan(0);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
-    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false }]));
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false, instant: false }]));
   });
 
   const NOTE = 'Steam is already set to sign in as user_2. The real switch would change nothing.';
@@ -215,7 +220,7 @@ describe('LaunchDialog: confirmation and refusals', () => {
       'launch:start': () => ({ job: job() }),
     });
     await user.click(await playButton());
-    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false }]));
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false, instant: false }]));
     expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull();
   });
 
@@ -308,6 +313,93 @@ describe('LaunchDialog: confirmation and refusals', () => {
     });
     await user.click(await playButton());
     expect((await screen.findByRole('alert')).textContent).toBe('Steam: loginusers.vdf could not be read');
+  });
+});
+
+describe('LaunchDialog: a one-click Play (instant)', () => {
+  const instant = (handlers: Handlers = {}, props: { initialAccountId?: string | null; game?: ReturnType<typeof game> | null } = {}) =>
+    open(handlers, { instant: true, initialAccountId: 'acct-alt', ...props });
+
+  it('shows nothing, checks the launcher, starts as the account it came with, and closes on a direct job', async () => {
+    const checked = deferred<{ preflight: LaunchPreflight }>();
+    const started = deferred<{ job: ReturnType<typeof job> }>();
+    const { bridge, onClose } = instant({ 'launch:preflight': () => checked.promise, 'launch:start': () => started.promise });
+    await waitFor(() => expect(bridge.sent('launch:preflight')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1' }]));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    await act(async () => checked.resolve({ preflight: preflight({ launcherRunning: true, alreadyActive: true }) }));
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false, instant: true }]));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    const direct = job({ direct: true, switched: true });
+    await act(async () => started.resolve({ job: direct }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(useUiStore.getState().activeLaunch?.job).toEqual(direct);
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('starts a new launch when the last one for this game has finished, instead of following it', async () => {
+    const earlier = job({
+      id: 'job-0',
+      state: 'failed',
+      direct: true,
+      switched: true,
+      error: 'Steam did not start the game.',
+      finishedAt: '2026-09-17T10:01:00.000Z',
+    });
+    useUiStore.getState().setActiveLaunch({ job: earlier, game: game() });
+    const fresh = job({ id: 'job-2', direct: true, switched: true });
+    const { bridge, onClose } = instant({
+      'launch:preflight': () => ({ preflight: preflight({ launcherRunning: true, alreadyActive: true }) }),
+      'launch:start': () => ({ job: fresh }),
+    });
+    await waitFor(() => expect(bridge.sent('launch:start')).toEqual([{ accountId: 'acct-alt', gameId: 'game-1', confirmClose: false, instant: true }]));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(useUiStore.getState().activeLaunch?.job).toEqual(fresh);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    useUiStore.getState().setActiveLaunch(null);
+  });
+
+  it('shows the running phases for a job that has to switch, and the confirmation when the launcher must close', async () => {
+    const { onClose } = instant({ 'launch:preflight': () => ({ preflight: preflight() }), 'launch:start': () => ({ job: job() }) });
+    expect(await screen.findByRole('dialog')).toBeTruthy();
+    await shown('Show details');
+    expect(onClose).not.toHaveBeenCalled();
+    useUiStore.getState().setActiveLaunch(null);
+
+    const { user, bridge } = instant({
+      'launch:preflight': () => ({
+        preflight: preflight({ launcherRunning: true, needsConfirmation: true, closeMessage: 'Steam is running. Switching closes it.' }),
+      }),
+    });
+    expect(await screen.findByRole('button', { name: 'Close Steam and continue' })).toBeTruthy();
+    expect(bridge.sent('launch:start')).toEqual([]);
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    await playButton();
+  });
+
+  it('falls back to the picker when the account it came with is gone, without checking anything', async () => {
+    const { bridge } = instant({}, { initialAccountId: 'acct-gone' });
+    expect(await playButton()).toBeTruthy();
+    expect(screen.getByText('Play as Alt')).toBeTruthy();
+    expect(bridge.sent('launch:preflight')).toEqual([]);
+  });
+
+  it('shows preview mode, a refusal, and a busy app instead of starting', async () => {
+    const { bridge, unmount } = instant({ 'launch:preflight': () => ({ preflight: preflight({ dryRun: true }) }) });
+    await shown('Preview mode is on, so nothing happened. A real switch would do this:');
+    expect(bridge.sent('launch:start')).toEqual([]);
+    unmount();
+
+    const blocked = instant({ 'launch:preflight': () => ({ preflight: preflight({ blocked: 'Steam is not installed on this PC.' }) }) });
+    expect(await screen.findByText('Steam is not installed on this PC.')).toBeTruthy();
+    blocked.unmount();
+
+    instant({
+      'launch:preflight': () => ({ preflight: preflight() }),
+      'launch:start': () => {
+        throw new BridgeError('BUSY', 'Another switch is still running. Wait for it to finish.');
+      },
+    });
+    expect((await screen.findByRole('alert')).textContent).toBe('Another switch is still running. Wait for it to finish.');
   });
 });
 
@@ -533,6 +625,22 @@ describe('LaunchHost', () => {
       const text = screen.getByRole('status').textContent ?? '';
       expect(text).toContain(`Switched to Alt. ${handOff}`);
       expect(text.includes('Launched')).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('says "Launching" for a direct job and "Could not launch" when only the launch failed', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let current = job({ direct: true, switched: true, steps: [jobStep('close', 'skipped'), jobStep('launch', 'running')] });
+      installBridge({ 'accounts:list': () => ({ accounts: [MAIN, ALT] }), 'launch:status': () => ({ job: current }) });
+      useUiStore.getState().setActiveLaunch({ job: current, game: game() });
+      render(<LaunchHost />);
+      expect(screen.getByRole('status').textContent).toContain('Launching Dota 2 as Alt…');
+      current = job({ direct: true, switched: true, state: 'failed', error: 'Steam: Dota 2 needs an update', finishedAt: 'x' });
+      await act(async () => vi.advanceTimersByTimeAsync(450));
+      expect(screen.getByRole('status').textContent).toContain('Could not launch Dota 2');
     } finally {
       vi.useRealTimers();
     }

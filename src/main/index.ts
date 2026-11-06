@@ -61,7 +61,7 @@ import { INSTALL_REGISTRY_KEY, updateAvailability, type InstallInput } from './u
 import { RELEASE_KEYS } from './updates/release-keys';
 import { resolveUpdateTestFeed, type UpdateTestFeed } from './updates/test-feed';
 import { UpdateService } from './updates/update-service';
-import { closeRequestAction, isTrustedRendererUrl, placementFrom, startHidden } from './window-guard';
+import { closeRequestAction, hideAfterInstantPlay, isTrustedRendererUrl, placementFrom, startHidden } from './window-guard';
 
 // The first statement of the module body runs once every static import above has been evaluated.
 const moduleLoadedAt = Date.now();
@@ -577,7 +577,31 @@ async function bootstrap(): Promise<void> {
   // Read what the last run left behind before anything in this run can start a switch and overwrite it.
   const recovery = new SwitchRecoveryService({ journal, accounts, backups, launchers, log: log.child('recovery') });
   recovery.load();
-  launch = new LaunchService(db, { launchers, accounts, library, settings, log: log.child('launch'), journal });
+  launch = new LaunchService(db, {
+    launchers,
+    accounts,
+    library,
+    settings,
+    log: log.child('launch'),
+    journal,
+    // A one-click Play that needed no switch: the game is on its way, so the window gets out of the way like the launcher's own would.
+    onFinished: (job, { instant }) => {
+      const win = mainWindow;
+      if (!win || win.isDestroyed() || !win.isVisible()) return;
+      const hide = hideAfterInstantPlay({
+        instant,
+        direct: job.direct,
+        done: job.state === 'done',
+        handOff: job.handOff !== null,
+        trayPresent: tray !== null,
+        closeToTray: closeToTray(),
+        hideToTray: settings.getBool('play.hideToTray', true),
+      });
+      if (!hide) return;
+      win.hide();
+      log.info('window hidden to the tray after an instant launch', { jobId: job.id });
+    },
+  });
   const artwork = new ArtworkService(db, {
     dir: paths.artworkDir,
     fetch: platform.fetch,

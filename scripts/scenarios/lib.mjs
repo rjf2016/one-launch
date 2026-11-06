@@ -69,9 +69,14 @@ export function readJournal(d) {
   return existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : null;
 }
 
-/** Clicks Play on a game card, picks an account, takes a screenshot of the picker, and presses Play. */
+/**
+ * Opens the picker for a game through its card menu's "Play as…" (the poster itself plays at once as the last
+ * account once the game has been launched here), picks an account, takes a screenshot of the picker, and presses Play.
+ */
 export async function startPlay(d, { game, account, tag }) {
-  await d.click(`Play ${game}`);
+  await d.click(`More for ${game}`);
+  await d.waitFor('Play as…');
+  await d.click('Play as…');
   await d.waitFor(() => /Pick the account to use|Play as /.test(document.body.innerText));
   await d.click({ contains: account });
   await d.waitFor(`Play as ${account}`);

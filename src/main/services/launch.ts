@@ -58,12 +58,16 @@ export interface StartLaunchInput {
   gameId: string | null;
   /** The user has confirmed the launcher (and any running game) may be closed. */
   confirmClose: boolean;
+  /** A one-click Play from a game card, with no dialog: main may hide the window once a direct job has launched. */
+  instant?: boolean;
 }
 
 const HISTORY_LIMIT = 20;
 
 /** A preflight the dialog took this recently answers the start that follows it; an older one is taken again. */
 const PREFLIGHT_REUSE_MS = 10_000;
+/** A direct job trusts a reused preflight only this young: one the user had time to act on is taken again, since nothing else checks the account. */
+const PREFLIGHT_DIRECT_MS = 2_000;
 
 function errorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
@@ -95,6 +99,8 @@ export class LaunchService {
       settings: SettingsService;
       log: Logger;
       journal?: SwitchJournal;
+      /** Called once a job has settled, with its final snapshot. */
+      onFinished?: (job: LaunchJob, input: { instant: boolean }) => void;
     },
   ) {
     this.insertHistory = db.prepare<[string, string, string, string, string]>(
@@ -169,23 +175,33 @@ export class LaunchService {
       const account = this.deps.accounts.require(input.accountId);
       const game = this.gameFor(account, input.gameId);
 
+      let pf: SwitchPreflight | null = null;
       if (!input.confirmClose) {
-        const pf = await this.freshPreflight(account, game);
+        const fresh = await this.freshPreflight(account, game);
+        pf = fresh.pf;
+        if (game && pf.alreadyActive && pf.launcherRunning && fresh.ageMs > PREFLIGHT_DIRECT_MS) {
+          pf = await this.deps.launchers.preflight(account, game);
+        }
         if (pf.launcherRunning && !pf.alreadyActive) {
           throw new AdapterError(account.launcher, 'start', new ConfirmationRequiredError(pf.closeMessage, pf.runningGame));
         }
         if (this.closing) throw new LaunchBusyError();
       }
 
+      // The launcher is running and signed in as the account, so a switch would touch nothing: the job goes straight
+      // to the game launch. A plain switch still runs the adapter, since confirming the sign-in is its whole point.
+      const direct = pf !== null && game !== null && pf.alreadyActive && pf.launcherRunning;
       const launchStep: JobStep | null = game ? { id: 'launch', title: `Launch ${game.name}`, status: 'pending', detail: '' } : null;
+      const skipped: JobStep[] = direct ? pf!.plan.steps.map((s) => ({ id: s.id, title: s.title, status: 'skipped', detail: s.detail ?? '' })) : [];
       const job: LaunchJob = {
         id: randomUUID(),
         state: 'running',
         launcher: account.launcher,
         account: { id: account.id, displayName: account.displayName, login: account.login },
         game: game ? { id: game.id, name: game.name, launcherGameId: game.launcherGameId } : null,
-        steps: launchStep ? [launchStep] : [],
+        steps: launchStep ? [...skipped, launchStep] : [],
         attention: null,
+        direct,
         switched: false,
         handOff: null,
         backupId: null,
@@ -196,8 +212,8 @@ export class LaunchService {
       };
       this.current = job;
       this.controller = new AbortController();
-      this.deps.log.info('launch job started', { jobId: job.id, accountId: account.id, gameId: game?.id ?? null });
-      void this.run(job, account, game, input.confirmClose, this.controller.signal);
+      this.deps.log.info('launch job started', { jobId: job.id, accountId: account.id, gameId: game?.id ?? null, direct });
+      void this.run(job, account, game, { confirmClose: input.confirmClose, instant: input.instant === true }, this.controller.signal);
       return this.snapshot(job);
     } finally {
       this.starting = false;
@@ -214,12 +230,15 @@ export class LaunchService {
     return game;
   }
 
-  /** The dialog's own preflight when it is for this account and fresh, else a new one; what the start reads from it does not depend on the game. Each preflight answers one start. */
-  private async freshPreflight(account: Account, game: Game | null): Promise<SwitchPreflight> {
+  /** The dialog's own preflight when it is for this account and fresh (with its age), else a new one; what the start reads from it does not depend on the game. Each preflight answers one start. */
+  private async freshPreflight(account: Account, game: Game | null): Promise<{ pf: SwitchPreflight; ageMs: number }> {
     const last = this.lastPreflight;
     this.lastPreflight = null;
-    if (last && last.accountId === account.id && Date.now() - last.at <= PREFLIGHT_REUSE_MS) return last.pf;
-    return this.deps.launchers.preflight(account, game ?? undefined);
+    if (last && last.accountId === account.id) {
+      const ageMs = Date.now() - last.at;
+      if (ageMs <= PREFLIGHT_REUSE_MS) return { pf: last.pf, ageMs };
+    }
+    return { pf: await this.deps.launchers.preflight(account, game ?? undefined), ageMs: 0 };
   }
 
   /** A switch or launch is in progress, or is being started. Quitting now would leave the launcher half-switched. */
@@ -267,8 +286,14 @@ export class LaunchService {
     }
   }
 
-  private async run(job: LaunchJob, account: Account, game: Game | null, confirmClose: boolean, signal: AbortSignal): Promise<void> {
-    const launchStep: JobStep | null = game ? { id: 'launch', title: `Launch ${game.name}`, status: 'pending', detail: '' } : null;
+  private async run(
+    job: LaunchJob,
+    account: Account,
+    game: Game | null,
+    input: { confirmClose: boolean; instant: boolean },
+    signal: AbortSignal,
+  ): Promise<void> {
+    const launchStep: JobStep | null = game ? job.steps[job.steps.length - 1]! : null;
     const startedMs = Date.now();
     const stepStarts = new Map<string, number>();
     /** Logs how long each step ran, from the moment it was reported running to the moment it was not. */
@@ -290,10 +315,24 @@ export class LaunchService {
     let result: LaunchResult = 'failed';
     const journal = this.deps.journal;
     try {
+      if (job.direct && game && launchStep) {
+        job.switched = true;
+        launchStep.status = 'running';
+        timeSteps();
+        const { command, handOff } = await this.deps.launchers.launchGame(account.launcher, game, { signal, startedBySwitch: false });
+        launchStep.status = 'done';
+        launchStep.detail = `Sent ${command}`;
+        job.handOff = handOff ?? null;
+        this.deps.accounts.touchLastUsed(account.id);
+        result = 'ok';
+        job.state = 'done';
+        this.deps.log.info('launch job direct', { jobId: job.id, ms: Date.now() - startedMs });
+        return;
+      }
       journal?.begin({ jobId: job.id, launcher: account.launcher, accountId: account.id });
       const switched = await this.deps.launchers
         .switch(account, {
-          confirmClose,
+          confirmClose: input.confirmClose,
           signal,
           ...(game ? { game: { launcherGameId: game.launcherGameId, name: game.name } } : {}),
           onProgress: (steps) => {
@@ -379,6 +418,11 @@ export class LaunchService {
       if (this.recent.length > HISTORY_LIMIT) this.recent.length = HISTORY_LIMIT;
       this.deps.log.info('launch job finished', { jobId: job.id, state: job.state, restored: job.restored, ms: Date.now() - startedMs });
       this.notifyIdle();
+      try {
+        this.deps.onFinished?.(this.snapshot(job), { instant: input.instant });
+      } catch (err) {
+        this.deps.log.warn('launch job finished hook failed', { jobId: job.id, error: err });
+      }
     }
   }
 

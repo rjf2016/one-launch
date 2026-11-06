@@ -54,6 +54,8 @@ export interface ConfirmOptions {
 export interface LaunchRequest {
   game: Game | null;
   initialAccountId: string | null;
+  /** A one-click Play: the dialog stays out of sight and plays as `initialAccountId`, showing itself only when something needs the user. */
+  instant?: boolean;
 }
 
 /** The switch-and-launch job the app is following. It outlives the dialog, so navigating away never loses it. */

@@ -195,6 +195,7 @@ export function job(over: Partial<LaunchJob> = {}): LaunchJob {
       jobStep('launch', 'pending'),
     ],
     attention: null,
+    direct: false,
     switched: false,
     handOff: null,
     backupId: null,

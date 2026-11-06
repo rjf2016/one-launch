@@ -221,15 +221,15 @@ describe('IPC handlers: what reaches the services (B19)', () => {
   it('treats only a literal true as a confirmation or a forced refresh', async () => {
     answers['launch.start'] = () => ({ id: 'job-1' });
     answers['artwork.refresh'] = () => 1;
-    await call('launch:start', { accountId: 'a', gameId: null, confirmClose: 'true' });
-    await call('launch:start', { accountId: 'a', gameId: 'g', confirmClose: true });
+    await call('launch:start', { accountId: 'a', gameId: null, confirmClose: 'true', instant: 'true' });
+    await call('launch:start', { accountId: 'a', gameId: 'g', confirmClose: true, instant: true });
     await call('launch:start', { accountId: 'a' });
     await call('artwork:refresh', { gameId: null, force: 1 });
     await call('artwork:refresh', { force: true });
     expect(reached.map((r) => r.args)).toEqual([
-      [{ accountId: 'a', gameId: null, confirmClose: false }],
-      [{ accountId: 'a', gameId: 'g', confirmClose: true }],
-      [{ accountId: 'a', gameId: null, confirmClose: false }],
+      [{ accountId: 'a', gameId: null, confirmClose: false, instant: false }],
+      [{ accountId: 'a', gameId: 'g', confirmClose: true, instant: true }],
+      [{ accountId: 'a', gameId: null, confirmClose: false, instant: false }],
       [null, false],
       [null, true],
     ]);
