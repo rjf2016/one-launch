@@ -101,6 +101,8 @@ export class LaunchService {
       journal?: SwitchJournal;
       /** Called once a job has settled, with its final snapshot. */
       onFinished?: (job: LaunchJob, input: { instant: boolean }) => void;
+      /** Dev-only: a traced fake-launcher run gets a snapshot at every change, including those a status poll is too slow to see. */
+      trace?: (job: LaunchJob) => void;
     },
   ) {
     this.insertHistory = db.prepare<[string, string, string, string, string]>(
@@ -307,6 +309,7 @@ export class LaunchService {
           this.deps.log.info('launch step finished', { jobId: job.id, step: s.id, status: s.status, ms: Date.now() - since });
         }
       }
+      this.deps.trace?.(this.snapshot(job));
     };
     const setSteps = (switchSteps: readonly JobStep[]): void => {
       job.steps = launchStep ? [...switchSteps, launchStep] : [...switchSteps];
@@ -347,6 +350,7 @@ export class LaunchService {
           },
           onAttention: (attention) => {
             job.attention = attention;
+            this.deps.trace?.(this.snapshot(job));
           },
           // Decrypted only if the adapter actually needs it (credentials path or expired-session fallback).
           getPassword: () => this.deps.accounts.decryptPassword(account.id),

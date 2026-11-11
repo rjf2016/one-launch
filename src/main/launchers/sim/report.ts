@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto';
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import type { LaunchJob } from '@shared/models';
 
 export const FAKE_REPORT_FILE = 'fake-platform.json';
 
@@ -20,39 +22,61 @@ export interface FakeReportData {
 export class FakeReport {
   readonly data: FakeReportData = { registryWrites: [], processEvents: [], opened: [], fetched: [], clipboardWrites: 0, riotLaunchRequests: [] };
   private file: string | null = null;
+  /** Dev-only: set for a traced run. `seq` counts across the kinds (plat, job, ipc), so the order between a close, a write and a start survives. */
+  onEvent: ((event: { seq: number; k: string } & Record<string, unknown>) => void) | null = null;
+  private seq = 0;
 
   attach(dataDir: string): void {
     this.file = join(dataDir, FAKE_REPORT_FILE);
     this.flush();
   }
 
+  emit(k: string, fields: Record<string, unknown>): void {
+    this.onEvent?.({ seq: this.seq++, k, ...fields });
+  }
+
+  job({ id, state, steps, attention, switched, handOff, backupId, restored, error }: LaunchJob): void {
+    this.emit('job', { job: id, state, steps: steps.map((s) => [s.id, s.status, s.title, s.detail]), attention, switched, handOff, backupId, restored, error });
+  }
+
+  fileWrite(path: string, data: Buffer | string): void {
+    this.emit('plat', { op: 'file.write', path, sha256: createHash('sha256').update(data).digest('hex') });
+  }
+
   registryWrite(entry: FakeReportData['registryWrites'][number]): void {
     this.data.registryWrites.push(entry);
+    this.emit('plat', { ...entry, op: `reg.${entry.op}` });
     this.flush();
   }
 
-  processEvent(entry: FakeReportData['processEvents'][number]): void {
+  /** `tree` is a kill's own flag, which the report file has never carried. */
+  processEvent(entry: FakeReportData['processEvents'][number], tree?: boolean): void {
     this.data.processEvents.push(entry);
+    this.emit('plat', { op: `proc.${entry.kind}`, exe: entry.exe, args: entry.args, ...(tree === undefined ? {} : { tree }) });
     this.flush();
   }
 
   opened(url: string): void {
     this.data.opened.push(url);
+    this.emit('plat', { op: 'shell.open', url });
     this.flush();
   }
 
   fetched(url: string): void {
     this.data.fetched.push(url);
+    this.emit('plat', { op: 'net.fetch', url });
     this.flush();
   }
 
   clipboardWrite(): void {
     this.data.clipboardWrites++;
+    this.emit('plat', { op: 'clip.write' });
     this.flush();
   }
 
   riotLaunchRequest(id: string): void {
     this.data.riotLaunchRequests.push(id);
+    this.emit('plat', { op: 'riot.launch', id });
     this.flush();
   }
 

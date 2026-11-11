@@ -111,6 +111,9 @@ export function writeFileAtomic(dest: string, data: Buffer | string): void {
   writeFilesAtomic([{ dest, data }]);
 }
 
+/** Dev-only: a traced fake-launcher run sets `observer` to hear of each file as it lands. Every adapter write comes through here and no simulator write does. */
+export const atomicWrites: { observer: ((dest: string, data: Buffer | string) => void) | null } = { observer: null };
+
 /** Every temp file is written before the first rename, so a full disk or a locked folder fails with nothing replaced. */
 export function writeFilesAtomic(files: readonly { dest: string; data: Buffer | string }[]): void {
   const staged = files.map((f) => ({ dest: f.dest, tmp: `${f.dest}.onelaunch-${process.pid}.tmp`, data: f.data }));
@@ -119,7 +122,10 @@ export function writeFilesAtomic(files: readonly { dest: string; data: Buffer | 
       mkdirSync(dirname(f.dest), { recursive: true });
       writeFileSync(f.tmp, f.data);
     }
-    for (const f of staged) renameSync(f.tmp, f.dest);
+    for (const f of staged) {
+      renameSync(f.tmp, f.dest);
+      atomicWrites.observer?.(f.dest, f.data);
+    }
   } finally {
     for (const f of staged) if (existsSync(f.tmp)) rmSync(f.tmp, { force: true });
   }

@@ -76,7 +76,7 @@ export interface MaterializeOptions {
  * table with the launcher simulators, every path root inside the folder, short timings, a fixture
  * network, and clipboard recorders. Nothing it returns reaches the real registry, process list, or network.
  */
-export function materializeScenario(opts: MaterializeOptions): LauncherPlatform {
+export function materializeScenario(opts: MaterializeOptions): LauncherPlatform & { report: FakeReport } {
   const { dir, dataDir, log } = opts;
   const scenario = parseScenario(JSON.parse(readFileSync(join(dir, 'scenario.json'), 'utf8')));
   const knobsFile = join(dir, 'knobs.json');
@@ -106,7 +106,12 @@ export function materializeScenario(opts: MaterializeOptions): LauncherPlatform 
   processes.addListener((exe, args) =>
     report.processEvent({ kind: exe.includes('<close>') || args[0] === '<close>' ? 'close' : 'start', exe, args: [...args] }),
   );
-  processes.addKillListener((image) => report.processEvent({ kind: 'kill', exe: image, args: [] }));
+  // A kill listener is not told whether the tree goes too, so kill itself is wrapped, as recordingRegistry wraps the registry writes.
+  const kill = processes.kill.bind(processes);
+  processes.kill = async (image, opts) => {
+    report.processEvent({ kind: 'kill', exe: image, args: [] }, opts?.tree !== false);
+    await kill(image, opts);
+  };
 
   const installed = new Set(scenario.installed);
   const logins = battlenetLogins(scenario);
@@ -166,7 +171,14 @@ export function materializeScenario(opts: MaterializeOptions): LauncherPlatform 
     readText: async () => held,
     clear: () => {
       held = '';
+      report.emit('plat', { op: 'clip.clear' });
     },
+  };
+  const loginItem = new MemoryLoginItem();
+  const setLoginItem = loginItem.set.bind(loginItem);
+  loginItem.set = (openAtLogin) => {
+    report.emit('plat', { op: 'login.set', openAtLogin });
+    return setLoginItem(openAtLogin);
   };
 
   log.info('fake launchers ready', { dir, installed: scenario.installed });
@@ -177,7 +189,7 @@ export function materializeScenario(opts: MaterializeOptions): LauncherPlatform 
     openExternal: async (url) => report.opened(url),
     fetch: artwork,
     riotLocalLaunch,
-    loginItem: new MemoryLoginItem(),
+    loginItem,
     roots: {
       steam: { defaultInstallDir: roots.nowhere },
       epic: { localAppData: roots.localAppData, programData: roots.programData, defaultInstallDir: roots.nowhere },
@@ -188,6 +200,7 @@ export function materializeScenario(opts: MaterializeOptions): LauncherPlatform 
     clipboard: { clipboard: clipboardBoard, writePrivately: record },
     seed: (targets) => applyFakeSeed(scenario.seed ?? {}, targets, log),
     ...(quitDuringSwitch ? { quitDuringSwitch } : {}),
+    report,
   };
 }
 

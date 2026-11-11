@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -30,9 +30,11 @@ import {
 } from '@shared/models';
 import { backupDatabase, migrate, openDatabase, type Db } from './db';
 import { registerIpcHandlers } from './ipc';
+import { ipcTrace } from './ipc/handle';
 import { BattlenetAdapter } from './launchers/battlenet/adapter';
 import { EpicAdapter } from './launchers/epic/adapter';
 import { RiotAdapter } from './launchers/riot/adapter';
+import type { FakeReport } from './launchers/sim/report';
 import { SteamAdapter } from './launchers/steam/adapter';
 import { loginItemAvailable, START_HIDDEN_FLAG } from './platform/login-item';
 import { configureAppPaths, ensureAppDirs, getAppPaths, type DataDirSource } from './platform/paths';
@@ -41,7 +43,7 @@ import { createPlatform, resolveFakeLaunchersDir } from './platform/wiring';
 import { AccountsService } from './services/accounts';
 import { ArtworkService } from './services/artwork';
 import { ARTWORK_SCHEME, resolveArtworkPath } from './services/artwork-url';
-import { BackupService, DEFAULT_BACKUPS_TO_KEEP } from './services/backup';
+import { atomicWrites, BackupService, DEFAULT_BACKUPS_TO_KEEP } from './services/backup';
 import { writeClipboardPrivately } from './platform/clipboard-private';
 import { ClipboardService, DEFAULT_CLIPBOARD_CLEAR_MS } from './services/clipboard';
 import { LaunchService } from './services/launch';
@@ -85,6 +87,8 @@ try {
   process.stderr.write(`One Launch: ${err instanceof Error ? err.message : String(err)}\n`);
   app.exit(2);
 }
+// Dev-only: ONELAUNCH_ORACLE_TRACE=1 on an unpackaged fake-launcher run with its own data folder records every IPC call, job change and platform event.
+const oracleTrace = !app.isPackaged && fakeLaunchersDir !== null && dataDirSource !== 'default' && process.env['ONELAUNCH_ORACLE_TRACE'] === '1';
 app.setAppUserModelId('dev.onelaunch.app');
 
 // A second instance hands over to the first (see 'second-instance' below) and leaves at once, before
@@ -456,6 +460,12 @@ async function bootstrap(): Promise<void> {
     openExternal: (url) => shell.openExternal(url),
     loginItem: { available: (registry) => loginItemAvailable(install(registry)), execPath: process.execPath, app },
   });
+  const trace = oracleTrace ? (platform as typeof platform & { report: FakeReport }).report : null;
+  if (trace) {
+    trace.onEvent = (event) => appendFileSync(join(paths.dataDir, 'oracle-trace.jsonl'), `${JSON.stringify(event)}\n`);
+    ipcTrace.record = (channel, req, res) => trace.emit('ipc', { channel, req, res });
+    atomicWrites.observer = (path, data) => trace.fileWrite(path, data);
+  }
 
   // The interface uses no permission-gated web API, and without handlers Electron grants every request, clipboard reads included.
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -584,6 +594,7 @@ async function bootstrap(): Promise<void> {
     settings,
     log: log.child('launch'),
     journal,
+    ...(trace ? { trace: trace.job.bind(trace) } : {}),
     // A one-click Play that needed no switch: the game is on its way, so the window gets out of the way like the launcher's own would.
     onFinished: (job, { instant }) => {
       const win = mainWindow;

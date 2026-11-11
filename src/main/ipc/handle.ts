@@ -22,6 +22,12 @@ export interface RegistrarOptions {
   isTrustedSender: (event: IpcMainInvokeEvent) => boolean;
 }
 
+/** Dev-only: main sets `record` for a traced fake-launcher run and nowhere else. It is handed every call with the channel's secret already masked. */
+export const ipcTrace: { record: ((channel: string, req: unknown, res: IpcEnvelope<unknown>) => void) | null } = { record: null };
+const SECRET: Readonly<Record<string, string>> = { 'accounts:create': 'password', 'accounts:setPassword': 'password', 'vault:setSecret': 'value' };
+const masked = (holder: unknown, field: string | undefined): unknown =>
+  field === undefined ? holder : holder && typeof holder === 'object' && !Array.isArray(holder) ? { ...holder, [field]: '<redacted>' } : '<redacted>';
+
 function toErrorShape(err: unknown): IpcErrorShape {
   if (err instanceof IpcRequestError) return { code: err.code, message: err.message };
   if (err && typeof err === 'object' && 'code' in err && typeof (err as { code: unknown }).code === 'string') {
@@ -42,7 +48,7 @@ export function createRegistrar(opts: RegistrarOptions) {
     if (registered.has(channel)) throw new Error(`IPC handler already registered for ${channel}`);
     registered.add(channel);
 
-    ipcMain.handle(channel, async (event, req: unknown): Promise<IpcEnvelope<IpcResponse<K>>> => {
+    const answer = async (event: IpcMainInvokeEvent, req: unknown): Promise<IpcEnvelope<IpcResponse<K>>> => {
       if (!opts.isTrustedSender(event)) {
         opts.log.warn('rejected IPC call from untrusted sender', { channel, url: event.senderFrame?.url });
         return { ok: false, error: { code: 'UNTRUSTED_SENDER', message: 'Request rejected' } };
@@ -56,6 +62,11 @@ export function createRegistrar(opts: RegistrarOptions) {
         else opts.log.error(`ipc ${channel} failed`, { code: error.code, message: error.message });
         return { ok: false, error };
       }
+    };
+    ipcMain.handle(channel, async (event, req: unknown) => {
+      const res = await answer(event, req);
+      ipcTrace.record?.(channel, masked(req, SECRET[channel]), res.ok && channel === 'vault:getSecret' ? { ok: true, data: masked(res.data, 'value') } : res);
+      return res;
     });
   };
 }
