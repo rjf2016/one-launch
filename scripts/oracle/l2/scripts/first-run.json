@@ -1,0 +1,59 @@
+{
+  "fake": "none",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "settings:getAll"
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:status"
+    },
+    {
+      "op": "invoke",
+      "channel": "library:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "artwork:status"
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "firstRun.dismissed",
+        "value": "true"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:status"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:getAll"
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:status"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:get"
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

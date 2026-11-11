@@ -1,0 +1,110 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "epic": {
+        "reactMs": 600000
+      }
+    }
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "step": "verify",
+        "status": "running"
+      }
+    },
+    {
+      "op": "crash"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:get"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:restore"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:get"
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "step": "verify",
+        "status": "running"
+      }
+    },
+    {
+      "op": "crash"
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:get"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:dismiss"
+    },
+    {
+      "op": "invoke",
+      "channel": "recovery:get"
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "epic"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

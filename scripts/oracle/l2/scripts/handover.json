@@ -1,0 +1,161 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "steam": {
+        "expiredSessions": ["user_3"]
+      },
+      "epic": {
+        "expired": ["22222222222222222222222222222222"],
+        "signInWhenAskedMs": 3000,
+        "signInAs": "22222222222222222222222222222222"
+      }
+    },
+    "timing": {
+      "steam": {
+        "signInMs": 2000,
+        "manualSignInMs": 12000
+      },
+      "epic": {
+        "signInMs": 2000
+      }
+    }
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "step": "manual",
+        "status": "running"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:copy",
+      "req": {
+        "id": "@acct:steam:user_3",
+        "field": "login"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:copy",
+      "req": {
+        "id": "@acct:steam:user_3",
+        "field": "password"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:cancel",
+      "req": {
+        "jobId": "@job:1"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "cancelled"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "state": "needs-sign-in"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:recent",
+      "req": {
+        "limit": 10
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:3",
+      "until": {
+        "step": "manual",
+        "status": "running"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:3",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "sessions:get",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

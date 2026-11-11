@@ -1,0 +1,143 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "epic"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:battlenet:saved3@example.com",
+        "gameId": "@game:battlenet:prometheus"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:battlenet:saved3@example.com",
+        "gameId": "@game:battlenet:prometheus",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:3",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "battlenet"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:riot:riot_alt",
+        "gameId": "@game:riot:valorant.live"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:riot:riot_alt",
+        "gameId": "@game:riot:valorant.live",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:4",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "riot"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:recent",
+      "req": {
+        "limit": 10
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

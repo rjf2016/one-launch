@@ -1,0 +1,91 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "settings:get",
+      "req": {
+        "key": "dryRun"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "dryRun",
+        "value": "true"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:get",
+      "req": {
+        "key": "dryRun"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": null,
+        "confirmClose": false
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "dryRun",
+        "value": "false"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:get",
+      "req": {
+        "key": "dryRun"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

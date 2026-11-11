@@ -1,0 +1,104 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "epic": {
+        "reactMs": 600000
+      }
+    },
+    "quitDuringSwitch": "keep"
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "window.closeToTray",
+        "value": "false"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "step": "verify",
+        "status": "running"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:cancel",
+      "req": {
+        "jobId": "@job:1"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "cancelled"
+      }
+    },
+    {
+      "op": "restart",
+      "knobs": {
+        "knobs": {
+          "epic": {
+            "reactMs": 600000
+          }
+        },
+        "quitDuringSwitch": "quit"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "step": "verify",
+        "status": "running"
+      }
+    },
+    {
+      "op": "shutdown"
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

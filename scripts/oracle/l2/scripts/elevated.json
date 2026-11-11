@@ -1,0 +1,57 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "steam": {
+        "runningAs": "user_1"
+      }
+    },
+    "processes": {
+      "elevated": ["steam.exe"],
+      "shutdownPolls": 100000
+    },
+    "timing": {
+      "steam": {
+        "shutdownMs": 1000,
+        "killGraceMs": 500
+      }
+    }
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "failed"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "battlenet": {
+        "gamesRunning": ["prometheus"]
+      }
+    }
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:battlenet:saved3@example.com",
+        "gameId": "@game:battlenet:prometheus"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:battlenet:saved3@example.com",
+        "gameId": "@game:battlenet:prometheus",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "failed"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:recent",
+      "req": {
+        "limit": 10
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

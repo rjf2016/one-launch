@@ -1,0 +1,40 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:epic:alt@example.com",
+        "gameId": "@game:epic:Sugar",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "epic"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

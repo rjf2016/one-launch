@@ -1,0 +1,53 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:rememberedAccounts",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:importAccounts",
+      "req": {
+        "launcher": "steam",
+        "launcherUids": ["76561198000000002", "76561198000000004"]
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:rememberedAccounts",
+      "req": {
+        "launcher": "battlenet"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:importAccounts",
+      "req": {
+        "launcher": "battlenet",
+        "launcherUids": ["saved2@example.com", "saved4@example.com", "saved5@example.com"]
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "launchers:rememberedAccounts",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

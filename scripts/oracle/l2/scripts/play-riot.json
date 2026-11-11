@@ -1,0 +1,120 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "riot.pressPlay",
+        "value": "false"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:riot:riot_alt",
+        "gameId": "@game:riot:valorant.live"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:riot:riot_alt",
+        "gameId": "@game:riot:valorant.live",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "sessions:get",
+      "req": {
+        "accountId": "@acct:riot:riot_alt"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "sessions:get",
+      "req": {
+        "accountId": "@acct:riot:riot_main"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "riot"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:recent",
+      "req": {
+        "limit": 50
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "riot.pressPlay",
+        "value": "true"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:riot:riot_main",
+        "gameId": "@game:riot:valorant.live"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:riot:riot_main",
+        "gameId": "@game:riot:valorant.live",
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "riot"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:recent",
+      "req": {
+        "limit": 50
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

@@ -1,0 +1,189 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "steam": {
+        "runningAs": "user_1",
+        "reactMs": 5000
+      }
+    },
+    "processes": {
+      "shutdownPolls": 100000
+    },
+    "timing": {
+      "steam": {
+        "shutdownMs": 4000,
+        "killGraceMs": 1000,
+        "readyGraceMs": 4000
+      }
+    }
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "step": "close",
+        "status": "running"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:cancel",
+      "req": {
+        "jobId": "@job:1"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "cancelled"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "step": "verify",
+        "status": "running"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:cancel",
+      "req": {
+        "jobId": "@job:2"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "state": "cancelled"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "restart",
+      "knobs": {
+        "knobs": {
+          "steam": {
+            "runningAs": "user_3",
+            "reactMs": 5000
+          }
+        },
+        "processes": {
+          "shutdownPolls": 100000
+        },
+        "timing": {
+          "steam": {
+            "shutdownMs": 4000,
+            "killGraceMs": 1000,
+            "readyGraceMs": 4000
+          }
+        }
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_1",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_1",
+        "gameId": "@game:steam:252950",
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:3",
+      "until": {
+        "state": "running",
+        "step": "verify",
+        "status": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:cancel",
+      "req": {
+        "jobId": "@job:3"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:3",
+      "until": {
+        "state": "cancelled"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:recent",
+      "req": {
+        "limit": 10
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

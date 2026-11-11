@@ -1,0 +1,40 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:battlenet:saved3@example.com",
+        "gameId": "@game:battlenet:prometheus"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:battlenet:saved3@example.com",
+        "gameId": "@game:battlenet:prometheus",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "battlenet"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

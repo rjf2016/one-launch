@@ -1,0 +1,101 @@
+{
+  "fake": "all-four",
+  "knobs": {
+    "knobs": {
+      "riot": {
+        "signInWhenAskedMs": 4000,
+        "signInAs": "44444444-4444-4444-8444-444444444444",
+        "staySignedIn": false
+      }
+    }
+  },
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "settings:set",
+      "req": {
+        "key": "riot.pressPlay",
+        "value": "false"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:riot:riot_new",
+        "gameId": "@game:riot:valorant.live"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:riot:riot_new",
+        "gameId": "@game:riot:valorant.live",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "step": "manual",
+        "status": "running"
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "accounts:list"
+    },
+    {
+      "op": "invoke",
+      "channel": "sessions:get",
+      "req": {
+        "accountId": "@acct:riot:riot_new"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:riot:riot_main",
+        "gameId": null
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:riot:riot_main",
+        "gameId": null,
+        "confirmClose": true,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:2",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "sessions:get",
+      "req": {
+        "accountId": "@acct:riot:riot_new"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "fake": "all-four",
+  "steps": [
+    {
+      "op": "invoke",
+      "channel": "launch:preflight",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "launch:start",
+      "req": {
+        "accountId": "@acct:steam:user_3",
+        "gameId": "@game:steam:252950",
+        "confirmClose": false,
+        "instant": false
+      }
+    },
+    {
+      "op": "awaitJob",
+      "job": "@job:1",
+      "until": {
+        "state": "done"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:restore",
+      "req": {
+        "launcher": "steam",
+        "id": "@backup:steam:1"
+      }
+    },
+    {
+      "op": "restart"
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:restore",
+      "req": {
+        "launcher": "steam",
+        "id": "@backup:steam:1"
+      }
+    },
+    {
+      "op": "invoke",
+      "channel": "backups:list",
+      "req": {
+        "launcher": "steam"
+      }
+    },
+    {
+      "op": "snapshot"
+    }
+  ]
+}
