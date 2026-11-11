@@ -22,11 +22,20 @@ Every script writes under one folder, the bundle root:
 | `node scripts/oracle/emit-schemas.mjs` | Copies `schemas/*.schema.json` into `<out>/schemas` |
 | `node scripts/oracle/manifest.mjs` | Writes `<out>/MANIFEST.json`: the pin from `<out>/PIN`, this branch's commit, a sha256 per file |
 | `node scripts/oracle/verify.mjs` | Checks the bundle; exits 0 only when every check passes |
+| `node scripts/oracle/check.mjs` | `npm run check` with the test clock started at the pin; see "Oracle clock" |
 | `npx vitest run --config scripts/oracle/vitest.config.ts` | The tooling's own unit tests |
 
 Order after any capture: generate, then `emit-schemas`, then `manifest` (from a committed tree), then `verify`.
 
 `manifest.mjs` refuses an uncommitted tree. `--allow-dirty` writes the manifest anyway with `tooling.dirty: true`, and `verify.mjs` then fails unless it gets the same flag; a bundle is only finished when it verifies without it.
+
+## Oracle clock
+
+Two tests at the pin compare a fixture's sign-in time with the real date, and fail once that sign-in is more than 60 days old. The owner decided not to fix them on `master`, so the pin stays and `npm run check` stays red on those two under the real clock. Wherever the plan says the check passes, it means `check.mjs`.
+
+`check.mjs` runs the same typecheck, lint and test suite, with one difference: each test file's clock starts at the pin's commit time (`ORACLE_CLOCK` in `lib/clock.mjs`) and runs on from there. It refuses to run when `package.json`'s `check` script is no longer the one it mirrors. `src/` and `test/` are not touched.
+
+The clock replaces `Date` only. File times, SQLite's own clock, timers and child processes keep real time. A capture whose result depends on today's date (a session's age, a stale flag) loads `lib/clock.setup.mjs` before the app code, as a `setupFiles` entry or as the generator's first import, and records `ORACLE_CLOCK` so the Rust side can set its clock to the same instant.
 
 ## Generators
 
