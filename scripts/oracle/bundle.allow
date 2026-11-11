@@ -1,0 +1,21 @@
+# Values verify.mjs lets through in the oracle bundle, on top of scripts/hooks/no-secrets.allow.
+# One fingerprint per line (the first 16 hex characters of the value's sha256), under a comment saying what the value is
+# and where it sits, so the value itself is never copied here. Add one only for a placeholder or a generated id.
+
+# jobId and accountId in fixtures/data-folder/switch.json: random ids the fixture generator made for a made-up job and account
+9e7bd59976dc35e6
+b380ba77178526d8
+
+# jobId and accountId in the four fixtures/journal/switch-*.json files: random ids from the same generator run
+577afe2e986331e0
+4c4cebaf314ea97a
+
+# Folder names under fixtures/data-folder/artwork: random game ids the fixture generator made (the manifest lists them as paths)
+f3c4ac2f916b118c
+0ddd6d9eb57b2e70
+1ba70eca99f4d956
+ed79fc2a6149b7db
+add2a4c16bbd4869
+
+# Made-up token in the seed copy of the generator (fixtures/_generator): its payload is {"sub":"1234567890"}, its signature the words "signature placeholder"
+ff7004eeb42f7fb8

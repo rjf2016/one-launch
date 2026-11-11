@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test catalogue",
+  "description": "tests/catalogue.json: one entry per test of the Electron suite at the pin, with it.each expanded.",
+  "type": "object",
+  "required": ["entries"],
+  "additionalProperties": false,
+  "properties": {
+    "entries": { "type": "array", "items": { "$ref": "#/$defs/entry" } }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "required": ["id", "file", "suite", "name", "environment", "kind", "golden"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^T-[0-9A-Za-z][0-9A-Za-z._-]*$",
+          "description": "Unique; derived from file, suite path and name, never from position."
+        },
+        "file": { "type": "string", "pattern": "^test/[^\\\\]+\\.test\\.tsx?$" },
+        "suite": { "type": "array", "items": { "type": "string" }, "description": "The enclosing describe titles, outermost first." },
+        "name": { "type": "string", "minLength": 1 },
+        "environment": { "enum": ["node", "jsdom"] },
+        "kind": { "enum": ["pure", "stateful", "adapter-flow", "renderer", "live", "tooling"] },
+        "status": { "enum": ["passed", "skipped", "todo"] },
+        "golden": {
+          "type": ["string", "null"],
+          "pattern": "^tests/goldens/[^\\\\]+\\.json$",
+          "description": "The result golden, by its path from the bundle root, where one exists."
+        },
+        "waiver": {
+          "description": "A proposed waiver category, for the owner to approve at the gate.",
+          "type": ["object", "null"],
+          "required": ["category"],
+          "additionalProperties": false,
+          "properties": {
+            "category": { "type": "string", "minLength": 1 },
+            "reason": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

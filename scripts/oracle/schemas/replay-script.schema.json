@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Replay script",
+  "description": "l2/scripts/<name>.json: one scripted run against fake launchers. Steps are gated on state, never on time; ids are written as aliases (@acct:steam:user_3, @game:steam:252950, @job:1).",
+  "type": "object",
+  "required": ["fake", "steps"],
+  "additionalProperties": false,
+  "properties": {
+    "fake": { "type": "string", "minLength": 1, "description": "The fake-launcher scenario folder under test/fake-launchers." },
+    "knobs": { "type": "object", "description": "Written as knobs.json over the scenario before the first start." },
+    "steps": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/step" } }
+  },
+  "$defs": {
+    "step": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["op", "channel"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "invoke" },
+            "channel": { "type": "string", "pattern": "^[a-z][A-Za-z]*:[a-z][A-Za-z]*$" },
+            "req": {}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op", "job", "until"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "awaitJob" },
+            "job": { "type": "string", "pattern": "^@job:[1-9][0-9]*$" },
+            "until": {
+              "description": "Every field given must match: the job's state, or a step id with its status.",
+              "type": "object",
+              "minProperties": 1,
+              "additionalProperties": { "type": ["string", "boolean", "number", "null"] }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op"],
+          "additionalProperties": false,
+          "properties": {
+            "op": { "const": "restart" },
+            "knobs": { "type": "object", "description": "Replaces knobs.json before the start." }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["op"],
+          "additionalProperties": false,
+          "properties": { "op": { "enum": ["crash", "shutdown", "snapshot"] } }
+        }
+      ]
+    }
+  }
+}

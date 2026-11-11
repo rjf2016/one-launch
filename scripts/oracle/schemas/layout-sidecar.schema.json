@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Layout sidecar",
+  "description": "ui/**/<shot>.layout.json, beside <shot>.png: what the page held when the shot was taken. Boxes are [x, y, width, height] in CSS pixels. The Rust side matches elements by role, name and ord.",
+  "type": "object",
+  "required": ["id", "viewport", "dpr", "locale", "tz", "focus", "text", "elements"],
+  "properties": {
+    "id": { "type": "integer", "minimum": 1, "description": "The row of SCREENSHOTS.md." },
+    "viewport": {
+      "type": "array",
+      "minItems": 2,
+      "prefixItems": [
+        { "type": "integer", "minimum": 1 },
+        { "type": "integer", "minimum": 1 }
+      ],
+      "items": false
+    },
+    "dpr": { "type": "number", "exclusiveMinimum": 0 },
+    "locale": { "type": "string", "pattern": "^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$" },
+    "tz": { "type": "string", "minLength": 1 },
+    "focus": { "type": ["string", "null"], "description": "The focused element as role:name, or null." },
+    "text": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["t", "box", "font", "color", "volatile"],
+        "properties": {
+          "t": { "type": "string" },
+          "box": { "$ref": "#/$defs/box" },
+          "font": {
+            "description": "[family, size in px, weight, line height in px].",
+            "type": "array",
+            "minItems": 4,
+            "prefixItems": [{ "type": "string", "minLength": 1 }, { "type": "number" }, { "type": "number" }, { "type": "number" }],
+            "items": false
+          },
+          "color": { "$ref": "#/$defs/color" },
+          "volatile": { "type": "boolean", "description": "True for time-like text that differs from one capture to the next." }
+        }
+      }
+    },
+    "elements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "name", "ord", "box", "state", "style", "cls"],
+        "properties": {
+          "role": { "type": "string", "minLength": 1 },
+          "name": { "type": "string" },
+          "ord": { "type": "integer", "minimum": 0, "description": "Position among the elements with the same role and name." },
+          "box": { "$ref": "#/$defs/box" },
+          "state": {
+            "type": "object",
+            "required": ["disabled", "checked", "expanded"],
+            "properties": {
+              "disabled": { "type": "boolean" },
+              "checked": { "enum": [true, false, "mixed", null] },
+              "expanded": { "type": ["boolean", "null"] }
+            }
+          },
+          "style": { "type": "object" },
+          "cls": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "box": {
+      "type": "array",
+      "minItems": 4,
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number", "minimum": 0 }, { "type": "number", "minimum": 0 }],
+      "items": false
+    },
+    "color": { "type": "string", "pattern": "^#[0-9a-f]{6}([0-9a-f]{2})?$" }
+  }
+}

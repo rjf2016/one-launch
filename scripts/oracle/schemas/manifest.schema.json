@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Oracle manifest",
+  "description": "MANIFEST.json at the bundle root: the pinned Electron commit, the oracle-tooling commit that produced the bundle, and the sha256 of every other file in the bundle, keyed by its path from the bundle root with forward slashes.",
+  "type": "object",
+  "required": ["pin", "tooling", "files"],
+  "additionalProperties": false,
+  "properties": {
+    "pin": {
+      "type": "object",
+      "required": ["repo", "commit", "version"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "commit": { "$ref": "#/$defs/commit" },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tooling": {
+      "type": "object",
+      "required": ["branch", "commit", "dirty"],
+      "additionalProperties": false,
+      "properties": {
+        "branch": { "const": "oracle-tooling" },
+        "commit": { "$ref": "#/$defs/commit" },
+        "dirty": { "type": "boolean" }
+      }
+    },
+    "files": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "$ref": "#/$defs/path" },
+      "additionalProperties": { "$ref": "#/$defs/sha256" }
+    }
+  },
+  "$defs": {
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "path": { "type": "string", "pattern": "^(?!\\.{1,2}(/|$))[^/\\\\:*?\"<>|]+(/(?!\\.{1,2}(/|$))[^/\\\\:*?\"<>|]+)*$" }
+  }
+}

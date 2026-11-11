@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Replay expectation",
+  "description": "l2/expected/<name>.json: what the Electron app did for the script of the same name, normalised. Events share one sequence; job events compare as a subsequence, platform events in exact order, the final state exactly. <ts> stands for any timestamp and <ms> for any millisecond value.",
+  "type": "object",
+  "required": ["events", "final"],
+  "properties": {
+    "events": { "type": "array", "items": { "$ref": "#/$defs/event" } },
+    "final": {
+      "type": "object",
+      "required": ["db", "journal", "backups", "launcherFiles", "log"],
+      "properties": {
+        "db": {
+          "type": "object",
+          "required": ["user_version", "tables"],
+          "properties": {
+            "user_version": { "type": "integer", "minimum": 0 },
+            "tables": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "object" } } }
+          }
+        },
+        "journal": { "type": ["object", "null"] },
+        "backups": { "type": "object" },
+        "launcherFiles": { "type": "object", "description": "Parsed projections, not bytes: the simulators stamp these files." },
+        "log": {
+          "type": "object",
+          "required": ["warn", "error"],
+          "properties": {
+            "warn": { "type": "array", "items": { "type": "string" } },
+            "error": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "required": ["seq", "k"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 0 },
+        "k": { "type": "string", "pattern": "^[a-z]+$" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "k": { "const": "job" } } },
+          "then": {
+            "required": ["job", "state"],
+            "properties": {
+              "job": { "type": "string", "pattern": "^@job:[1-9][0-9]*$" },
+              "state": { "type": "string", "minLength": 1 },
+              "steps": {
+                "description": "Each step as [id, status, title, detail].",
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 4,
+                  "prefixItems": [{ "type": "string" }, { "type": "string" }, { "type": "string" }, { "type": "string" }],
+                  "items": false
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "k": { "const": "plat" } } },
+          "then": {
+            "required": ["op"],
+            "properties": {
+              "op": { "type": "string", "pattern": "^[a-z]+(\\.[a-zA-Z]+)+$" },
+              "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Vector file",
+  "description": "l1/**/*.json: the cases for one pure function of the Electron app, each with its arguments and either the value the real function returned or the error it threw. Values are plain JSON; an object whose key starts with $ is one of the wrappers under $defs, for what JSON cannot carry exactly.",
+  "type": "object",
+  "required": ["function", "source", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "function": { "type": "string", "minLength": 1, "description": "The exported name, with the class first for a method (Class.method)." },
+    "source": { "type": "string", "pattern": "^src/[^\\\\]+\\.tsx?$", "description": "The module that exports it, from the Electron repo root at the pin." },
+    "note": { "type": "string" },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "case": {
+      "type": "object",
+      "required": ["id", "origin", "args"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$", "description": "Unique within the file and stable across generator runs." },
+        "origin": { "$ref": "#/$defs/origin" },
+        "args": { "type": "array", "items": { "$ref": "#/$defs/value" } },
+        "out": { "$ref": "#/$defs/value" },
+        "error": {
+          "type": "object",
+          "required": ["name", "message"],
+          "additionalProperties": { "$ref": "#/$defs/value" },
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "message": { "type": "string", "description": "Exact; several are shown to the user verbatim." }
+          }
+        }
+      },
+      "oneOf": [{ "required": ["out"] }, { "required": ["error"] }]
+    },
+    "origin": {
+      "type": "object",
+      "required": ["kind", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["fixture", "test", "corpus", "adversarial"] },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "fixture: its path. test: file and test name. corpus: seed and index. adversarial: what differs between JS and Rust."
+        }
+      }
+    },
+    "value": {
+      "anyOf": [
+        { "type": ["null", "boolean", "number", "string"] },
+        { "type": "array", "items": { "$ref": "#/$defs/value" } },
+        { "$ref": "#/$defs/bytes" },
+        { "$ref": "#/$defs/file" },
+        { "$ref": "#/$defs/undefined" },
+        { "$ref": "#/$defs/utf16" },
+        { "$ref": "#/$defs/number" },
+        { "$ref": "#/$defs/date" },
+        { "type": "object", "propertyNames": { "pattern": "^(?!\\$)" }, "additionalProperties": { "$ref": "#/$defs/value" } }
+      ]
+    },
+    "bytes": {
+      "description": "Raw bytes, base64. Inputs are bytes, never JSON strings: BOM, CRLF and invalid UTF-8 are behaviour.",
+      "type": "object",
+      "required": ["$bytes"],
+      "additionalProperties": false,
+      "properties": { "$bytes": { "type": "string", "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$" } }
+    },
+    "file": {
+      "description": "The bytes of a file in the bundle, by its path from the bundle root, with its sha256.",
+      "type": "object",
+      "required": ["$file", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "$file": { "type": "string", "pattern": "^[^/\\\\]+(/[^/\\\\]+)*$" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "undefined": {
+      "type": "object",
+      "required": ["$undefined"],
+      "additionalProperties": false,
+      "properties": { "$undefined": { "const": true } }
+    },
+    "utf16": {
+      "description": "A string as UTF-16 code units, for one JSON cannot carry safely (a lone surrogate).",
+      "type": "object",
+      "required": ["$utf16"],
+      "additionalProperties": false,
+      "properties": { "$utf16": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 65535 } } }
+    },
+    "number": {
+      "type": "object",
+      "required": ["$number"],
+      "additionalProperties": false,
+      "properties": { "$number": { "enum": ["NaN", "Infinity", "-Infinity", "-0"] } }
+    },
+    "date": {
+      "description": "A Date, as toISOString() prints it.",
+      "type": "object",
+      "required": ["$date"],
+      "additionalProperties": false,
+      "properties": { "$date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" } }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Triage linkage",
+  "description": "triage-linkage.json at the bundle root: for each row of plan/triage.toml the owner decided as fix or drop, the artefacts that differ from Electron on purpose, so a parity diff is not permanently red on an intentional difference.",
+  "type": "object",
+  "required": ["rows"],
+  "additionalProperties": false,
+  "properties": {
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "decision", "affects"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[A-Z][0-9A-Za-z.]*-[0-9A-Za-z]+$", "description": "The row id in plan/triage.toml." },
+          "decision": { "enum": ["fix", "drop"] },
+          "affects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["artefact", "how"],
+              "additionalProperties": false,
+              "properties": {
+                "artefact": {
+                  "type": "string",
+                  "pattern": "^[^/\\\\]+(/[^/\\\\]+)*$",
+                  "description": "A file in the bundle, by its path from the bundle root."
+                },
+                "ids": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 },
+                  "description": "The cases, events or elements inside the artefact, when not all of it is affected."
+                },
+                "how": {
+                  "enum": ["regenerated", "marked"],
+                  "description": "regenerated: the expectation holds the decided behaviour. marked: it holds Electron's and the comparison skips it."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
