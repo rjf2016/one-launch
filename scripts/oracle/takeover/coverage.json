@@ -1,0 +1,190 @@
+[
+  {
+    "unit": "What the first Rust installer and the Rust updater must satisfy so that an installed Electron copy updates to the Rust build through its existing updater, and so that an Electron build can replace a Rust one.",
+    "covers": ["I9.1", "B1"]
+  },
+  {
+    "unit": "`E\\` is the Electron repo at the pinned commit.",
+    "covers": ["T6"]
+  },
+  {
+    "unit": "Read from source; nothing here was run.",
+    "covers": ["T6"]
+  },
+  {
+    "unit": "Milestone 0 ticket T11 turns this into a written contract with assertions.",
+    "covers": ["T6"]
+  },
+  {
+    "unit": "- At quit it spawns, detached, `\"%LOCALAPPDATA%\\one-launch-updater\\pending\\OneLaunch-<v>-setup.exe\" --updated /S`, plus `--force-run` only after \"Restart to update\" (`E\\node_modules\\electron-updater\\out\\NsisUpdater.js`, `E\\src\\main\\updates\\engine.ts`).",
+    "covers": ["U1", "U2", "U3", "U4"]
+  },
+  {
+    "unit": "- No `/D=`, no `--package-file`, no elevation, no Authenticode check.",
+    "covers": ["U5", "U6", "U7"]
+  },
+  {
+    "unit": "- Before that it requires a semver-greater version and a matching sha512 (`AppUpdater.js`), plus the Ed25519 check in `E\\src\\main\\updates\\manifest.ts`.",
+    "covers": ["U8"]
+  },
+  {
+    "unit": "- It tries `<installer>.blockmap` and falls back to a full download on any error, so clients do not need a blockmap. `E\\scripts\\release-sign.mjs` does refuse a draft without one and imports Electron sources, so it must be ported; the blockmap requirement is a triage row.",
+    "covers": ["U10", "U11"]
+  },
+  {
+    "unit": "Templates: `E\\node_modules\\app-builder-lib\\templates\\nsis\\`.",
+    "covers": ["T1"]
+  },
+  {
+    "unit": "The GUID is `37275e3e-77ba-54aa-bc32-31551d28dc0d`.",
+    "covers": ["I1.2", "R1"]
+  },
+  {
+    "unit": "1. **Init.** Mutex named with the GUID (`include\\allowOnlyOneInstallerInstance.nsh`). `$INSTDIR` comes from `HKCU\\Software\\<GUID>\\InstallLocation` (`multiUser.nsh`), then the `\\One Launch` to `\\OneLaunch` move (`E\\build\\installer.nsh`). `/S` shows no pages.",
+    "covers": ["I1.1", "I1.2", "I1.3", "I1.4", "I1.5", "I1.6", "I1.7"]
+  },
+  {
+    "unit": "2. **Wait for the app.** With `--updated`: 300 ms, then 1 s, then stop, then force. The stock check uses `Get-CimInstance Win32_Process`, which is WMI; the `customCheckAppRunning` hook allows an image-name check instead. Triage row.",
+    "covers": ["I2.1", "I2.2", "I2.3", "I2.4", "I2.5"]
+  },
+  {
+    "unit": "3. **Run the old uninstaller, verbatim.** `uninstallOldVersion` (`include\\installUtil.nsh`) reads `UninstallString` from `HKCU\\...\\Uninstall\\<GUID>`, copies it to temp and runs `/S /KEEP_APP_DATA /currentuser [--keep-shortcuts] --updated _?=<InstallLocation>`. Five tries; a non-zero result aborts with exit 2. This is what removes the Electron files. The shipped uninstaller moves then deletes `$INSTDIR`, skips the Run value because of `--updated`, keeps shortcuts, never touches `%APPDATA%`, and deletes both registry keys.",
+    "covers": ["I3.1", "I3.2", "I3.3", "I3.4", "I3.5", "I3.6"]
+  },
+  {
+    "unit": "4. **Extract and register.** Write `Uninstall OneLaunch.exe`, then:",
+    "covers": ["I4.1", "I4.2"]
+  },
+  {
+    "unit": "- `HKCU\\Software\\<GUID>`: `InstallLocation`, `KeepShortcuts=\"true\"`, `ShortcutName=\"One Launch\"`.",
+    "covers": ["I4.3"]
+  },
+  {
+    "unit": "- Uninstall key: `DisplayName \"One Launch <version>\"`, `UninstallString \"<dir>\\Uninstall OneLaunch.exe\" /currentuser`, `QuietUninstallString` (same plus `/S`), `DisplayVersion`, `DisplayIcon \"<exe>,0\"`, `Publisher`, `NoModify`, `NoRepair`, `EstimatedSize`.",
+    "covers": ["I4.4", "I4.5", "I4.6", "I4.7", "I4.8", "I4.9"]
+  },
+  {
+    "unit": "5. **Shortcuts.** Kept on the `--keep-shortcuts` path; otherwise `One Launch.lnk` on Start menu and desktop with AUMID `dev.onelaunch.app`.",
+    "covers": ["I5.1", "I5.2"]
+  },
+  {
+    "unit": "6. **Run value.** Survives only if it starts with `\"<INSTDIR>\\OneLaunch.exe\"`. So the Rust exe must be `OneLaunch.exe` in the same folder and accept `--start-hidden`. The installer never writes the value.",
+    "covers": ["I6.1", "I6.2", "I6.3"]
+  },
+  {
+    "unit": "7. **Relaunch.** Only with `--force-run` and silent: `ExecShellAsUser <Start-menu link or exe> open --updated`. The Rust app must tolerate `--updated`.",
+    "covers": ["I7.1", "I7.2", "I7.3"]
+  },
+  {
+    "unit": "8. **Rust uninstaller.** Honours the same flags and `_?=`, so a later installer or an Electron reinstall can drive it.",
+    "covers": ["I8.1", "I8.2", "I8.3"]
+  },
+  {
+    "unit": "9. **Every Rust release** satisfies 1 to 8, because stragglers jump straight to whatever is latest.",
+    "covers": ["I9.1"]
+  },
+  {
+    "unit": "- `SetCurrentProcessExplicitAppUserModelID(\"dev.onelaunch.app\")`.",
+    "covers": ["A1"]
+  },
+  {
+    "unit": "- Icon at index 0, `asInvoker` manifest, `--data-dir=`.",
+    "covers": ["A2", "A3"]
+  },
+  {
+    "unit": "- First Rust version greater than the last Electron one.",
+    "covers": ["A4"]
+  },
+  {
+    "unit": "- Schema stays at v5 and the vault stays `v10` until cutover is declared stable.",
+    "covers": ["A5", "A6"]
+  },
+  {
+    "unit": "- Availability: port of `E\\src\\main\\updates\\availability.ts` (packaged, default data folder, uninstaller beside the exe, `InstallLocation` equals the exe folder).",
+    "covers": ["R1"]
+  },
+  {
+    "unit": "- Feed: `GET github.com/<owner>/<repo>/releases/latest` with `Accept: application/json` for `tag_name`, then `releases/download/<tag>/latest.yml`.",
+    "covers": ["R2"]
+  },
+  {
+    "unit": "- A strict YAML subset parser, then a port of `verifyManifest` with identical refusal reasons and texts.",
+    "covers": ["R3"]
+  },
+  {
+    "unit": "- Payload `one-launch-update-v1\\n<version>\\n<url>\\n<sha512>\\n<size>\\n`; key id is SHA-256 of the SPKI, first 16 hex characters; the same two pinned keys.",
+    "covers": ["R4"]
+  },
+  {
+    "unit": "- Semver greater-than, no downgrade; download to the same `pending\\` folder; SHA-512 base64 check.",
+    "covers": ["R5"]
+  },
+  {
+    "unit": "- Port of the `update-service.ts` state machine (15 s first check, 6 h interval).",
+    "covers": ["R6"]
+  },
+  {
+    "unit": "- Synchronous re-hash at quit after the DB closes, then detached spawn with the same argv. Blocked by session end, crash, or non-zero exit.",
+    "covers": ["R7"]
+  },
+  {
+    "unit": "- `describeUpdateError` maps ureq error kinds onto the same sentences.",
+    "covers": ["R8"]
+  },
+  {
+    "unit": "- `xtask` writes `latest.yml` in the same shape: `version`, `files[{url, sha512, size}]`, `path`, `sha512`, `releaseDate`.",
+    "covers": ["R9"]
+  },
+  {
+    "unit": "Vendor the electron-builder NSIS templates (MIT), frozen with the effective defines, plus `E\\build\\installer.nsh`, compiled by a pinned `makensis` with the same plugin set.",
+    "covers": ["T1", "T2", "T3"]
+  },
+  {
+    "unit": "The generated script is in `E\\dist\\builder-debug.yml` after a build.",
+    "covers": ["T2"]
+  },
+  {
+    "unit": "Not verified: whether stock StdUtils parses `--flag`; reuse electron-builder's plugin binaries (licence check) or parse with `${GetOptions}`.",
+    "covers": ["T4", "T5", "I1.8"]
+  },
+  {
+    "unit": "There is no downgrade and no staged rollout.",
+    "covers": ["B1", "U9"]
+  },
+  {
+    "unit": "Rollback means publishing an Electron build with a higher version; the symmetric contract lets its installer replace the Rust install, and the frozen schema and vault let it open the same data folder.",
+    "covers": ["B1"]
+  },
+  {
+    "unit": "- The real Electron to Rust update on the owner's install: taskbar pin, shortcut icon, Run value, passwords decrypting.",
+    "covers": ["O1"]
+  },
+  {
+    "unit": "- SmartScreen and antivirus reaction to a new unsigned exe.",
+    "covers": ["O2"]
+  },
+  {
+    "unit": "- `--start-hidden` at a real logon, and shutdown with a pending update.",
+    "covers": ["O3"]
+  },
+  {
+    "unit": "- A rollback by installing the Electron installer over Rust.",
+    "covers": ["O4"]
+  },
+  {
+    "unit": "- An all-users install.",
+    "covers": ["O5"]
+  },
+  {
+    "unit": "- Signing and publishing.",
+    "covers": ["O6"]
+  },
+  {
+    "unit": "Everything else runs on GitHub-hosted runners only: install the public Electron release, run the Rust installer with the exact argv, assert files, registry, shortcuts and relaunch.",
+    "covers": ["O7"]
+  },
+  {
+    "unit": "Never on the owner's PC.",
+    "covers": ["O7"]
+  }
+]
