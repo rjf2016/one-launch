@@ -17,5 +17,21 @@ f3c4ac2f916b118c
 ed79fc2a6149b7db
 add2a4c16bbd4869
 
+# FOLDERID_UserProgramFiles in takeover/nsis/templates/multiUser.nsh: the documented Windows known-folder id, in a vendored electron-builder template kept byte for byte
+d44520e7bd5009ad
+
+# Made-up token of test/parse-limits.test.ts in three l1/riot/files/readSession/limits-*.yaml inputs: header {"alg":"none"}, a subject of ones, signature "sig"
+fe9c592fad6ca04f
+
+# fingerprint in l1/riot/readSession.json: the sha256 readSession returns for a placeholder refresh token, under the app's own key name.
+# The two compact corpus bases, the two limits inputs, the simulator's session file, an invalid-UTF-8 case and one corpus mutation
+0042055d2544757d
+e4acc7054cc4a06d
+80589ef2579ff830
+148afd57afc3408c
+53517504acc623b4
+47531137a5ba7fd0
+151b9f05f1fdc9c5
+
 # Made-up token in the seed copy of the generator (fixtures/_generator): its payload is {"sub":"1234567890"}, its signature the words "signature placeholder"
 ff7004eeb42f7fb8
