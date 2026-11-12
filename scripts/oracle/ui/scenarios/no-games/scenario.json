@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "installed": ["steam"],
+  "files": {
+    "steam/steam.exe": "",
+    "steam/config/loginusers.vdf": "@fixtures/steam/loginusers.vdf",
+    "steam/steamapps/libraryfolders.vdf": {
+      "inline": "\"libraryfolders\"\n{\n\t\"0\"\n\t{\n\t\t\"path\"\t\t\"{root:vdf}\\\\steam\"\n\t}\n}\n"
+    }
+  },
+  "registry": {},
+  "processes": {
+    "shutdownPolls": 3
+  },
+  "knobs": {
+    "steam": {
+      "reactMs": 400
+    }
+  },
+  "seed": {
+    "settings": {
+      "firstRun.dismissed": "true"
+    },
+    "accounts": [
+      {
+        "launcher": "steam",
+        "displayName": "Persona One",
+        "login": "user_1",
+        "launcherUid": "76561198000000001"
+      },
+      {
+        "launcher": "steam",
+        "displayName": "Persona Three",
+        "login": "user_3",
+        "launcherUid": "76561198000000003",
+        "password": "pw-three"
+      }
+    ],
+    "sessions": []
+  }
+}
