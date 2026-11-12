@@ -95,11 +95,13 @@ One per PNG, valid against `layout-sidecar.schema.json`, with one text run and o
 - `elements`: every interactive element, every landmark, heading, dialog, menu, list and status, every `svg` and `img` (role `image`), and every box that paints a background, border, shadow or outline (role `generic`). `ord` counts within the same role and name, in document order.
 - `style` holds only what is set: `bg`, `bgImage`, `color`, `border` and `borderColor`, `radius`, `padding`, `shadow`, `outline`, `opacity` (with every ancestor's applied), and `font` on interactive elements. An absent key is the initial value. Colours are `#rrggbb`, or `#rrggbbaa` when not opaque, also inside gradients and shadows.
 
+`scroll` lists the boxes the user can scroll that have more content than room (`overflow` of `auto` or `scroll`): the box, where it is scrolled to, and the size of its content.
+
 Fields the schema does not know (it allows them and checks none): `name`, `clock`, `paused` and `scroll` at the top; `opacity`, `tracking` and `deco` on a text run; `tag`, `value`, `placeholder`, `desc` (the tooltip) and `volatile` on an element; `selected`, `pressed`, `current`, `busy` and `invalid` in `state`.
 
 ## Text that depends on time
 
-- A text run is `volatile` when it holds a clock time, a timestamp-shaped id, a duration in milliseconds, or a path under the scratch folder; a shot can add patterns of its own. An element whose name, value or tooltip holds one is marked the same way.
+- A text run is `volatile` when the text of its element holds a clock time, a timestamp-shaped id, a duration in milliseconds, or a path under the scratch folder; a shot can add patterns of its own. The element's whole text decides, so every line of a wrapped path and all three pieces of "Passed in 3 ms" are marked together. An element whose name, value or tooltip holds one is marked the same way.
 - A relative time is not volatile: under the oracle clock "just now" and "3 months ago" are the same on every capture. A shot refuses a relative time in seconds or minutes ("2 minutes ago"), because the next capture would read another number. Take the shot within a minute of the event, or start a new session; `aged: true` lets one through and marks the run volatile.
 - `--repeat` compares a second, independent capture with the bundle's sidecar: `identical` is byte for byte; `volatile` is identical once the text and horizontal extent of volatile runs and the names of volatile elements are masked; anything else fails.
 

@@ -251,6 +251,14 @@ export function buildSidecar({ snapshot, ax, meta, volatile = [] }) {
     if (!boxesByLayout.has(li)) boxesByLayout.set(li, []);
     boxesByLayout.get(li).push(k);
   });
+  // React splits one sentence into several text nodes, and a long one wraps: the whole text of the element decides, so "Passed in", "3" and "ms" stand or fall together.
+  const sentences = new Map();
+  layout.nodeIndex.forEach((nodeIndex, li) => {
+    if (layout.text[li] === undefined || layout.text[li] < 0) return;
+    const parent = nodes.parentIndex[nodeIndex];
+    sentences.set(parent, `${sentences.get(parent) ?? ''}${str(layout.text[li])}`);
+  });
+  const volatileParents = new Set([...sentences].filter(([, sentence]) => isVolatile(sentence, volatile)).map(([parent]) => parent));
   layout.nodeIndex.forEach((nodeIndex, li) => {
     if (layout.text[li] === undefined || layout.text[li] < 0) return;
     const whole = str(layout.text[li]);
@@ -273,7 +281,7 @@ export function buildSidecar({ snapshot, ax, meta, volatile = [] }) {
           style['line-height'] === 'normal' ? round(run.box[3]) : round(px(style['line-height'])),
         ],
         color: cssColor(style.color),
-        volatile: isVolatile(run.t, volatile),
+        volatile: volatileParents.has(nodes.parentIndex[nodeIndex]),
       };
       if (fade < 0.999) item.opacity = round(fade);
       if (style['letter-spacing'] !== 'normal' && px(style['letter-spacing']) !== 0) item.tracking = round(px(style['letter-spacing']));
@@ -385,8 +393,9 @@ export function buildSidecar({ snapshot, ax, meta, volatile = [] }) {
   layout.nodeIndex.forEach((nodeIndex, li) => {
     const rect = layout.scrollRects?.[li];
     const client = layout.clientRects?.[li];
-    if (!rect || rect.length !== 4 || !client || client.length !== 4 || styles[nodeIndex] === null || !clips(nodeIndex)) return;
-    if (rect[2] <= client[2] + 0.5 && rect[3] <= client[3] + 0.5) return;
+    if (!rect || rect.length !== 4 || !client || client.length !== 4 || styles[nodeIndex] === null) return;
+    const scrolls = (axis, extent, room) => /^(auto|scroll)$/.test(styles[nodeIndex][`overflow-${axis}`]) && extent > room + 0.5;
+    if (!scrolls('x', rect[2], client[2]) && !scrolls('y', rect[3], client[3])) return;
     if (!shown(nodeIndex, layout.bounds[li])) return;
     scroll.push({ box: paddingBox(nodeIndex).map(round), at: [round(rect[0]), round(rect[1])], size: [round(rect[2]), round(rect[3])] });
   });
