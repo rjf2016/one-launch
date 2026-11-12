@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { createServer } from 'node:net';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Driver, materializeScenario, repoRoot, sleep } from '../../app-driver.mjs';
@@ -38,6 +39,40 @@ export function scratchBase() {
   if (`${base}\\`.toLowerCase().startsWith(`${repoRoot}\\`.toLowerCase())) throw new Error('ORACLE_SCRATCH must be outside the Electron repo');
   mkdirSync(base, { recursive: true });
   return base;
+}
+
+function freePort() {
+  return new Promise((done, fail) => {
+    const probe = createServer();
+    probe.once('error', fail);
+    probe.listen(0, '127.0.0.1', () => {
+      const { port } = probe.address();
+      probe.close(() => done(port));
+    });
+  });
+}
+
+async function browserProcessId(port) {
+  const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+  const ws = new WebSocket(webSocketDebuggerUrl);
+  await new Promise((open, fail) => {
+    ws.onopen = open;
+    ws.onerror = () => fail(new Error('could not open the browser target'));
+  });
+  try {
+    const { processInfo } = await new Promise((done, fail) => {
+      ws.onmessage = (m) => {
+        const msg = JSON.parse(m.data);
+        if (msg.id !== 1) return;
+        if (msg.error) fail(new Error(msg.error.message));
+        else done(msg.result);
+      };
+      ws.send(JSON.stringify({ id: 1, method: 'SystemInfo.getProcessInfo' }));
+    });
+    return processInfo.find((p) => p.type === 'browser')?.id ?? null;
+  } finally {
+    ws.close();
+  }
 }
 
 async function removeFolder(folder) {
@@ -131,6 +166,8 @@ export class ShotDriver extends Driver {
   async lay() {
     if (!existsSync(this.exe)) throw new Error(`Not found: ${this.exe}\nInstall dependencies first: npm ci`);
     if (!existsSync(join(repoRoot, 'out', 'main', 'index.js'))) throw new Error('Build the app first: npx electron-vite build');
+    // The driver's own port is a random pick; two captures at once would sooner or later share one and drive each other's app.
+    this.port = await freePort();
     this.scratch = join(scratchBase(), this.slot);
     await removeFolder(this.scratch);
     this.dataDir = join(this.scratch, 'data');
@@ -170,6 +207,8 @@ export class ShotDriver extends Driver {
 
   async connect(opts) {
     await super.connect(opts);
+    const owner = await browserProcessId(this.port);
+    if (owner !== this.child.pid) throw new Error(`port ${this.port} answers for another app (process ${owner}), not the one this capture started`);
     if (!existsSync(join(this.controlDir, HOOKED_MARKER))) throw new Error('the capture preload did not reach ipcMain, so nothing could be held');
     await this.send('Page.enable');
     await this.send('Emulation.setLocaleOverride', { locale: LOCALE });
