@@ -22,6 +22,8 @@ Every script writes under one folder, the bundle root:
 | `node scripts/oracle/emit-schemas.mjs` | Copies `schemas/*.schema.json` into `<out>/schemas` |
 | `node scripts/oracle/manifest.mjs` | Writes `<out>/MANIFEST.json`: the pin from `<out>/PIN`, this branch's commit, a sha256 per file |
 | `node scripts/oracle/verify.mjs` | Checks the bundle; exits 0 only when every check passes |
+| `node scripts/oracle/verify.mjs --repo` | The same, then scans the whole repo that holds the bundle; see "The repo around the bundle". `--repo-only` leaves the bundle checks out |
+| `node scripts/oracle/gate/self-diff.mjs`, `gate/plant.mjs` | Every layer captured again and compared with the bundle; one planted difference per layer. See `gate/README.md` |
 | `node scripts/oracle/check.mjs` | `npm run check` with the test clock started at the pin; see "Oracle clock" |
 | `npx vitest run --config scripts/oracle/vitest.config.ts` | The tooling's own unit tests |
 
@@ -81,5 +83,17 @@ Every other file is hashed and scanned but has no schema. The schemas are JSON S
 - a user folder anywhere, in file names, text, binary files (also as UTF-16) and the text of every layout sidecar: a non-placeholder name under `Users`, or this machine's user name, host name, home or temp folder. A PNG cannot be scanned, so its sidecar text stands in for it and captures must run with `TEMP` on a neutral folder.
 
 Findings show the file, the rule and a masked value, never the value.
+
+A run over the whole bundle takes about seven minutes, most of it the secret scan on a few fixtures with very long lines; `--repo` about as long again.
+
+### The repo around the bundle
+
+The Rust repo is public from its first push, and a push publishes its whole history. `--repo` adds three checks over the repo that holds the bundle:
+
+- `repo secrets`: the secret scan over every file any ref reaches, also one a later commit changed or removed, and over every changed, staged or untracked file that could go into the next commit. A 64-character hex value passes when it is the sha256 of one of those files, a value of a manifest's `files`, or sits under a `sha256` key of a JSON file;
+- `repo user paths`: the user-folder scan over the same files, names and bytes;
+- `repo commits`: every author and committer address is a GitHub noreply address.
+
+Run it before the first push and before any push that follows a change outside `oracle/`.
 
 `bundle.allow` lists what the secret scan lets through in the bundle on top of `scripts/hooks/no-secrets.allow`, as fingerprints (the first 16 hex characters of the value's sha256), so the value is never copied into this repo. Add one only for a placeholder or a generated id, under a comment saying what it is.

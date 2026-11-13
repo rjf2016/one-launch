@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -5,7 +6,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
 import { MANIFEST, SCHEMA_SOURCE, buildManifest } from '../lib/bundle.mjs';
 import { jsonText } from '../lib/out.mjs';
-import { fingerprint, verifyBundle } from '../verify.mjs';
+import { fingerprint, verifyBundle, verifyRepo } from '../verify.mjs';
 
 const sha256 = (data) => createHash('sha256').update(data).digest('hex');
 const COMMIT = 'c0ffee'.repeat(6) + 'c0ff';
@@ -323,5 +324,86 @@ describe('verifyBundle', () => {
       }).verify();
       expect(problems(result, 'user paths')).toContain('ui/shots/150-advanced.layout.json: text in the shot  user-folder  m…(7 chars)');
     });
+  });
+});
+
+describe('verifyRepo', () => {
+  const NOREPLY = '1+someone@users.noreply.github.com';
+  // Built from pieces so this file holds no address for the repo's own secret scan to find.
+  const PLANTED_ADDRESS = ['planted', '@', 'not-a-real-company', '.io'].join('');
+
+  function makeRepo(address = NOREPLY) {
+    const root = mkdtempSync(join(tmpdir(), 'oracle-verify-repo-'));
+    made.push(root);
+    const git = (...args) =>
+      execFileSync('git', ['-c', 'user.name=someone', '-c', `user.email=${address}`, '-c', 'commit.gpgsign=false', '-c', 'core.autocrlf=false', ...args], {
+        cwd: root,
+        stdio: 'pipe',
+      });
+    git('init', '-q');
+    const repo = {
+      root,
+      write(rel, data) {
+        mkdirSync(dirname(join(root, rel)), { recursive: true });
+        writeFileSync(join(root, rel), data);
+        return repo;
+      },
+      remove(rel) {
+        rmSync(join(root, rel));
+        return repo;
+      },
+      commit(message) {
+        git('add', '-A');
+        git('commit', '-q', '-m', message);
+        return repo;
+      },
+      verify(identity = stranger) {
+        const allowFile = join(root, '..', `${root.split(/[\\/]/).pop()}.allow`);
+        made.push(allowFile);
+        writeFileSync(allowFile, '');
+        return verifyRepo({ out: join(root, 'oracle'), identity, repoAllow: new Set(), bundleAllow: allowFile });
+      },
+    };
+    return repo.write('oracle/PIN', 'repo = owner/one-launch\n').write('plan/PLAN.md', '# Plan\n').commit('first');
+  }
+
+  test('a clean repo passes every check', () => {
+    const result = makeRepo().verify();
+    expect(result.checks.map((check) => check.name)).toEqual(['repo secrets', 'repo user paths', 'repo commits']);
+    expect(failed(result)).toEqual([]);
+  });
+
+  test('a value a later commit removed is still found in the history', () => {
+    const repo = makeRepo().write('plan/notes.md', `ask ${PLANTED_ADDRESS}\n`).commit('second').remove('plan/notes.md').commit('third');
+    const result = repo.verify();
+    expect(failed(result)).toEqual(['repo secrets']);
+    expect(problems(result, 'repo secrets')).toHaveLength(1);
+    expect(problems(result, 'repo secrets')[0]).toMatch(/^plan\/notes\.md:1 \(history, blob [0-9a-f]{7}\) {2}email {2}plan…io$/);
+  });
+
+  test('a file that waits for a commit is scanned, an ignored one is not', () => {
+    const repo = makeRepo().write('.gitignore', 'target/\n').commit('second');
+    repo.write('plan/gate.md', `see ${USER_FOLDER}\n`).write('target/build.log', `see ${USER_FOLDER}\n`);
+    const result = repo.verify();
+    expect(failed(result)).toEqual(['repo secrets', 'repo user paths']);
+    expect(problems(result, 'repo user paths')).toEqual(['plan/gate.md (not committed yet)  user-folder  m…(7 chars)']);
+  });
+
+  test('a digest of a file in the history, and a value under a sha256 key, pass as the bundle rule has it', () => {
+    const repo = makeRepo()
+      .write('oracle/a.bin', 'a planted value')
+      .write('oracle/index.json', jsonText({ file: 'oracle/a.bin', digest: PLANTED_HEX, other: { sha256: sha256('not a file') } }))
+      .commit('second');
+    expect(failed(repo.verify())).toEqual([]);
+    repo.write('oracle/loose.json', jsonText({ token: sha256('nothing in the repo') }));
+    expect(failed(repo.verify())).toEqual(['repo secrets']);
+  });
+
+  test('a commit whose address is not a noreply one fails', () => {
+    const result = makeRepo('dev@example.com').verify();
+    expect(failed(result)).toEqual(['repo commits']);
+    expect(problems(result, 'repo commits')).toEqual([
+      '1 of 1 commits carry an author or committer address that is not a GitHub noreply address  d…(15 chars)',
+    ]);
   });
 });
